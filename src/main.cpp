@@ -4,8 +4,20 @@
 #include <QLocale>
 #include <QTranslator>
 
-int main(int argc, char *argv[])
-{
+void InitDebugOutputFormat() {
+    const QString QT_MESSAGE_PATTERN =
+        "[%{time yyyy-MM-dd hh:mm:ss.zzz ttt}"
+        " %{if-debug}D%{endif}"
+        "%{if-info}I%{endif}"
+        "%{if-warning}W%{endif}"
+        "%{if-critical}C%{endif}"
+        "%{if-fatal}F%{endif}]"
+        " %{file}:%{line} - %{function}"
+        " >> %{message}";
+    qSetMessagePattern(QT_MESSAGE_PATTERN);
+}
+
+int main(int argc, char *argv[]) {
     QApplication a(argc, argv);
 
     QTranslator translator;
@@ -17,7 +29,11 @@ int main(int argc, char *argv[])
             break;
         }
     }
+
+    InitDebugOutputFormat();
+
     MainWindow w;
     w.show();
+
     return a.exec();
 }

@@ -5,17 +5,23 @@ find_package(Qt6 6.5 REQUIRED COMPONENTS Core Widgets LinguistTools)
 
 qt_standard_project_setup()
 
+set(CMAKE_CXX_STANDARD 20)
+set(CMAKE_CXX_STANDARD_REQUIRED ON)
+
+include_directories(${CMAKE_CURRENT_SOURCE_DIR}/src)
+include_directories(${CMAKE_CURRENT_SOURCE_DIR}/src/ui/MainWindow)
+
 qt_add_executable(TaoTieChat
     WIN32 MACOSX_BUNDLE
-    main.cpp
-    MainWindow.cpp
-    MainWindow.h
-    MainWindow.ui
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/main.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/ui/MainWindow/MainWindow.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/ui/MainWindow/MainWindow.h
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/ui/MainWindow/MainWindow.ui
 )
 
 qt_add_translations(
     TARGETS TaoTieChat
-    TS_FILES TaoTieChat_zh_CN.ts
+    TS_FILES ${CMAKE_CURRENT_SOURCE_DIR}/src/translations/TaoTieChat_zh_CN.ts
 )
 
 target_link_libraries(TaoTieChat

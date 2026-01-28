@@ -39,6 +39,9 @@ qt_add_executable(TaoTieChat
     ${CMAKE_CURRENT_SOURCE_DIR}/src/ui/ChatWindow/ItemChat.h
     ${CMAKE_CURRENT_SOURCE_DIR}/src/ui/ChatWindow/ItemChat.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/src/ui/ChatWindow/ItemChat.ui
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/ui/ChatWindow/ItemContent.h
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/ui/ChatWindow/ItemContent.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/ui/ChatWindow/ItemContent.ui
 )
 
 qt_add_translations(

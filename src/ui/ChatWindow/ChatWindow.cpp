@@ -61,44 +61,69 @@ ChatWindow::ChatWindow(QWidget *parent)
     // ui->stacked_content_list->setMinimumWidth(ItemChat().minimumWidth() + ui->page_list_chat->verticalScrollBar()->sizeHint().width());
 
     // debug - 添加示例聊天数据
-    ItemChatData item1;
-    item1.nickname = "张三";
-    item1.lastMessage = "晚上一起吃饭吗?";
-    item1.timestamp = "18:30";
-    item1.unreadCount = 3;
-    add_chat_item(item1);
+    {
+        ItemChatData item1;
+        item1.nickname = "张三";
+        item1.lastMessage = "晚上一起吃饭吗?";
+        item1.timestamp = "18:30";
+        item1.unreadCount = 3;
+        add_chat_item(item1);
 
-    ItemChatData item2;
-    item2.nickname = "李四";
-    item2.lastMessage = "好的,明天见!";
-    item2.timestamp = "17:15";
-    item2.unreadCount = 0;
-    add_chat_item(item2);
+        ItemChatData item2;
+        item2.nickname = "李四";
+        item2.lastMessage = "好的,明天见!";
+        item2.timestamp = "17:15";
+        item2.unreadCount = 0;
+        add_chat_item(item2);
 
-    ItemChatData item3;
-    item3.nickname = "王五";
-    item3.lastMessage = "周末有空吗?一起打篮球";
-    item3.timestamp = "昨天";
-    item3.unreadCount = 1;
-    add_chat_item(item3);
+        ItemChatData item3;
+        item3.nickname = "王五";
+        item3.lastMessage = "周末有空吗?一起打篮球";
+        item3.timestamp = "昨天";
+        item3.unreadCount = 1;
+        add_chat_item(item3);
 
-    ItemChatData item4;
-    item4.nickname = "赵六";
-    item4.lastMessage = "[图片]";
-    item4.timestamp = "周三";
-    item4.unreadCount = 0;
-    add_chat_item(item4);
+        ItemChatData item4;
+        item4.nickname = "赵六";
+        item4.lastMessage = "[图片]";
+        item4.timestamp = "周三";
+        item4.unreadCount = 0;
+        add_chat_item(item4);
 
-    ItemChatData item5;
-    item5.nickname = "开发组";
-    item5.lastMessage = "大家注意一下,今天下午3点开会";
-    item5.timestamp = "1月27日";
-    item5.unreadCount = 10;
-    add_chat_item(item5);
+        ItemChatData item5;
+        item5.nickname = "开发组";
+        item5.lastMessage = "大家注意一下,今天下午3点开会";
+        item5.timestamp = "1月27日";
+        item5.unreadCount = 10;
+        add_chat_item(item5);
+    }
 
-    // debug - content list
-    for(int i = 0; i < 50; ++i){
-        ui->page_list_content->addItem("content list " + QString::number(i));
+    // // debug - content list
+    // for(int i = 0; i < 50; ++i){
+    //     ui->page_list_content->addItem("content list " + QString::number(i));
+    // }
+
+    // debug - 添加示例联系人数据
+    {
+        ItemContentData item1;
+        item1.nickname = "张三";
+        add_content_item(item1);
+
+        ItemContentData item2;
+        item2.nickname = "李四";
+        add_content_item(item2);
+
+        ItemContentData item3;
+        item3.nickname = "王五";
+        add_content_item(item3);
+
+        ItemContentData item4;
+        item4.nickname = "赵六";
+        add_content_item(item4);
+
+        ItemContentData item5;
+        item5.nickname = "开发组";
+        add_content_item(item5);
     }
 }
 
@@ -150,6 +175,17 @@ void ChatWindow::add_chat_item(const ItemChatData &data) {
     ui->page_list_chat->setItemWidget(list_widget_item, itemWidget);
 }
 
+void ChatWindow::add_content_item(const ItemContentData &data) {
+    QListWidgetItem *list_widget_item = new QListWidgetItem(ui->page_list_content);
+    ItemContent     *itemWidget       = new ItemContent(data, ui->page_list_content);
+    list_widget_item->setSizeHint(itemWidget->sizeHint());
+    ui->page_list_content->setItemWidget(list_widget_item, itemWidget);
+}
+
 void ChatWindow::clear_chat_list() {
+    ui->page_list_chat->clear();
+}
+
+void ChatWindow::clear_content_list() {
     ui->page_list_chat->clear();
 }

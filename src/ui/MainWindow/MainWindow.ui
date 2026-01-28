@@ -34,7 +34,7 @@
      <number>0</number>
     </property>
     <item row="0" column="0">
-     <widget class="QStackedWidget" name="stacked_widget">
+     <widget class="QStackedWidget" name="main_stacked">
       <property name="lineWidth">
        <number>0</number>
       </property>

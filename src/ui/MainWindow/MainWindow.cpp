@@ -20,9 +20,9 @@ MainWindow::MainWindow(QWidget *parent)
 
     // // 2.连接
     // 根据子窗口来调整父窗口的大小和标题等内容
-    connect(ui->stacked_widget, &QStackedWidget::currentChanged, this, [&](){ this->on_show_widget_change(); });
-    connect(m_auth_window     , &AuthWindow    ::accepted      , this, [&](){ this->show_chat_window     (); });
-    connect(m_chat_window     , &ChatWindow    ::accepted      , this, [&](){ this->show_auth_window     (); });  // 用于测试页面切换
+    connect(ui->main_stacked, &QStackedWidget::currentChanged, this, [&](){ this->on_show_widget_change(); });
+    connect(m_auth_window   , &AuthWindow    ::accepted      , this, [&](){ this->show_chat_window     (); });
+    connect(m_chat_window   , &ChatWindow    ::accepted      , this, [&](){ this->show_auth_window     (); });  // 用于测试页面切换
 
     // // 3.设置
     // m_auth_window->installEventFilter(this);  // debug
@@ -32,8 +32,8 @@ MainWindow::MainWindow(QWidget *parent)
     // 先调整主窗口大小再添加显示
     // 默认显示登陆页面
     this->resize(m_auth_window->size());
-    ui->stacked_widget->addWidget(m_auth_window);
-    ui->stacked_widget->setCurrentWidget(m_auth_window);
+    ui->main_stacked->addWidget(m_auth_window);
+    ui->main_stacked->setCurrentWidget(m_auth_window);
 
     // 登陆检查
     QTimer::singleShot(0, this, &MainWindow::on_init);
@@ -70,15 +70,15 @@ void MainWindow::on_init() {
 }
 
 void MainWindow::on_show_widget_change() {
-    if(!ui || !ui->stacked_widget || !ui->stacked_widget->currentWidget()) {
+    if(!ui || !ui->main_stacked || !ui->main_stacked->currentWidget()) {
         return;  // 销毁时会触发
     }
-    QWidget *widget = ui->stacked_widget->currentWidget();
+    QWidget *widget = ui->main_stacked->currentWidget();
     // qDebug() << widget->metaObject()->className() << " size : " << widget->size();  // debug
     // qDebug() << this  ->metaObject()->className() << " size : " << this  ->size();  // debug
     // this->resize(widget->size());  // 这里设置就晚了
-    this->setWindowTitle(widget->windowTitle());
-    this->setWindowIcon(widget->windowIcon());
+    this->setWindowTitle   (widget->windowTitle   ());
+    this->setWindowIcon    (widget->windowIcon    ());
     this->setWindowIconText(widget->windowIconText());
     connect(widget, &QWidget::windowTitleChanged   , this, [&](const QString &title   ){ this->setWindowTitle   (title   ); });
     connect(widget, &QWidget::windowIconChanged    , this, [&](const QIcon   &icon    ){ this->setWindowIcon    (icon    ); });
@@ -95,14 +95,14 @@ bool MainWindow::show_window(QWidget*widget) {
         return false;
     }
     // 先清除已经添加的其他子窗口，防止意外的更改
-    for(int i = 0; i< ui->stacked_widget->count(); ++i) {
-        ui->stacked_widget->removeWidget(ui->stacked_widget->widget(i));
+    for(int i = 0; i< ui->main_stacked->count(); ++i) {
+        ui->main_stacked->removeWidget(ui->main_stacked->widget(i));
     }
     // 先调整主窗口大小再添加显示
     this->resize(widget->size());
     // this->setGeometry(widget->geometry());  // 子控件在 (0,0) 位置，该方式不可用
-    ui->stacked_widget->addWidget(widget);
-    ui->stacked_widget->setCurrentWidget(widget);
+    ui->main_stacked->addWidget(widget);
+    ui->main_stacked->setCurrentWidget(widget);
     return true;
 }
 

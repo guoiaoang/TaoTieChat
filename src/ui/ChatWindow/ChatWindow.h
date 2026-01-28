@@ -5,6 +5,9 @@
 #include <QSplitter>
 #include <QMenu>
 #include <QAction>
+#include <QListWidgetItem>
+#include <QScrollBar>
+#include "ItemChat.h"
 
 namespace Ui {
 class ChatWindow;
@@ -19,6 +22,8 @@ public:
 
 private:
     void on_show_menu();
+    void add_chat_item(const ItemChatData &data);
+    void clear_chat_list();
 
 signals:
     void signout();

@@ -4,6 +4,7 @@
 // #include <QListView>
 // #include <QListWidget>
 #include <QtDebug>
+#include <QButtonGroup>
 
 ChatWindow::ChatWindow(QWidget *parent)
     : QDialog(parent), ui(new Ui::ChatWindow) {
@@ -17,13 +18,22 @@ ChatWindow::ChatWindow(QWidget *parent)
     m_action_settings = new QAction;
 
     // 连接消息
-    connect(ui->navigate_button_chat   , &QToolButton::clicked  , this, [&](){ ui->stacked_content_list->setCurrentWidget(ui->stacked_page_chat   ); });
-    connect(ui->navigate_button_contact, &QToolButton::clicked  , this, [&](){ ui->stacked_content_list->setCurrentWidget(ui->stacked_page_content); });
+    connect(ui->navigate_button_chat   , &QToolButton::clicked  , this, [&](){
+        ui->stacked_content_list->setCurrentWidget(ui->stacked_page_chat   );
+        ui->navigate_button_chat   ->setEnabled(false);
+        ui->navigate_button_contact->setEnabled(true );
+    });
+    connect(ui->navigate_button_contact, &QToolButton::clicked  , this, [&](){
+        ui->stacked_content_list->setCurrentWidget(ui->stacked_page_content);
+        ui->navigate_button_chat   ->setEnabled(true );
+        ui->navigate_button_contact->setEnabled(false);
+    });
     connect(ui->navigate_button_menu   , &QToolButton::clicked  , this, [&](){ this->on_show_menu(); });
     connect(m_action_signout           , &QAction    ::triggered, this, [&](){ emit signout(); });
-    connect(m_action_settings          , &QAction    ::triggered, this, [](){ qDebug() << "m_action_settings"; });
+    connect(m_action_settings          , &QAction    ::triggered, this, [&](){ qDebug() << "m_action_settings"; });
 
     // 执行操作
+    ui->navigate_button_chat->click();  // 初始化状态
     // 替换为可滑动窗口
     ui->content_layout->removeWidget(ui->stacked_content_list);
     ui->content_layout->removeWidget(ui->stacked_content_detail);
@@ -43,9 +53,53 @@ ChatWindow::ChatWindow(QWidget *parent)
     m_menu_settings->addSeparator();
     m_menu_settings->addAction(m_action_signout);
 
-    // debug
-    ui->page_list_chat   ->addItem("chat list");
-    ui->page_list_content->addItem("content list");
+    // 设置列表属性
+    ui->page_list_chat->setSpacing(0);
+    ui->page_list_chat->setVerticalScrollMode(QAbstractItemView::ScrollPerPixel);
+
+    // TODO:设置最小宽度为 ItemChat 宽度 + 滚动条宽度
+    // ui->stacked_content_list->setMinimumWidth(ItemChat().minimumWidth() + ui->page_list_chat->verticalScrollBar()->sizeHint().width());
+
+    // debug - 添加示例聊天数据
+    ItemChatData item1;
+    item1.nickname = "张三";
+    item1.lastMessage = "晚上一起吃饭吗?";
+    item1.timestamp = "18:30";
+    item1.unreadCount = 3;
+    add_chat_item(item1);
+
+    ItemChatData item2;
+    item2.nickname = "李四";
+    item2.lastMessage = "好的,明天见!";
+    item2.timestamp = "17:15";
+    item2.unreadCount = 0;
+    add_chat_item(item2);
+
+    ItemChatData item3;
+    item3.nickname = "王五";
+    item3.lastMessage = "周末有空吗?一起打篮球";
+    item3.timestamp = "昨天";
+    item3.unreadCount = 1;
+    add_chat_item(item3);
+
+    ItemChatData item4;
+    item4.nickname = "赵六";
+    item4.lastMessage = "[图片]";
+    item4.timestamp = "周三";
+    item4.unreadCount = 0;
+    add_chat_item(item4);
+
+    ItemChatData item5;
+    item5.nickname = "开发组";
+    item5.lastMessage = "大家注意一下,今天下午3点开会";
+    item5.timestamp = "1月27日";
+    item5.unreadCount = 10;
+    add_chat_item(item5);
+
+    // debug - content list
+    for(int i = 0; i < 50; ++i){
+        ui->page_list_content->addItem("content list " + QString::number(i));
+    }
 }
 
 ChatWindow::~ChatWindow() {
@@ -87,4 +141,15 @@ void ChatWindow::on_show_menu() {
     m_menu_settings->popup(QPoint(pos.x(), pos.y() - h));
 
     // m_menu_settings->exec(QCursor::pos()); // 在鼠标当前位置弹出
+}
+
+void ChatWindow::add_chat_item(const ItemChatData &data) {
+    QListWidgetItem *list_widget_item = new QListWidgetItem(ui->page_list_chat);
+    ItemChat        *itemWidget       = new ItemChat(data, ui->page_list_chat);
+    list_widget_item->setSizeHint(itemWidget->sizeHint());
+    ui->page_list_chat->setItemWidget(list_widget_item, itemWidget);
+}
+
+void ChatWindow::clear_chat_list() {
+    ui->page_list_chat->clear();
 }

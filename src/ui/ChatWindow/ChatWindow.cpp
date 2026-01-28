@@ -13,9 +13,13 @@ ChatWindow::ChatWindow(QWidget *parent)
 
     // 创建对象
     m_split_content   = new QSplitter;
-    m_menu_settings   = new QMenu;
+    m_menu_settings   = new QMenu  ;
     m_action_signout  = new QAction;
     m_action_settings = new QAction;
+    // add
+    m_menu_add      = new QMenu  ;
+    m_action_add    = new QAction;
+    m_action_create = new QAction;
 
     // 连接消息
     connect(ui->navigate_button_chat   , &QToolButton::clicked  , this, [&](){
@@ -28,16 +32,21 @@ ChatWindow::ChatWindow(QWidget *parent)
         ui->navigate_button_chat   ->setEnabled(true );
         ui->navigate_button_contact->setEnabled(false);
     });
-    connect(ui->navigate_button_menu   , &QToolButton::clicked  , this, [&](){ this->on_show_menu(); });
-    connect(m_action_signout           , &QAction    ::triggered, this, [&](){ emit signout(); });
-    connect(m_action_settings          , &QAction    ::triggered, this, [&](){ qDebug() << "m_action_settings"; });
+    connect(ui->button_settings, &QToolButton::clicked  , this, [&](){ this->on_show_settings_menu(); });
+    connect(ui->button_add     , &QToolButton::clicked  , this, [&](){ this->on_show_add_menu     (); });
+    connect(m_action_signout   , &QAction    ::triggered, this, [&](){ emit signout(); });
+    connect(m_action_settings  , &QAction    ::triggered, this, [&](){ qDebug() << "m_action_settings"; });
+    connect(m_action_add       , &QAction    ::triggered, this, [&](){ qDebug() << "m_action_add"     ; });
+    connect(m_action_create    , &QAction    ::triggered, this, [&](){ qDebug() << "m_action_create"  ; });
 
     // 执行操作
     ui->navigate_button_chat->click();  // 初始化状态
     // 替换为可滑动窗口
-    ui->content_layout->removeWidget(ui->stacked_content_list);
+    // ui->content_layout->removeWidget(ui->stacked_content_list);
+    ui->content_layout->removeWidget(ui->widget_content_list);
     ui->content_layout->removeWidget(ui->stacked_content_detail);
-    m_split_content->addWidget(ui->stacked_content_list);
+    // m_split_content->addWidget(ui->stacked_content_list);
+    m_split_content->addWidget(ui->widget_content_list);
     m_split_content->addWidget(ui->stacked_content_detail);
     ui->chat_layout->replaceWidget(ui->content_widget, m_split_content);
 
@@ -52,6 +61,13 @@ ChatWindow::ChatWindow(QWidget *parent)
     m_menu_settings->addAction(m_action_settings);
     m_menu_settings->addSeparator();
     m_menu_settings->addAction(m_action_signout);
+    // add
+    m_action_add   ->setText(tr("Add as a friend or join a group"));
+    m_action_create->setText(tr("Create a group"));
+    m_menu_add->addAction(m_action_add   );
+    m_menu_add->addAction(m_action_create);
+    m_action_add   ->setEnabled(false); // TODO:功能未实现，暂时禁用
+    m_action_create->setEnabled(false); // TODO:功能未实现，暂时禁用
 
     // 设置列表属性
     ui->page_list_chat->setSpacing(0);
@@ -146,9 +162,21 @@ ChatWindow::~ChatWindow() {
         delete m_action_settings;
         m_action_settings = nullptr;
     }
+    if(m_menu_add) {
+        delete m_menu_add;
+        m_menu_add = nullptr;
+    }
+    if(m_action_add) {
+        delete m_action_add;
+        m_action_add = nullptr;
+    }
+    if(m_action_create) {
+        delete m_action_create;
+        m_action_create = nullptr;
+    }
 }
 
-void ChatWindow::on_show_menu() {
+void ChatWindow::on_show_settings_menu() {
     // qDebug() << "navigate_button_menu";
 
     // // 在按钮上方弹出
@@ -161,11 +189,19 @@ void ChatWindow::on_show_menu() {
 
     // 在按钮上方弹出
     m_menu_settings->adjustSize(); // 内存调整为实际大小
-    QPoint pos = ui->navigate_button_menu->mapToGlobal(ui->navigate_button_menu->rect().bottomRight());
+    QPoint pos = ui->button_settings->mapToGlobal(ui->button_settings->rect().bottomRight());
     int h = m_menu_settings->size().height();
     m_menu_settings->popup(QPoint(pos.x(), pos.y() - h));
 
     // m_menu_settings->exec(QCursor::pos()); // 在鼠标当前位置弹出
+}
+
+void ChatWindow::on_show_add_menu() {
+    // 在按钮下方左侧弹出
+    m_menu_add->adjustSize(); // 内存调整为实际大小
+    QPoint pos = ui->button_add->mapToGlobal(ui->button_add->rect().bottomRight());
+    int w = m_menu_add->size().width();
+    m_menu_add->popup(QPoint(pos.x() - w, pos.y()));
 }
 
 void ChatWindow::add_chat_item(const ItemChatData &data) {

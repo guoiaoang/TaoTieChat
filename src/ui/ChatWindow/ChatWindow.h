@@ -7,6 +7,9 @@
 #include <QAction>
 #include <QListWidgetItem>
 #include <QScrollBar>
+#include <QMenu>
+#include <QAction>
+
 #include "ItemChat.h"
 #include "ItemContent.h"
 
@@ -22,7 +25,8 @@ public:
     ~ChatWindow();
 
 private:
-    void on_show_menu();
+    void on_show_settings_menu();
+    void on_show_add_menu();
     void add_chat_item   (const ItemChatData &data);
     void add_content_item(const ItemContentData &data);
     void clear_chat_list   ();
@@ -37,4 +41,7 @@ private:
     QMenu          *m_menu_settings   = nullptr;
     QAction        *m_action_signout  = nullptr;
     QAction        *m_action_settings = nullptr;
+    QMenu          *m_menu_add        = nullptr;
+    QAction        *m_action_add      = nullptr;
+    QAction        *m_action_create   = nullptr;
 };

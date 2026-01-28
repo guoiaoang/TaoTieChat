@@ -23,6 +23,7 @@ MainWindow::MainWindow(QWidget *parent)
     connect(ui->main_stacked, &QStackedWidget::currentChanged, this, [&](){ this->on_show_widget_change(); });
     connect(m_auth_window   , &AuthWindow    ::accepted      , this, [&](){ this->show_chat_window     (); });
     connect(m_chat_window   , &ChatWindow    ::accepted      , this, [&](){ this->show_auth_window     (); });  // 用于测试页面切换
+    connect(m_chat_window   , &ChatWindow    ::signout       , this, [&](){ this->show_auth_window     (); });  // 退出登录
 
     // // 3.设置
     // m_auth_window->installEventFilter(this);  // debug

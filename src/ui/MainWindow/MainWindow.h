@@ -9,6 +9,8 @@
 #include <QStatusBar>
 #include <QMenuBar>
 #include <QToolButton>
+#include <QScreen>
+#include <QGuiApplication>
 #include <QStyle>
 
 #include "AuthWindow.h"

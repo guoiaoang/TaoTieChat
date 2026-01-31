@@ -104,6 +104,9 @@ bool MainWindow::show_window(QWidget*widget) {
     // this->setGeometry(widget->geometry());  // 子控件在 (0,0) 位置，该方式不可用
     ui->main_stacked->addWidget(widget);
     ui->main_stacked->setCurrentWidget(widget);
+
+    // 设置居中显示窗口
+    this->setGeometry(QStyle::alignedRect(Qt::LeftToRight, Qt::AlignCenter, this->size(), qApp->primaryScreen()->availableGeometry()));
     return true;
 }
 

@@ -9,6 +9,7 @@
 #include <QStatusBar>
 #include <QMenuBar>
 #include <QToolButton>
+#include <QStyle>
 
 #include "AuthWindow.h"
 #include "ChatWindow.h"

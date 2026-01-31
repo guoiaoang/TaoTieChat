@@ -1,0 +1,200 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<ui version="4.0">
+ <class>ItemMessage</class>
+ <widget class="QWidget" name="ItemMessage">
+  <property name="geometry">
+   <rect>
+    <x>0</x>
+    <y>0</y>
+    <width>461</width>
+    <height>263</height>
+   </rect>
+  </property>
+  <property name="minimumSize">
+   <size>
+    <width>1</width>
+    <height>1</height>
+   </size>
+  </property>
+  <property name="windowTitle">
+   <string>Form</string>
+  </property>
+  <layout class="QGridLayout" name="layout_item_message">
+   <item row="0" column="0">
+    <widget class="QStackedWidget" name="stacked_item_message">
+     <widget class="QWidget" name="friend_page">
+      <layout class="QHBoxLayout" name="friend_layout_page">
+       <property name="rightMargin">
+        <number>60</number>
+       </property>
+       <item>
+        <widget class="QToolButton" name="friend_button_avatar">
+         <property name="styleSheet">
+          <string notr="true">QToolButton {
+    border-radius: 20px;
+    background-color: #e0e0e0;
+    border: 1px solid #ccc;
+}</string>
+         </property>
+         <property name="text">
+          <string>avater</string>
+         </property>
+        </widget>
+       </item>
+       <item>
+        <layout class="QVBoxLayout" name="friend_layout_info">
+         <item>
+          <widget class="QLineEdit" name="friend_edit_nickname">
+           <property name="minimumSize">
+            <size>
+             <width>1</width>
+             <height>1</height>
+            </size>
+           </property>
+           <property name="readOnly">
+            <bool>true</bool>
+           </property>
+          </widget>
+         </item>
+         <item>
+          <widget class="QTextEdit" name="friend_edit_content">
+           <property name="minimumSize">
+            <size>
+             <width>1</width>
+             <height>1</height>
+            </size>
+           </property>
+           <property name="styleSheet">
+            <string notr="true">QTextEdit {
+    background-color: gray;
+    border: 1px solid #ddd;
+    border-radius: 8px;
+    padding: 8px 12px;
+}</string>
+           </property>
+           <property name="readOnly">
+            <bool>true</bool>
+           </property>
+          </widget>
+         </item>
+        </layout>
+       </item>
+      </layout>
+     </widget>
+     <widget class="QWidget" name="self_page">
+      <layout class="QHBoxLayout" name="self_layout_page">
+       <property name="leftMargin">
+        <number>60</number>
+       </property>
+       <item>
+        <layout class="QVBoxLayout" name="self_layout_info">
+         <item>
+          <widget class="QLineEdit" name="self_edit_nickname">
+           <property name="minimumSize">
+            <size>
+             <width>1</width>
+             <height>1</height>
+            </size>
+           </property>
+           <property name="readOnly">
+            <bool>true</bool>
+           </property>
+          </widget>
+         </item>
+         <item>
+          <widget class="QTextEdit" name="self_edit_content">
+           <property name="minimumSize">
+            <size>
+             <width>1</width>
+             <height>1</height>
+            </size>
+           </property>
+           <property name="styleSheet">
+            <string notr="true">QTextEdit {
+    background-color: #95ec69;
+    border: 1px solid #95ec69;
+    border-radius: 8px;
+    padding: 8px 12px;
+}</string>
+           </property>
+           <property name="readOnly">
+            <bool>true</bool>
+           </property>
+          </widget>
+         </item>
+        </layout>
+       </item>
+       <item>
+        <widget class="QToolButton" name="self_button_avatar">
+         <property name="styleSheet">
+          <string notr="true">QToolButton {
+    border-radius: 20px;
+    background-color: #e0e0e0;
+    border: 1px solid #ccc;
+}</string>
+         </property>
+         <property name="text">
+          <string>Avatar</string>
+         </property>
+        </widget>
+       </item>
+      </layout>
+     </widget>
+     <widget class="QWidget" name="time_page">
+      <layout class="QHBoxLayout" name="time_layout_page">
+       <item>
+        <spacer name="time_spacer_left">
+         <property name="orientation">
+          <enum>Qt::Orientation::Horizontal</enum>
+         </property>
+         <property name="sizeHint" stdset="0">
+          <size>
+           <width>133</width>
+           <height>20</height>
+          </size>
+         </property>
+        </spacer>
+       </item>
+       <item>
+        <widget class="QToolButton" name="time_button_text">
+         <property name="minimumSize">
+          <size>
+           <width>1</width>
+           <height>1</height>
+          </size>
+         </property>
+         <property name="font">
+          <font>
+           <pointsize>8</pointsize>
+          </font>
+         </property>
+         <property name="styleSheet">
+          <string notr="true">QToolButton { color: #999; }</string>
+         </property>
+         <property name="text">
+          <string>2026-01-01 周四 00:00:00</string>
+         </property>
+        </widget>
+       </item>
+       <item>
+        <spacer name="time_spacer_right">
+         <property name="orientation">
+          <enum>Qt::Orientation::Horizontal</enum>
+         </property>
+         <property name="sizeHint" stdset="0">
+          <size>
+           <width>132</width>
+           <height>20</height>
+          </size>
+         </property>
+        </spacer>
+       </item>
+      </layout>
+     </widget>
+    </widget>
+   </item>
+  </layout>
+ </widget>
+ <resources/>
+ <connections/>
+</ui>

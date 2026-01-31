@@ -1,5 +1,4 @@
-#ifndef ITEMCHAT_H
-#define ITEMCHAT_H
+#pragma once
 
 #include <QWidget>
 
@@ -26,6 +25,9 @@ public:
     explicit ItemChat(const ItemChatData data, QWidget *parent = nullptr);
     ~ItemChat();
 
+    // 获取数据
+    const ItemChatData& get_data() const { return m_data; }
+
 private:
     void update_data(const ItemChatData &data);
     void update_ui();
@@ -34,5 +36,3 @@ private:
     Ui::ItemChat *ui;
     ItemChatData  m_data;
 };
-
-#endif // ITEMCHAT_H

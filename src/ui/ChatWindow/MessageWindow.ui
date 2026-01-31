@@ -1,0 +1,147 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<ui version="4.0">
+ <class>MessageWindow</class>
+ <widget class="QWidget" name="MessageWindow">
+  <property name="geometry">
+   <rect>
+    <x>0</x>
+    <y>0</y>
+    <width>344</width>
+    <height>355</height>
+   </rect>
+  </property>
+  <property name="windowTitle">
+   <string>Form</string>
+  </property>
+  <layout class="QGridLayout" name="layout_message_window">
+   <item row="0" column="0">
+    <layout class="QGridLayout" name="layout_title">
+     <item row="0" column="3">
+      <widget class="QToolButton" name="button_detail">
+       <property name="text">
+        <string>Detail</string>
+       </property>
+      </widget>
+     </item>
+     <item row="0" column="1">
+      <widget class="QLabel" name="label_title">
+       <property name="text">
+        <string>Title</string>
+       </property>
+      </widget>
+     </item>
+     <item row="0" column="2">
+      <spacer name="spacer_title">
+       <property name="orientation">
+        <enum>Qt::Orientation::Horizontal</enum>
+       </property>
+       <property name="sizeHint" stdset="0">
+        <size>
+         <width>40</width>
+         <height>20</height>
+        </size>
+       </property>
+      </spacer>
+     </item>
+     <item row="0" column="0">
+      <widget class="QToolButton" name="button_title_avatar">
+       <property name="text">
+        <string>Avatar</string>
+       </property>
+      </widget>
+     </item>
+    </layout>
+   </item>
+   <item row="1" column="0">
+    <widget class="QListWidget" name="list_messages"/>
+   </item>
+   <item row="2" column="0">
+    <widget class="QWidget" name="widget_input" native="true">
+     <layout class="QGridLayout" name="layout_widget_input">
+      <item row="0" column="0">
+       <layout class="QHBoxLayout" name="layout_button_ctrls">
+        <item>
+         <widget class="QToolButton" name="button_emoji">
+          <property name="text">
+           <string>Emoji</string>
+          </property>
+         </widget>
+        </item>
+        <item>
+         <widget class="QToolButton" name="button_file">
+          <property name="text">
+           <string>File</string>
+          </property>
+         </widget>
+        </item>
+        <item>
+         <widget class="QToolButton" name="button_screenshot">
+          <property name="text">
+           <string>Screenshot</string>
+          </property>
+         </widget>
+        </item>
+        <item>
+         <spacer name="spacer_button_ctrls">
+          <property name="orientation">
+           <enum>Qt::Orientation::Horizontal</enum>
+          </property>
+          <property name="sizeHint" stdset="0">
+           <size>
+            <width>40</width>
+            <height>20</height>
+           </size>
+          </property>
+         </spacer>
+        </item>
+        <item>
+         <widget class="QToolButton" name="button_voice">
+          <property name="text">
+           <string>Voice</string>
+          </property>
+         </widget>
+        </item>
+        <item>
+         <widget class="QToolButton" name="button_video">
+          <property name="text">
+           <string>Video</string>
+          </property>
+         </widget>
+        </item>
+       </layout>
+      </item>
+      <item row="1" column="0">
+       <widget class="QTextEdit" name="textEdit"/>
+      </item>
+      <item row="2" column="0">
+       <layout class="QHBoxLayout" name="layout_send">
+        <item>
+         <spacer name="spacer_send">
+          <property name="orientation">
+           <enum>Qt::Orientation::Horizontal</enum>
+          </property>
+          <property name="sizeHint" stdset="0">
+           <size>
+            <width>40</width>
+            <height>20</height>
+           </size>
+          </property>
+         </spacer>
+        </item>
+        <item>
+         <widget class="QToolButton" name="button_send">
+          <property name="text">
+           <string>Send</string>
+          </property>
+         </widget>
+        </item>
+       </layout>
+      </item>
+     </layout>
+    </widget>
+   </item>
+  </layout>
+ </widget>
+ <resources/>
+ <connections/>
+</ui>

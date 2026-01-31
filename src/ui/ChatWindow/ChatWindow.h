@@ -9,9 +9,12 @@
 #include <QScrollBar>
 #include <QMenu>
 #include <QAction>
+#include <QMap>
 
 #include "ItemChat.h"
 #include "ItemContent.h"
+#include "ItemMessage.h"
+#include "MessageWindow.h"
 
 namespace Ui {
 class ChatWindow;
@@ -32,6 +35,12 @@ private:
     void clear_chat_list   ();
     void clear_content_list();
 
+    // 聊天消息管理
+    void on_chat_item_clicked(QListWidgetItem *item);
+    void show_chat_messages(const QString &chat_id);
+    void add_chat_message(const QString &chat_id, const ItemMessageData &data);
+    void clear_chat_messages();
+
 signals:
     void signout();
 
@@ -44,4 +53,7 @@ private:
     QMenu          *m_menu_add        = nullptr;
     QAction        *m_action_add      = nullptr;
     QAction        *m_action_create   = nullptr;
+
+    QMap<QString, MessageWindow*> m_message_windows;  // 聊天室 ID 与对应窗口的绑定
+    UserMessages m_user_messages;
 };

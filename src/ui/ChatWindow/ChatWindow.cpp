@@ -39,6 +39,9 @@ ChatWindow::ChatWindow(QWidget *parent)
     connect(m_action_add       , &QAction    ::triggered, this, [&](){ qDebug() << "m_action_add"     ; });
     connect(m_action_create    , &QAction    ::triggered, this, [&](){ qDebug() << "m_action_create"  ; });
 
+    // 连接聊天列表点击事件
+    connect(ui->page_list_chat, &QListWidget::itemClicked, this, &ChatWindow::on_chat_item_clicked);
+
     // 执行操作
     ui->navigate_button_chat->click();  // 初始化状态
     // 替换为可滑动窗口
@@ -48,6 +51,8 @@ ChatWindow::ChatWindow(QWidget *parent)
     // m_split_content->addWidget(ui->stacked_content_list);
     m_split_content->addWidget(ui->widget_content_list);
     m_split_content->addWidget(ui->stacked_content_detail);
+    m_split_content->setStretchFactor(0, 0); // 编号 0 的窗口拉伸因子为 0 // 整个窗口调整大小时左侧宽度不调整
+    m_split_content->setStretchFactor(1, 1);
     ui->chat_layout->replaceWidget(ui->content_widget, m_split_content);
 
     // 设置菜单
@@ -72,6 +77,8 @@ ChatWindow::ChatWindow(QWidget *parent)
     // 设置列表属性
     ui->page_list_chat->setSpacing(0);
     ui->page_list_chat->setVerticalScrollMode(QAbstractItemView::ScrollPerPixel);
+    // m_split_content->setSizes(QList<int>{100, 100});
+    ui->widget_content_list->resize(300, ui->widget_content_list->height());
 
     // TODO:设置最小宽度为 ItemChat 宽度 + 滚动条宽度
     // ui->stacked_content_list->setMinimumWidth(ItemChat().minimumWidth() + ui->page_list_chat->verticalScrollBar()->sizeHint().width());
@@ -114,11 +121,6 @@ ChatWindow::ChatWindow(QWidget *parent)
         add_chat_item(item5);
     }
 
-    // // debug - content list
-    // for(int i = 0; i < 50; ++i){
-    //     ui->page_list_content->addItem("content list " + QString::number(i));
-    // }
-
     // debug - 添加示例联系人数据
     {
         ItemContentData item1;
@@ -140,6 +142,29 @@ ChatWindow::ChatWindow(QWidget *parent)
         ItemContentData item5;
         item5.nickname = "开发组";
         add_content_item(item5);
+    }
+
+    // debug - 初始化示例聊天消息
+    {
+        // 张三的聊天记录
+        add_chat_message("张三", ItemMessageData{"", "张三", "你好，晚上有空吗?", "18:20", false});
+        add_chat_message("张三", ItemMessageData{"", "我", "有空啊，什么事?", "18:22", true});
+        add_chat_message("张三", ItemMessageData{"", "张三", "晚上一起吃饭吗?", "18:30", false});
+
+        // 李四的聊天记录
+        add_chat_message("李四", ItemMessageData{"", "我", "明天见!", "17:10", true});
+        add_chat_message("李四", ItemMessageData{"", "李四", "好的，明天见!", "17:15", false});
+
+        // 王五的聊天记录
+        add_chat_message("王五", ItemMessageData{"", "王五", "周末有空吗?", "昨天 10:30", false});
+        add_chat_message("王五", ItemMessageData{"", "王五", "一起打篮球", "昨天 10:31", false});
+
+        // 赵六的聊天记录
+        add_chat_message("赵六", ItemMessageData{"", "赵六", "[图片]", "周三", false});
+
+        // 开发组的聊天记录
+        add_chat_message("开发组", ItemMessageData{"", "组长", "大家注意一下", "1月27日 14:50", false});
+        add_chat_message("开发组", ItemMessageData{"", "组长", "今天下午3点开会", "1月27日 14:51", false});
     }
 }
 
@@ -224,4 +249,56 @@ void ChatWindow::clear_chat_list() {
 
 void ChatWindow::clear_content_list() {
     ui->page_list_chat->clear();
+}
+
+void ChatWindow::on_chat_item_clicked(QListWidgetItem *item) {
+    // 获取对应的 ItemChat Widget
+    ItemChat *item_chat = qobject_cast<ItemChat*>(ui->page_list_chat->itemWidget(item));
+    if (item_chat) {
+        QString chat_id = item_chat->get_data().nickname;
+        qDebug() << "Clicked chat item:" << chat_id;
+        show_chat_messages(chat_id);
+    }
+}
+
+void ChatWindow::show_chat_messages(const QString &chat_id) {
+    // 有则切换，无则添加
+    // 切换
+    auto ite = m_message_windows.find(chat_id);
+    if(ite != m_message_windows.end()) {
+        ui->stacked_content_detail->setCurrentWidget(*ite);
+        return;
+    }
+    // 添加
+    MessageWindow*message_window = new MessageWindow;
+    ui->stacked_content_detail->addWidget(message_window);
+    ui->stacked_content_detail->setCurrentWidget(message_window);
+    // 设置标题
+    message_window->update_info(ChatroomInfo(chat_id));
+    // 显示对应聊天的消息
+    if (m_user_messages.contains(chat_id)) {
+        const ChatroomMessages &chatroom_messages = m_user_messages[chat_id];
+        message_window->update_data(chatroom_messages);
+        ui->page_list_detail->scrollToBottom();  // 滚动到底部
+    }
+    else {
+        message_window->update_data(ChatroomMessages());
+    }
+}
+
+void ChatWindow::add_chat_message(const QString &chat_id, const ItemMessageData &data) {
+    if (!m_user_messages.contains(chat_id)) {
+        m_user_messages[chat_id] = QVector<ItemMessageData>();
+    }
+    m_user_messages[chat_id].append(data);
+
+    MessageWindow *message_window = dynamic_cast<MessageWindow*>(ui->stacked_content_detail->currentWidget());
+    if(message_window) {
+        message_window->append_message(data);
+    }
+}
+
+void ChatWindow::clear_chat_messages() {
+    ui->page_list_detail->clear();
+    m_user_messages.clear();
 }

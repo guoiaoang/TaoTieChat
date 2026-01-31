@@ -1,5 +1,4 @@
-#ifndef ITEMCONTENT_H
-#define ITEMCONTENT_H
+#pragma once
 
 #include <QWidget>
 
@@ -29,5 +28,3 @@ private:
     Ui::ItemContent *ui;
     ItemContentData m_data;
 };
-
-#endif // ITEMCONTENT_H

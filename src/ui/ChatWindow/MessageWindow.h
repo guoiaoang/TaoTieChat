@@ -2,31 +2,31 @@
 
 #include <QWidget>
 #include <QSplitter>
-#include "ItemMessage.h"
+
+#include "data.h"
 
 namespace Ui {
 class MessageWindow;
 }
 
+// 单个聊天对话框
 class MessageWindow : public QWidget {
     Q_OBJECT
 
 public:
     explicit MessageWindow(QWidget *parent = nullptr);
-    explicit MessageWindow(
-        const ChatroomMessages&chatroom_messages,
-        QWidget *parent = nullptr);
+    explicit MessageWindow(Content content, Messages messages, QWidget *parent = nullptr);
     ~MessageWindow();
 
 // private:
-    void update_info(const ChatroomInfo&chatroom_info);
-    void update_data(const ChatroomMessages &chatroom_messages);
-    void update_ui();
-    void append_message(const ItemMessageData&item_message_data);
+    void update_contents(Content  content );
+    void update_messages(Messages messages);
+    void append_message (Message  message );
+    // void update_ui();
 
 private:
-    Ui::MessageWindow *ui;
+    Ui::MessageWindow *ui         = nullptr;
     QSplitter         *m_splitter = nullptr;
-    ChatroomInfo       m_chatroom_info;
-    ChatroomMessages   m_chatroom_messages;
+    Content  m_content ;
+    Messages m_messages;
 };

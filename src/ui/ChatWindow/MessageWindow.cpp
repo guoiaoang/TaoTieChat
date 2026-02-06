@@ -2,14 +2,22 @@
 #include "ui_MessageWindow.h"
 
 MessageWindow::MessageWindow(QWidget *parent)
-    : MessageWindow(ChatroomMessages(), parent) {
+    : MessageWindow(nullptr, nullptr, parent) {
 }
 
-MessageWindow::MessageWindow(const ChatroomMessages&chatroom_messages, QWidget *parent)
-    : QWidget(parent), ui(new Ui::MessageWindow) {
+MessageWindow::MessageWindow(Content content, Messages messages, QWidget *parent)
+    : QWidget(parent), ui(new Ui::MessageWindow), m_content(content), m_messages(messages) {
     ui->setupUi(this);
     m_splitter = new QSplitter;
+    if(m_content == nullptr) {
+        m_content = QSharedPointer<TypeContent>(new TypeContent);
+    }
+    if(m_messages == nullptr) {
+        m_messages = QSharedPointer<TypeMessages>(new TypeMessages);
+    }
+
     ui->list_messages->setSpacing(0);
+    // 按像素滚动，而不是按条目 (会发生跳变)
     ui->list_messages->setVerticalScrollMode(QAbstractItemView::ScrollPerPixel);
 
     // 替换
@@ -18,10 +26,13 @@ MessageWindow::MessageWindow(const ChatroomMessages&chatroom_messages, QWidget *
     m_splitter->addWidget(ui->list_messages);
     ui->layout_message_window->replaceWidget(ui->widget_input, m_splitter);
     m_splitter->addWidget(ui->widget_input);
-    // ui->widget_input->resize(200, ui->widget_input->width()); // 为生效??
+
+    // ui->widget_input->resize(200, ui->widget_input->width()); // 未生效？?
+    // 设置拉伸因子 // 拉伸主窗口时窗口调整大小的策略
     m_splitter->setStretchFactor(0, 1);
     m_splitter->setStretchFactor(1, 0);
-    update_ui();
+
+    // update_ui();
 }
 
 MessageWindow::~MessageWindow() {
@@ -35,54 +46,17 @@ MessageWindow::~MessageWindow() {
     }
 }
 
-void MessageWindow::update_info(const ChatroomInfo&chatroom_info) {
-    m_chatroom_info = chatroom_info;
+void MessageWindow::update_contents(Content content ) {
+    m_content = content;
 }
 
 // 消息较多时应该差异化更新
-void MessageWindow::update_data(const ChatroomMessages &chatroom_messages) {
-    // if(chatroom_messages == m_chatroom_messages) {
-    //     return;
-    // }
-    m_chatroom_messages = chatroom_messages;
-    update_ui();
+void MessageWindow::update_messages(Messages messages) {
+    m_messages = messages;
 }
 
-void MessageWindow::update_ui() {
-    // 清空当前消息列表
-    ui->list_messages->clear();
-    for (const ItemMessageData &item_message_data : m_chatroom_messages) {
-        QListWidgetItem *list_widget_item = new QListWidgetItem(ui->list_messages);
-        ItemMessage     *item_message     = new ItemMessage(item_message_data, ui->list_messages);
-        list_widget_item ->setSizeHint(item_message->sizeHint());
-        ui->list_messages->setItemWidget(list_widget_item, item_message);
-    }
-    // 更新标题名称
-    ui->label_title->setText(m_chatroom_info.title);
-    // 更新头像
-    if (!m_chatroom_info.avatar.isEmpty() && !QIcon(m_chatroom_info.avatar).isNull()) {
-        QIcon ico(m_chatroom_info.avatar);
-        // avatar->setPixmap(pixmap.scaled(48, 48, Qt::KeepAspectRatioByExpanding, Qt::SmoothTransformation));
-        ui->button_title_avatar->setIcon(ico);
-    } else {
-        // 显示昵称首字母
-        if (m_chatroom_info.title.length() > 0) {
-            QString initial = m_chatroom_info.title.left(1).toUpper();
-            ui->button_title_avatar->setText(initial);
-            // avatar->setAlignment(Qt::AlignCenter);
-            QFont avatarFont;
-            avatarFont.setPointSize(20);
-            avatarFont.setBold(true);
-            ui->button_title_avatar->setFont(avatarFont);
-        }
-    }
-}
-
-void MessageWindow::append_message(const ItemMessageData&item_message_data) {
-    m_chatroom_messages.append(item_message_data);
-    QListWidgetItem *list_widget_item = new QListWidgetItem(ui->list_messages);
-    ItemMessage     *item_message     = new ItemMessage(item_message_data, ui->list_messages);
-    list_widget_item ->setSizeHint(item_message->sizeHint());
-    ui->list_messages->setItemWidget(list_widget_item, item_message);
+void MessageWindow::append_message (Message message ) {
+    //
     ui->list_messages->scrollToBottom(); // 滚动到最后
 }
+

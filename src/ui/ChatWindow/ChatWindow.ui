@@ -42,7 +42,7 @@
       <item>
        <layout class="QVBoxLayout" name="navigate_layout_contact">
         <item>
-         <widget class="QToolButton" name="navigate_button_chat">
+         <widget class="QToolButton" name="navigate_button_chat_room">
           <property name="sizePolicy">
            <sizepolicy hsizetype="Preferred" vsizetype="Preferred">
             <horstretch>0</horstretch>
@@ -151,7 +151,7 @@
            <property name="frameShadow">
             <enum>QFrame::Shadow::Raised</enum>
            </property>
-           <widget class="QWidget" name="stacked_page_chat">
+           <widget class="QWidget" name="stacked_page_chat_room">
             <layout class="QGridLayout" name="stacked_layout_chat">
              <property name="leftMargin">
               <number>0</number>
@@ -166,7 +166,7 @@
               <number>0</number>
              </property>
              <item row="0" column="0">
-              <widget class="QListWidget" name="page_list_chat"/>
+              <widget class="QListView" name="page_list_chat_room"/>
              </item>
             </layout>
            </widget>
@@ -185,7 +185,7 @@
               <number>0</number>
              </property>
              <item row="0" column="0">
-              <widget class="QListWidget" name="page_list_content"/>
+              <widget class="QListView" name="page_list_content"/>
              </item>
             </layout>
            </widget>
@@ -217,7 +217,7 @@
            <number>0</number>
           </property>
           <item row="0" column="0">
-           <widget class="QListWidget" name="page_list_detail"/>
+           <widget class="QListView" name="page_list_detail"/>
           </item>
          </layout>
         </widget>

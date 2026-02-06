@@ -39,6 +39,7 @@ message(STATUS "QT_MAINTENANCE_TOOL  : ${QT_MAINTENANCE_TOOL}")
 # endif()
 
 include_directories(${CMAKE_CURRENT_SOURCE_DIR}/src)
+include_directories(${CMAKE_CURRENT_SOURCE_DIR}/src/data)
 include_directories(${CMAKE_CURRENT_SOURCE_DIR}/src/ui/MainWindow)
 include_directories(${CMAKE_CURRENT_SOURCE_DIR}/src/ui/AuthWindow)
 include_directories(${CMAKE_CURRENT_SOURCE_DIR}/src/ui/ChatWindow)
@@ -46,6 +47,7 @@ include_directories(${CMAKE_CURRENT_SOURCE_DIR}/src/ui/ChatWindow)
 qt_add_executable(TaoTieChat
     WIN32 MACOSX_BUNDLE
     ${CMAKE_CURRENT_SOURCE_DIR}/src/main.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/data/data.h
     ${CMAKE_CURRENT_SOURCE_DIR}/src/ui/MainWindow/MainWindow.h
     ${CMAKE_CURRENT_SOURCE_DIR}/src/ui/MainWindow/MainWindow.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/src/ui/MainWindow/MainWindow.ui
@@ -55,18 +57,13 @@ qt_add_executable(TaoTieChat
     ${CMAKE_CURRENT_SOURCE_DIR}/src/ui/ChatWindow/ChatWindow.h
     ${CMAKE_CURRENT_SOURCE_DIR}/src/ui/ChatWindow/ChatWindow.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/src/ui/ChatWindow/ChatWindow.ui
-    ${CMAKE_CURRENT_SOURCE_DIR}/src/ui/ChatWindow/ItemChat.h
-    ${CMAKE_CURRENT_SOURCE_DIR}/src/ui/ChatWindow/ItemChat.cpp
-    ${CMAKE_CURRENT_SOURCE_DIR}/src/ui/ChatWindow/ItemChat.ui
-    ${CMAKE_CURRENT_SOURCE_DIR}/src/ui/ChatWindow/ItemContent.h
-    ${CMAKE_CURRENT_SOURCE_DIR}/src/ui/ChatWindow/ItemContent.cpp
-    ${CMAKE_CURRENT_SOURCE_DIR}/src/ui/ChatWindow/ItemContent.ui
     ${CMAKE_CURRENT_SOURCE_DIR}/src/ui/ChatWindow/MessageWindow.h
     ${CMAKE_CURRENT_SOURCE_DIR}/src/ui/ChatWindow/MessageWindow.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/src/ui/ChatWindow/MessageWindow.ui
-    ${CMAKE_CURRENT_SOURCE_DIR}/src/ui/ChatWindow/ItemMessage.h
-    ${CMAKE_CURRENT_SOURCE_DIR}/src/ui/ChatWindow/ItemMessage.cpp
-    ${CMAKE_CURRENT_SOURCE_DIR}/src/ui/ChatWindow/ItemMessage.ui
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/ui/ChatWindow/ContentModel.h
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/ui/ChatWindow/ContentModel.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/ui/ChatWindow/ContentDelegate.h
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/ui/ChatWindow/ContentDelegate.cpp
 )
 
 qt_add_translations(

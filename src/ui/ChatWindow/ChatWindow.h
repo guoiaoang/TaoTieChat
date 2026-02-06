@@ -11,10 +11,9 @@
 #include <QAction>
 #include <QMap>
 
-#include "ItemChat.h"
-#include "ItemContent.h"
-#include "ItemMessage.h"
 #include "MessageWindow.h"
+#include "ContentModel.h"
+#include "ContentDelegate.h"
 
 namespace Ui {
 class ChatWindow;
@@ -28,18 +27,26 @@ public:
     ~ChatWindow();
 
 private:
+    // 显示设置菜单
     void on_show_settings_menu();
+    // 显示 创建/添加 好友/群组 菜单
     void on_show_add_menu();
-    void add_chat_item   (const ItemChatData &data);
-    void add_content_item(const ItemContentData &data);
-    void clear_chat_list   ();
-    void clear_content_list();
 
-    // 聊天消息管理
-    void on_chat_item_clicked(QListWidgetItem *item);
-    void show_chat_messages(const QString &chat_id);
-    void add_chat_message(const QString &chat_id, const ItemMessageData &data);
-    void clear_chat_messages();
+    // // 聊天室管理
+    // 添加到聊天室列表
+    void add_chat_room(Content content);
+    // 点击聊天室中的一个对话
+    void on_chat_room_item_clicked(QListWidgetItem *item);
+    // 显示指定聊天室的对话
+    void show_chat_room_messages(Content content);
+
+    // // 联系人管理
+    // 添加到联系人列表
+    void add_content(Content content);
+    // 点击联系人列表中的一个联系人
+    void on_content_item_clicked(QListWidgetItem *item);
+    // 显示指定联系人的信息
+    void show_content_info(Content content);
 
 signals:
     void signout();
@@ -54,6 +61,9 @@ private:
     QAction        *m_action_add      = nullptr;
     QAction        *m_action_create   = nullptr;
 
-    QMap<QString, MessageWindow*> m_message_windows;  // 聊天室 ID 与对应窗口的绑定
-    UserMessages m_user_messages;
+    QMap<Content, MessageWindow*> m_message_windows;  // 聊天室 ID 与对应窗口的绑定
+    UserMessages  m_user_messages;
+    // model/view/delegate
+    ContentModel    *m_content_model    = nullptr;
+    ContentDelegate *m_content_delegate = nullptr;
 };

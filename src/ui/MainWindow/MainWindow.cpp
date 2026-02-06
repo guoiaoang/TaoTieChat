@@ -36,7 +36,7 @@ MainWindow::MainWindow(QWidget *parent)
     ui->main_stacked->addWidget(m_auth_window);
     ui->main_stacked->setCurrentWidget(m_auth_window);
 
-    // 登陆检查
+    // TODO:登陆检查
     QTimer::singleShot(0, this, &MainWindow::on_init);
 
     // // 4.显示

@@ -52,9 +52,6 @@
      </item>
     </layout>
    </item>
-   <item row="1" column="0">
-    <widget class="QListWidget" name="list_messages"/>
-   </item>
    <item row="2" column="0">
     <widget class="QWidget" name="widget_input" native="true">
      <layout class="QGridLayout" name="layout_widget_input">
@@ -139,6 +136,9 @@
       </item>
      </layout>
     </widget>
+   </item>
+   <item row="1" column="0">
+    <widget class="QListView" name="list_messages"/>
    </item>
   </layout>
  </widget>

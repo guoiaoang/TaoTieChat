@@ -50,7 +50,7 @@
          <property name="widgetResizable">
           <bool>true</bool>
          </property>
-         <widget class="QWidget" name="singin_contents">
+         <widget class="QWidget" name="singin_contacts">
           <property name="geometry">
            <rect>
             <x>0</x>
@@ -59,7 +59,7 @@
             <height>398</height>
            </rect>
           </property>
-          <layout class="QVBoxLayout" name="singin_layout_contents">
+          <layout class="QVBoxLayout" name="singin_layout_contacts">
            <property name="spacing">
             <number>0</number>
            </property>
@@ -277,7 +277,7 @@
          <property name="widgetResizable">
           <bool>true</bool>
          </property>
-         <widget class="QWidget" name="qrcode_contents">
+         <widget class="QWidget" name="qrcode_contacts">
           <property name="geometry">
            <rect>
             <x>0</x>
@@ -310,7 +310,7 @@
          <property name="widgetResizable">
           <bool>true</bool>
          </property>
-         <widget class="QWidget" name="twofa_contents">
+         <widget class="QWidget" name="twofa_contacts">
           <property name="geometry">
            <rect>
             <x>0</x>
@@ -349,7 +349,7 @@
          <property name="widgetResizable">
           <bool>true</bool>
          </property>
-         <widget class="QWidget" name="signup_contents">
+         <widget class="QWidget" name="signup_contacts">
           <property name="geometry">
            <rect>
             <x>0</x>
@@ -358,7 +358,7 @@
             <height>398</height>
            </rect>
           </property>
-          <layout class="QVBoxLayout" name="signup_layout_contents">
+          <layout class="QVBoxLayout" name="signup_layout_contacts">
            <property name="spacing">
             <number>6</number>
            </property>

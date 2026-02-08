@@ -48,22 +48,31 @@ qt_add_executable(TaoTieChat
     WIN32 MACOSX_BUNDLE
     ${CMAKE_CURRENT_SOURCE_DIR}/src/main.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/src/data/data.h
+    # 主窗口
     ${CMAKE_CURRENT_SOURCE_DIR}/src/ui/MainWindow/MainWindow.h
     ${CMAKE_CURRENT_SOURCE_DIR}/src/ui/MainWindow/MainWindow.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/src/ui/MainWindow/MainWindow.ui
+    # 登录/认证窗口
     ${CMAKE_CURRENT_SOURCE_DIR}/src/ui/AuthWindow/AuthWindow.h
     ${CMAKE_CURRENT_SOURCE_DIR}/src/ui/AuthWindow/AuthWindow.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/src/ui/AuthWindow/AuthWindow.ui
+    # 聊天窗口，聊天/联系人列表及内容页面
     ${CMAKE_CURRENT_SOURCE_DIR}/src/ui/ChatWindow/ChatWindow.h
     ${CMAKE_CURRENT_SOURCE_DIR}/src/ui/ChatWindow/ChatWindow.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/src/ui/ChatWindow/ChatWindow.ui
+    # 消息窗口，显示聊天对话框
     ${CMAKE_CURRENT_SOURCE_DIR}/src/ui/ChatWindow/MessageWindow.h
     ${CMAKE_CURRENT_SOURCE_DIR}/src/ui/ChatWindow/MessageWindow.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/src/ui/ChatWindow/MessageWindow.ui
-    ${CMAKE_CURRENT_SOURCE_DIR}/src/ui/ChatWindow/ContentModel.h
-    ${CMAKE_CURRENT_SOURCE_DIR}/src/ui/ChatWindow/ContentModel.cpp
-    ${CMAKE_CURRENT_SOURCE_DIR}/src/ui/ChatWindow/ContentDelegate.h
-    ${CMAKE_CURRENT_SOURCE_DIR}/src/ui/ChatWindow/ContentDelegate.cpp
+    # 聊天窗口的联系人列表 model/view 实现
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/ui/ChatWindow/ContactModel.h
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/ui/ChatWindow/ContactModel.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/ui/ChatWindow/ContactDelegate.h
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/ui/ChatWindow/ContactDelegate.cpp
+    # 联系人信息页面，与 ContactModel/ContactDelegate 无关
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/ui/ChatWindow/ContactWindow.h
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/ui/ChatWindow/ContactWindow.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/ui/ChatWindow/ContactWindow.ui
 )
 
 qt_add_translations(

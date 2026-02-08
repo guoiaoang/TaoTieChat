@@ -15,11 +15,11 @@ class MessageWindow : public QWidget {
 
 public:
     explicit MessageWindow(QWidget *parent = nullptr);
-    explicit MessageWindow(Content content, Messages messages, QWidget *parent = nullptr);
+    explicit MessageWindow(Contact contact, Messages messages, QWidget *parent = nullptr);
     ~MessageWindow();
 
 // private:
-    void update_contents(Content  content );
+    void update_contacts(Contact  contact );
     void update_messages(Messages messages);
     void append_message (Message  message );
     // void update_ui();
@@ -27,6 +27,6 @@ public:
 private:
     Ui::MessageWindow *ui         = nullptr;
     QSplitter         *m_splitter = nullptr;
-    Content  m_content ;
+    Contact  m_contact ;
     Messages m_messages;
 };

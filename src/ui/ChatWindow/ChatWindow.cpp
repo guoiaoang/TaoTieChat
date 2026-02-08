@@ -12,7 +12,7 @@ ChatWindow::ChatWindow(QWidget *parent)
     // // connect(ui->button_chat, &QToolButton::clicked, this, &ChatWindow::accept);
 
     // 创建对象
-    m_split_content   = new QSplitter;
+    m_split_contact   = new QSplitter;
     m_menu_settings   = new QMenu  ;
     m_action_signout  = new QAction;
     m_action_settings = new QAction;
@@ -24,13 +24,13 @@ ChatWindow::ChatWindow(QWidget *parent)
     // 连接消息
     // 点击了聊天室按钮
     connect(ui->navigate_button_chat_room, &QToolButton::clicked  , this, [&](){
-        ui->stacked_content_list->setCurrentWidget(ui->stacked_page_chat_room);
+        ui->stacked_contact_list->setCurrentWidget(ui->stacked_page_chat_room);
         ui->navigate_button_chat_room->setEnabled(false);
         ui->navigate_button_contact  ->setEnabled(true );
     });
     // 点击了联系人按钮
     connect(ui->navigate_button_contact, &QToolButton::clicked  , this, [&](){
-        ui->stacked_content_list->setCurrentWidget(ui->stacked_page_content);
+        ui->stacked_contact_list->setCurrentWidget(ui->stacked_page_contact);
         ui->navigate_button_chat_room->setEnabled(true );
         ui->navigate_button_contact  ->setEnabled(false);
     });
@@ -49,15 +49,15 @@ ChatWindow::ChatWindow(QWidget *parent)
     // 执行操作
     ui->navigate_button_chat_room->click();  // 初始化状态
     // 替换为可滑动窗口
-    // ui->content_layout->removeWidget(ui->stacked_content_list);
-    ui->content_layout->removeWidget(ui->widget_content_list);
-    ui->content_layout->removeWidget(ui->stacked_content_detail);
-    // m_split_content->addWidget(ui->stacked_content_list);
-    m_split_content->addWidget(ui->widget_content_list);
-    m_split_content->addWidget(ui->stacked_content_detail);
-    m_split_content->setStretchFactor(0, 0); // 编号 0 的窗口拉伸因子为 0 // 整个窗口调整大小时左侧宽度不调整
-    m_split_content->setStretchFactor(1, 1);
-    ui->chat_layout->replaceWidget(ui->content_widget, m_split_content);
+    // ui->contact_layout->removeWidget(ui->stacked_contact_list);
+    ui->contact_layout->removeWidget(ui->widget_contact_list);
+    ui->contact_layout->removeWidget(ui->stacked_contact_detail);
+    // m_split_contact->addWidget(ui->stacked_contact_list);
+    m_split_contact->addWidget(ui->widget_contact_list);
+    m_split_contact->addWidget(ui->stacked_contact_detail);
+    m_split_contact->setStretchFactor(0, 0); // 编号 0 的窗口拉伸因子为 0 // 整个窗口调整大小时左侧宽度不调整
+    m_split_contact->setStretchFactor(1, 1);
+    ui->chat_layout->replaceWidget(ui->contact_widget, m_split_contact);
 
     // 设置菜单
     // ui->navigate_button_menu->setMenu(m_menu_settings);
@@ -82,36 +82,75 @@ ChatWindow::ChatWindow(QWidget *parent)
     ui->page_list_chat_room->setSpacing(0);
     // 设置按像素滚动列表内容
     ui->page_list_chat_room->setVerticalScrollMode(QAbstractItemView::ScrollPerPixel);
-    // m_split_content->setSizes(QList<int>{100, 100});
-    ui->widget_content_list->resize(300, ui->widget_content_list->height());
+    // m_split_contact->setSizes(QList<int>{100, 100});
+    ui->widget_contact_list->resize(300, ui->widget_contact_list->height());
 
     // TODO:设置最小宽度为 ItemChat 宽度 + 滚动条宽度
-    // ui->stacked_content_list->setMinimumWidth(ItemChat().minimumWidth() + ui->page_list_chat->verticalScrollBar()->sizeHint().width());
+    // ui->stacked_contact_list->setMinimumWidth(ItemChat().minimumWidth() + ui->page_list_chat->verticalScrollBar()->sizeHint().width());
 
-    // content view/model/delegate
-    m_content_model = new ContentModel;
-    ui->page_list_content->setModel(m_content_model);
-    m_content_delegate = new ContentDelegate;
-    ui->page_list_content->setItemDelegate(m_content_delegate);
-    // content test data
+    // contact view/model/delegate
+    m_contact_model = new ContactModel;
+    ui->page_list_contact->setModel(m_contact_model);
+    m_contact_delegate = new ContactDelegate;
+    ui->page_list_contact->setItemDelegate(m_contact_delegate);
+    // contact test data
     {
-        Content content = QSharedPointer<TypeContent>(new TypeContent);
-        content->set_data("Content ID 01", TypeContent::Type::FRIEND, "Content Avatar 01", "Content NickName 01", "Last Message 01");
-        // content->datas()[TypeContent::ModelRole::ID      ] = "Content ID 01"      ;
-        // content->datas()[TypeContent::ModelRole::Avatar  ] = "Content Avatar 01"  ;
-        // content->datas()[TypeContent::ModelRole::NickName] = "Content NickName 01";
-        // content->datas()[TypeContent::ModelRole::Message ] = "Last Message 01"    ;
-        add_content(content);
-        add_content(QSharedPointer<TypeContent>(new TypeContent("Content ID 02", TypeContent::Type::FRIEND, "Content Avatar 02", "Content NickName 02", "Last Message 02")));
+        Contact contact = QSharedPointer<TypeContact>(new TypeContact);
+        contact->set_data("Contact ID 01", TypeContact::Type::FRIEND, "Contact Avatar 01", "Contact NickName 01", "Last Message 01");
+        // contact->datas()[TypeContact::ModelRole::ID      ] = "Contact ID 01"      ;
+        // contact->datas()[TypeContact::ModelRole::Avatar  ] = "Contact Avatar 01"  ;
+        // contact->datas()[TypeContact::ModelRole::NickName] = "Contact NickName 01";
+        // contact->datas()[TypeContact::ModelRole::Message ] = "Last Message 01"    ;
+        add_contact(contact);
+        add_contact(QSharedPointer<TypeContact>(new TypeContact("Contact ID 02", TypeContact::Type::FRIEND, "Contact Avatar 02", "Contact NickName 02", "Last Message 02")));
+        add_contact(QSharedPointer<TypeContact>(new TypeContact("Contact ID 03", TypeContact::Type::FRIEND, "Contact Avatar 03", "Contact NickName 03", "Last Message 03")));
+    }
+
+    // select
+    {
+        // 推荐 `QItemSelectionModel::currentChanged`
+        // currentChanged：侧重于“焦点”在哪一行（通过键盘上下键移动焦点时触发，即便没有勾选选框）。
+        // selectionChanged：侧重于“高亮/勾选”状态的变化（在多选模式下，即使用户只是增加了一个选中项，也会触发）。
+
+        // // C++ 实现示例
+        // connect(ui->page_list_contact->selectionModel(), &QItemSelectionModel::currentChanged, this, [&](const QModelIndex &current, const QModelIndex &previous) {
+        //             int currentRow = current.row();
+        //             // 在这里处理行号变化
+        //             qDebug() << "current row : " << currentRow;
+        //         });
+        // // 连接信号
+        // connect(ui->page_list_contact->selectionModel(), &QItemSelectionModel::selectionChanged, this, [&](const QItemSelection &selected, const QItemSelection &deselected) {
+        //             // 获取所有当前选中的索引
+        //             QModelIndexList indexes = ui->page_list_contact->selectionModel()->selectedIndexes();
+        //             for (const QModelIndex &index : indexes) {
+        //                 qDebug() << "current row : " << index.row();
+        //             }
+        //         });
+
+        // // 鼠标左键单击会先后触发 pressed, clicked;
+        // // 鼠标左键双击击会先后触发 pressed, clicked, doubleClicked, activated;
+        // // 回车仅会触发 activated;  // 微信回车键无反应
+        // // 空格及方向键均无消息。
+        // // 上下方向键不触发 clicked 等信号，但会触发 currentChanged
+        // connect(ui->page_list_contact, &QListView::pressed        , this, [&](const QModelIndex &index) { qDebug() << "QListView::pressed         " << index; } );
+        // connect(ui->page_list_contact, &QListView::clicked        , this, [&](const QModelIndex &index) { qDebug() << "QListView::clicked         " << index; } );
+        // connect(ui->page_list_contact, &QListView::doubleClicked  , this, [&](const QModelIndex &index) { qDebug() << "QListView::doubleClicked   " << index; } );
+        // connect(ui->page_list_contact, &QListView::activated      , this, [&](const QModelIndex &index) { qDebug() << "QListView::activated       " << index; } );
+        // connect(ui->page_list_contact, &QListView::entered        , this, [&](const QModelIndex &index) { qDebug() << "QListView::entered         " << index; } );
+        // connect(ui->page_list_contact, &QListView::viewportEntered, this, [&](                        ) { qDebug() << "QListView::viewportEntered "         ; } );
+        // connect(ui->page_list_contact, &QListView::iconSizeChanged, this, [&](const QSize       &size ) { qDebug() << "QListView::iconSizeChanged " << size ; } );
+
+        // 使用 currentChanged 信号支持键盘上下键导航和鼠标点击
+        connect(ui->page_list_contact->selectionModel(), &QItemSelectionModel::currentChanged, this, &ChatWindow::on_contact_selection_changed);
     }
 }
 
 ChatWindow::~ChatWindow() {
     delete ui;
     ui = nullptr;
-    if(m_split_content) {
-        delete m_split_content;
-        m_split_content = nullptr;
+    if(m_split_contact) {
+        delete m_split_contact;
+        m_split_contact = nullptr;
     }
     if(m_menu_settings) {
         delete m_menu_settings;
@@ -137,13 +176,13 @@ ChatWindow::~ChatWindow() {
         delete m_action_create;
         m_action_create = nullptr;
     }
-    if(m_content_model) {
-        delete m_content_model;
-        m_content_model = nullptr;
+    if(m_contact_model) {
+        delete m_contact_model;
+        m_contact_model = nullptr;
     }
-    if(m_content_delegate) {
-        delete m_content_delegate;
-        m_content_delegate = nullptr;
+    if(m_contact_delegate) {
+        delete m_contact_delegate;
+        m_contact_delegate = nullptr;
     }
 }
 
@@ -163,66 +202,59 @@ void ChatWindow::on_show_add_menu() {
     m_menu_add->popup(QPoint(pos.x() - w, pos.y()));
 }
 
-void ChatWindow::add_chat_room(Content content) {
-    // 添加聊天室到聊天室列表控件
-    // QListWidgetItem *list_widget_item = new QListWidgetItem(ui->page_list_chat);
-    // ItemChat        *itemWidget       = new ItemChat(data, ui->page_list_chat);
-    // list_widget_item->setSizeHint(itemWidget->sizeHint());
-    // ui->page_list_chat->setItemWidget(list_widget_item, itemWidget);
+void ChatWindow::on_chat_room_item_selected(const QModelIndex &index) {
+    qDebug() << "index : " << index;
 }
 
-void ChatWindow::on_chat_room_item_clicked(QListWidgetItem *item) {
-    // // 获取对应的 ItemChat Widget
-    // ItemChat *item_chat = qobject_cast<ItemChat*>(ui->page_list_chat->itemWidget(item));
-    // if (item_chat) {
-    //     QString chat_id = item_chat->get_data().nickname;
-    //     qDebug() << "Clicked chat item:" << chat_id;
-    //     show_chat_messages(chat_id);
-    // }
+void ChatWindow::on_chat_room_item_activated(const QModelIndex &index) {
+    qDebug() << "index : " << index;
 }
 
-void ChatWindow::show_chat_room_messages(Content content) {
-    // // 有则切换，无则添加
-    // // 切换
-    // auto ite = m_message_windows.find(chat_id);
-    // if(ite != m_message_windows.end()) {
-    //     ui->stacked_content_detail->setCurrentWidget(*ite);
-    //     return;
-    // }
-    // // 添加
-    // MessageWindow*message_window = new MessageWindow;
-    // ui->stacked_content_detail->addWidget(message_window);
-    // ui->stacked_content_detail->setCurrentWidget(message_window);
-    // // 设置标题
-    // message_window->update_info(ChatroomInfo(chat_id));
-    // // 显示对应聊天的消息
-    // if (m_user_messages.contains(chat_id)) {
-    //     const ChatroomMessages &chatroom_messages = m_user_messages[chat_id];
-    //     message_window->update_data(chatroom_messages);
-    //     ui->page_list_detail->scrollToBottom();  // 滚动到底部
-    // }
-    // else {
-    //     message_window->update_data(ChatroomMessages());
-    // }
+void ChatWindow::add_chat_room(Contact contact) {
+    qDebug() << "contact : " << contact->nickname();
 }
 
-void ChatWindow::add_content(Content content) {
-    // QListWidgetItem *list_widget_item = new QListWidgetItem(ui->page_list_content);
-    // ItemContent     *itemWidget       = new ItemContent(data, ui->page_list_content);
-    // list_widget_item->setSizeHint(itemWidget->sizeHint());
-    // ui->page_list_content->setItemWidget(list_widget_item, itemWidget);
-    m_content_model->add_content(content);
+void ChatWindow::show_chat_room_messages(Contact contact) {
+    qDebug() << "contact : " << contact->nickname();
 }
 
-void ChatWindow::on_content_item_clicked(QListWidgetItem *item) {
-    // // 获取对应的 ItemChat Widget
-    // ItemChat *item_chat = qobject_cast<ItemChat*>(ui->page_list_chat->itemWidget(item));
-    // if (item_chat) {
-    //     QString chat_id = item_chat->get_data().nickname;
-    //     qDebug() << "Clicked chat item:" << chat_id;
-    //     show_chat_messages(chat_id);
-    // }
+void ChatWindow::add_contact(Contact contact) {
+    qDebug() << "contact : " << contact->nickname();
+    m_contact_model->add_contact(contact);
 }
 
-void ChatWindow::show_content_info(Content content) {
+void ChatWindow::on_contact_selection_changed(const QModelIndex &current, const QModelIndex &previous) {
+    // 索引值需要有效
+    if (!current.isValid()) {
+        return;
+    }
+    // 能够获取到有效的联系人信息
+    Contact contact = m_contact_model->contact(current);
+    if (!contact) {
+        return;
+    }
+    // 查找是否已经添加
+    ContactWindow *contact_window_update = nullptr;
+    for(int idx = 0; idx < ui->stacked_contact_detail->count(); ++idx) {
+        ContactWindow*contact_window_already = dynamic_cast<ContactWindow*>(ui->stacked_contact_detail->widget(idx));
+        if(!contact_window_already) {
+            break;
+        }
+        Contact contact_already = contact_window_already->contact();
+        if(contact_already.data()->id() == contact.data()->id()) {
+            contact_window_update = contact_window_already;
+            break;
+        }
+    }
+    // 如果已经添加则更新信息
+    if(contact_window_update) {
+        contact_window_update->update(contact);
+    }
+    // 如果没有则添加
+    else {
+        contact_window_update = new ContactWindow(contact, this);
+        ui->stacked_contact_detail->addWidget(contact_window_update);
+    }
+    // 显示
+    ui->stacked_contact_detail->setCurrentWidget(contact_window_update);
 }

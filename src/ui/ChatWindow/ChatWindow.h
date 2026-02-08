@@ -12,8 +12,9 @@
 #include <QMap>
 
 #include "MessageWindow.h"
-#include "ContentModel.h"
-#include "ContentDelegate.h"
+#include "ContactModel.h"
+#include "ContactDelegate.h"
+#include "ContactWindow.h"
 
 namespace Ui {
 class ChatWindow;
@@ -33,27 +34,30 @@ private:
     void on_show_add_menu();
 
     // // 聊天室管理
+    // 单击聊天室中的一个对话  // 显示聊天窗口
+    void on_chat_room_item_selected(const QModelIndex &index);
+    // 双击聊天室中的一个对话  // 微信会弹窗聊天窗口
+    void on_chat_room_item_activated(const QModelIndex &index);
+
+public Q_SLOTS:
+    // // 聊天室管理
     // 添加到聊天室列表
-    void add_chat_room(Content content);
-    // 点击聊天室中的一个对话
-    void on_chat_room_item_clicked(QListWidgetItem *item);
+    void add_chat_room(Contact contact);
     // 显示指定聊天室的对话
-    void show_chat_room_messages(Content content);
+    void show_chat_room_messages(Contact contact);
 
     // // 联系人管理
     // 添加到联系人列表
-    void add_content(Content content);
-    // 点击联系人列表中的一个联系人
-    void on_content_item_clicked(QListWidgetItem *item);
-    // 显示指定联系人的信息
-    void show_content_info(Content content);
+    void add_contact(Contact contact);
+    // model/view 模式下的选择
+    void on_contact_selection_changed(const QModelIndex &current, const QModelIndex &previous);
 
 signals:
     void signout();
 
 private:
     Ui::ChatWindow *ui;
-    QSplitter      *m_split_content   = nullptr;
+    QSplitter      *m_split_contact   = nullptr;
     QMenu          *m_menu_settings   = nullptr;
     QAction        *m_action_signout  = nullptr;
     QAction        *m_action_settings = nullptr;
@@ -61,9 +65,9 @@ private:
     QAction        *m_action_add      = nullptr;
     QAction        *m_action_create   = nullptr;
 
-    QMap<Content, MessageWindow*> m_message_windows;  // 聊天室 ID 与对应窗口的绑定
+    QMap<Contact, MessageWindow*> m_message_windows;  // 聊天室 ID 与对应窗口的绑定
     UserMessages  m_user_messages;
     // model/view/delegate
-    ContentModel    *m_content_model    = nullptr;
-    ContentDelegate *m_content_delegate = nullptr;
+    ContactModel    *m_contact_model    = nullptr;
+    ContactDelegate *m_contact_delegate = nullptr;
 };

@@ -63,7 +63,7 @@
            </sizepolicy>
           </property>
           <property name="text">
-           <string>Content</string>
+           <string>Contact</string>
           </property>
          </widget>
         </item>
@@ -99,11 +99,11 @@
     </widget>
    </item>
    <item>
-    <widget class="QWidget" name="content_widget" native="true">
-     <layout class="QHBoxLayout" name="content_layout">
+    <widget class="QWidget" name="contact_widget" native="true">
+     <layout class="QHBoxLayout" name="contact_layout">
       <item>
-       <widget class="QWidget" name="widget_content_list" native="true">
-        <layout class="QVBoxLayout" name="layout_widget_content_list">
+       <widget class="QWidget" name="widget_contact_list" native="true">
+        <layout class="QVBoxLayout" name="layout_widget_contact_list">
          <item>
           <layout class="QHBoxLayout" name="layout_search">
            <property name="leftMargin">
@@ -144,7 +144,7 @@
           </layout>
          </item>
          <item>
-          <widget class="QStackedWidget" name="stacked_content_list">
+          <widget class="QStackedWidget" name="stacked_contact_list">
            <property name="frameShape">
             <enum>QFrame::Shape::StyledPanel</enum>
            </property>
@@ -170,8 +170,8 @@
              </item>
             </layout>
            </widget>
-           <widget class="QWidget" name="stacked_page_content">
-            <layout class="QGridLayout" name="stacked_layout_content">
+           <widget class="QWidget" name="stacked_page_contact">
+            <layout class="QGridLayout" name="stacked_layout_contact">
              <property name="leftMargin">
               <number>0</number>
              </property>
@@ -185,7 +185,7 @@
               <number>0</number>
              </property>
              <item row="0" column="0">
-              <widget class="QListView" name="page_list_content"/>
+              <widget class="QListView" name="page_list_contact"/>
              </item>
             </layout>
            </widget>
@@ -195,7 +195,7 @@
        </widget>
       </item>
       <item>
-       <widget class="QStackedWidget" name="stacked_content_detail">
+       <widget class="QStackedWidget" name="stacked_contact_detail">
         <property name="frameShape">
          <enum>QFrame::Shape::StyledPanel</enum>
         </property>

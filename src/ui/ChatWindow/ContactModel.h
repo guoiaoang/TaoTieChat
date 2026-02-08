@@ -3,12 +3,12 @@
 #include <QAbstractListModel>
 #include "data.h"
 
-class ContentModel : public QAbstractListModel {
+class ContactModel : public QAbstractListModel {
     Q_OBJECT
 
 public:
-    explicit ContentModel(QObject *parent = nullptr);
-    explicit ContentModel(Contents contents, QObject *parent = nullptr);
+    explicit ContactModel(QObject *parent = nullptr);
+    explicit ContactModel(Contacts contacts, QObject *parent = nullptr);
 
     // Basic functionality:
     int rowCount(const QModelIndex &parent = QModelIndex()) const override;
@@ -17,9 +17,10 @@ public:
 
     // ====================================================================== //
 
-    void add_content(Content content);
-    void remove_content(Content content);
+    void add_contact(Contact contact);
+    void remove_contact(Contact contact);
+    Contact contact(const QModelIndex &index) const;
 
 private:
-    Contents m_contents;
+    Contacts m_contacts;
 };

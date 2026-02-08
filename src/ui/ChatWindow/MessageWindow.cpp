@@ -5,12 +5,12 @@ MessageWindow::MessageWindow(QWidget *parent)
     : MessageWindow(nullptr, nullptr, parent) {
 }
 
-MessageWindow::MessageWindow(Content content, Messages messages, QWidget *parent)
-    : QWidget(parent), ui(new Ui::MessageWindow), m_content(content), m_messages(messages) {
+MessageWindow::MessageWindow(Contact contact, Messages messages, QWidget *parent)
+    : QWidget(parent), ui(new Ui::MessageWindow), m_contact(contact), m_messages(messages) {
     ui->setupUi(this);
     m_splitter = new QSplitter;
-    if(m_content == nullptr) {
-        m_content = QSharedPointer<TypeContent>(new TypeContent);
+    if(m_contact == nullptr) {
+        m_contact = QSharedPointer<TypeContact>(new TypeContact);
     }
     if(m_messages == nullptr) {
         m_messages = QSharedPointer<TypeMessages>(new TypeMessages);
@@ -46,8 +46,8 @@ MessageWindow::~MessageWindow() {
     }
 }
 
-void MessageWindow::update_contents(Content content ) {
-    m_content = content;
+void MessageWindow::update_contacts(Contact contact ) {
+    m_contact = contact;
 }
 
 // 消息较多时应该差异化更新

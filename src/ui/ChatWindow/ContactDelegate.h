@@ -5,11 +5,11 @@
 
 #include "data.h"
 
-class ContentDelegate : public QStyledItemDelegate {
+class ContactDelegate : public QStyledItemDelegate {
     Q_OBJECT
 public:
-    explicit ContentDelegate(QObject *parent = nullptr);
-    ~ContentDelegate();
+    explicit ContactDelegate(QObject *parent = nullptr);
+    ~ContactDelegate();
 
 public:
     void paint(QPainter *painter, const QStyleOptionViewItem &option, const QModelIndex &index) const override;

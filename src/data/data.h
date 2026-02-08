@@ -11,7 +11,7 @@
 // #include <memory>
 
 // // 聊天室/群组/联系人信息
-// struct TypeContent {
+// struct TypeContact {
 //     enum class Type{
 //         FRIEND,  // 朋友/个人
 //         GROUP,   // 群组
@@ -57,21 +57,21 @@ struct TypeMessage {
     Type   type   = Type::Text;
     QString avatar  ;
     QString nickname;
-    QString content ;
+    QString contact ;
     QString time    ;
 };
 
-struct TypeContent;
+struct TypeContact;
 struct TypeMessage;
 
 // 一个联系人
-typedef QSharedPointer<TypeContent> Content;
+typedef QSharedPointer<TypeContact> Contact;
 // 一条消息
 typedef QSharedPointer<TypeMessage> Message;
 
 // 所有联系人
-typedef QVector<Content> TypeContents;
-typedef QSharedPointer<TypeContents> Contents;
+typedef QVector<Contact> TypeContacts;
+typedef QSharedPointer<TypeContacts> Contacts;
 
 // 单聊天框的聊天记录  // 与某人/群组的一个聊天框的内容
 typedef QVector<Message> TypeMessages;
@@ -83,7 +83,7 @@ typedef QSharedPointer<TypeUserMessages> UserMessages;
 
 // ========================================================================== //
 
-struct TypeContent{
+struct TypeContact{
     enum class Type{
         UNINIT,
         FRIEND,  // 朋友/个人
@@ -108,7 +108,7 @@ private:
 
 public:
     // 构造
-    TypeContent(QString id = QString(), Type type = Type::UNINIT,
+    TypeContact(QString id = QString(), Type type = Type::UNINIT,
                     QString avatar = QString(), QString nickname = QString(), QString message = QString(),
                     int unread = 0, void *point = nullptr
     ) {

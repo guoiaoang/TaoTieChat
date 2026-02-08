@@ -1,0 +1,43 @@
+#pragma once
+
+#include <QWidget>
+#include <QMenu>
+#include <QAction>
+#include <QDialog>
+#include <QMessageBox>
+#include <QtDebug>
+#include <QMetaEnum>
+#include <QPushButton>
+#include "data.h"
+
+namespace Ui {
+class ContactWindow;
+}
+
+class ContactWindow : public QWidget {
+    Q_OBJECT
+
+public:
+    explicit ContactWindow(QWidget *parent = nullptr);
+    explicit ContactWindow(Contact contact, QWidget *parent = nullptr);
+    ~ContactWindow();
+
+public:
+    void update(Contact contact);
+    Contact contact() const;
+
+private:
+    void on_button_avatar  ();
+    void on_button_messages();
+    void on_button_manager ();
+    void on_action_remove  ();
+
+Q_SIGNALS:
+    void remove_contact(Contact contact);
+
+private:
+    Ui::ContactWindow *ui              = nullptr;
+    Contact            m_contact       = nullptr;
+    QMenu             *m_menu_manager  = nullptr;
+    QAction           *m_action_remove = nullptr;
+};

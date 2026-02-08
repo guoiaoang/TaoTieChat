@@ -1,20 +1,20 @@
-#include "ContentDelegate.h"
+#include "ContactDelegate.h"
 
-ContentDelegate::ContentDelegate(QObject *parent)
+ContactDelegate::ContactDelegate(QObject *parent)
     : QStyledItemDelegate(parent) {
 }
 
-ContentDelegate::~ContentDelegate() {
+ContactDelegate::~ContactDelegate() {
 }
 
-void ContentDelegate::paint(QPainter *painter, const QStyleOptionViewItem &option, const QModelIndex &index) const {
+void ContactDelegate::paint(QPainter *painter, const QStyleOptionViewItem &option, const QModelIndex &index) const {
     if (!index.isValid())
         return;
 
     // 获取数据
-    QString avatar   = index.data(int(TypeContent::ModelRole::Avatar  )).toString();
-    QString nickname = index.data(int(TypeContent::ModelRole::NickName)).toString();
-    QString message  = index.data(int(TypeContent::ModelRole::Message )).toString();
+    QString avatar   = index.data(int(TypeContact::ModelRole::Avatar  )).toString();
+    QString nickname = index.data(int(TypeContact::ModelRole::NickName)).toString();
+    QString message  = index.data(int(TypeContact::ModelRole::Message )).toString();
 
     // 保存画笔状态
     painter->save();
@@ -36,7 +36,7 @@ void ContentDelegate::paint(QPainter *painter, const QStyleOptionViewItem &optio
                      avatarSize,
                      avatarSize);
 
-    QRect contentRect(avatarRect.right() + spacing,
+    QRect contactRect(avatarRect.right() + spacing,
                       option.rect.top() + margin,
                       option.rect.width() - avatarRect.width() - spacing - margin * 2,
                       option.rect.height() - margin * 2);
@@ -59,7 +59,7 @@ void ContentDelegate::paint(QPainter *painter, const QStyleOptionViewItem &optio
     painter->setFont(nicknameFont);
     painter->setPen(option.state & QStyle::State_Selected ? option.palette.highlightedText().color() : option.palette.text().color());
 
-    QRect nicknameRect = contentRect;
+    QRect nicknameRect = contactRect;
     nicknameRect.setHeight(20);
     painter->drawText(nicknameRect, Qt::AlignLeft | Qt::AlignVCenter, nickname);
 
@@ -70,14 +70,14 @@ void ContentDelegate::paint(QPainter *painter, const QStyleOptionViewItem &optio
     painter->setFont(messageFont);
     painter->setPen(option.state & QStyle::State_Selected ? option.palette.highlightedText().color() : QColor(100, 100, 100));
 
-    QRect messageRect = contentRect;
+    QRect messageRect = contactRect;
     messageRect.setTop(nicknameRect.bottom() + 5);
     painter->drawText(messageRect, Qt::AlignLeft | Qt::AlignTop | Qt::TextWordWrap, message);
 
     painter->restore();
 }
 
-QSize ContentDelegate::sizeHint(const QStyleOptionViewItem &option, const QModelIndex &index) const {
+QSize ContactDelegate::sizeHint(const QStyleOptionViewItem &option, const QModelIndex &index) const {
     // return QStyledItemDelegate::sizeHint(option, index);
     // 返回固定高度，或根据内容计算
     return QSize(0, 80);  // 高度 80 像素，宽度由 view 决定

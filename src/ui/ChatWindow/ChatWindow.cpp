@@ -1,10 +1,20 @@
 #include "ChatWindow.h"
 #include "ui_ChatWindow.h"
 
-// #include <QListView>
-// #include <QListWidget>
-#include <QtDebug>
-#include <QButtonGroup>
+/**
+ * @brief 遍历指定路径获取所有文件和文件夹列表
+ * @param path 目标路径
+ * @param recursive 是否递归子目录 (默认不递归)
+ * @return 包含所有绝对路径的列表
+ */
+QList<QFileInfo> dir_contents(const QString &path, bool recursive = false) {
+    QList<QFileInfo> lists;
+    using ItFlag = QDirListing::IteratorFlag;
+    for (const auto &dirEntry : QDirListing(path, recursive ? ItFlag::Recursive : ItFlag::Default)) {
+        lists << dirEntry.fileInfo();
+    }
+    return lists;
+}
 
 ChatWindow::ChatWindow(QWidget *parent)
     : QDialog(parent), ui(new Ui::ChatWindow) {
@@ -93,6 +103,21 @@ ChatWindow::ChatWindow(QWidget *parent)
     ui->page_list_contact->setModel(m_contact_model);
     m_contact_delegate = new ContactDelegate;
     ui->page_list_contact->setItemDelegate(m_contact_delegate);
+    // list path ":/"
+    if(0)
+    {
+        QList<QFileInfo> file_infos = dir_contents(":/", true);
+        qDebug().noquote().nospace() << "Total files: " << file_infos.size();
+
+        int width = QString::number(file_infos.size()).length();
+
+        for(int i = 0; i < file_infos.size(); ++i) {
+            QFileInfo file_info = file_infos.at(i);
+            QString indexStr = QString("%1").arg(i, width, 10, QChar(' '));
+            QString typeStr = file_info.isFile() ? " [File]" : (file_info.isDir() ? "  [Dir]" : "[other]");
+            qDebug().noquote().nospace() << indexStr << typeStr << " " << file_info.absoluteFilePath();
+        }
+    }
     // contact test data
     {
         Contact contact = QSharedPointer<TypeContact>(new TypeContact);
@@ -104,6 +129,7 @@ ChatWindow::ChatWindow(QWidget *parent)
         add_contact(contact);
         add_contact(QSharedPointer<TypeContact>(new TypeContact("Contact ID 02", TypeContact::Type::FRIEND, "Contact Avatar 02", "Contact NickName 02", "Last Message 02")));
         add_contact(QSharedPointer<TypeContact>(new TypeContact("Contact ID 03", TypeContact::Type::FRIEND, "Contact Avatar 03", "Contact NickName 03", "Last Message 03")));
+        add_contact(QSharedPointer<TypeContact>(new TypeContact("Contact ID 04", TypeContact::Type::FRIEND, ":/qt-project.org/qmessagebox/images/qtlogo-64.png", "Contact NickName 04", "Last Message 04")));
     }
 
     // select

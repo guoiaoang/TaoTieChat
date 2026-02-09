@@ -7,9 +7,13 @@
 #include <QAction>
 #include <QListWidgetItem>
 #include <QScrollBar>
-#include <QMenu>
-#include <QAction>
 #include <QMap>
+#include <QButtonGroup>
+#include <QDir>          // 遍历子目录，较老版本 // QDir::entryList()
+#include <QDirIterator>  // 遍历子目录，较新版本，单个遍历
+#include <QDirListing>   // 遍历子目录，最新版本，c++20 方式
+#include <QStringList>
+#include <QFileInfo>
 
 #include "MessageWindow.h"
 #include "ContactModel.h"

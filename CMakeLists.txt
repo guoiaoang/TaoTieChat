@@ -1,13 +1,23 @@
+# 使用已安装的 QT 套件编译：
+#   与 QtCreator 中的构建环境一致。
+#   关键操作是通过 `CMAKE_TOOLCHAIN_FILE` 指向 `qt.toolchain.cmake` 所在路径来指定编译套件。
+#   > cmake -S. -Bbuildx -DCMAKE_TOOLCHAIN_FILE="C:\app\dev\Qt\6.10.1\msvc2022_64\lib\cmake\Qt6\qt.toolchain.cmake"
+#   > cmake --build buildx
+#   > C:\app\dev\Qt\6.10.1\msvc2022_64\bin\windeployqt.exe buildx\Debug\TaoTieChat.exe
+
 cmake_minimum_required(VERSION 3.19)
 project(TaoTieChat LANGUAGES CXX)
 
 find_package(Qt6 6.5 REQUIRED COMPONENTS Core Widgets LinguistTools)
+# find_package(QT NAMES Qt6 Qt5      REQUIRED COMPONENTS Core Widgets LinguistTools)
+# find_package(Qt${QT_VERSION_MAJOR} REQUIRED COMPONENTS Core Widgets LinguistTools)
 
 qt_standard_project_setup()
 
 set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
+message(STATUS "CMAKE_TOOLCHAIN_FILE : ${CMAKE_TOOLCHAIN_FILE}")
 message(STATUS "CMAKE_BUILD_TYPE     : ${CMAKE_BUILD_TYPE}")
 message(STATUS "CMAKE_GENERATOR      : ${CMAKE_GENERATOR}")
 message(STATUS "CMAKE_CXX_FLAGS_INIT : ${CMAKE_CXX_FLAGS_INIT}")
@@ -21,6 +31,7 @@ message(STATUS "CMAKE_PREFIX_PATH    : ${CMAKE_PREFIX_PATH}")
 message(STATUS "QT_QMAKE_EXECUTABLE  : ${QT_QMAKE_EXECUTABLE}")
 message(STATUS "QT_MAINTENANCE_TOOL  : ${QT_MAINTENANCE_TOOL}")
 # message(STATUS "CMAKE_BUILD_TOOL     : ${CMAKE_BUILD_TOOL}") # after project()
+# message(STATUS "ENV{CMAKE_TOOLCHAIN_FILE} : $ENV{CMAKE_TOOLCHAIN_FILE}")
 
 # include(src/cmake/show_env.cmake)
 # show_env_before_project()
@@ -29,14 +40,6 @@ message(STATUS "QT_MAINTENANCE_TOOL  : ${QT_MAINTENANCE_TOOL}")
 
 # # add_definitions(-DSOURCE_ROOT="${CMAKE_CURRENT_SOURCE_DIR}/src")
 # add_compile_definitions(SOURCE_ROOT="${CMAKE_CURRENT_SOURCE_DIR}/src")
-
-# if (MSVC)
-#     # warning level 4
-#     add_compile_options(/W4)
-# else()
-#     # additional warnings
-#     add_compile_options(-Wall -Wextra -Wpedantic)
-# endif()
 
 include_directories(${CMAKE_CURRENT_SOURCE_DIR}/src)
 include_directories(${CMAKE_CURRENT_SOURCE_DIR}/src/data)

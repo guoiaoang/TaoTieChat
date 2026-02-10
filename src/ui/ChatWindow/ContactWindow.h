@@ -8,6 +8,8 @@
 #include <QtDebug>
 #include <QMetaEnum>
 #include <QPushButton>
+#include <QPainter>
+#include <QPainterPath>
 #include "data.h"
 
 namespace Ui {

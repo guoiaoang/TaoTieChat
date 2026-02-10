@@ -10,10 +10,10 @@ MessageWindow::MessageWindow(Contact contact, Messages messages, QWidget *parent
     ui->setupUi(this);
     m_splitter = new QSplitter;
     if(m_contact == nullptr) {
-        m_contact = QSharedPointer<TypeContact>(new TypeContact);
+        m_contact = QSharedPointer<ContactData>(new ContactData);
     }
     if(m_messages == nullptr) {
-        m_messages = QSharedPointer<TypeMessages>(new TypeMessages);
+        m_messages = QSharedPointer<MessagesData>(new MessagesData);
     }
 
     ui->list_messages->setSpacing(0);

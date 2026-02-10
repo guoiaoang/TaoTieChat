@@ -12,9 +12,9 @@ void ContactDelegate::paint(QPainter *painter, const QStyleOptionViewItem &optio
         return;
 
     // 获取数据
-    QString avatar   = index.data(int(TypeContact::ModelRole::Avatar  )).toString();
-    QString nickname = index.data(int(TypeContact::ModelRole::NickName)).toString();
-    QString message  = index.data(int(TypeContact::ModelRole::Message )).toString();
+    QString avatar   = index.data(int(ContactData::Role::Avatar  )).toString();
+    QString nickname = index.data(int(ContactData::Role::NickName)).toString();
+    QString message  = index.data(int(ContactData::Role::Message )).toString();
 
     // 保存画笔状态
     painter->save();

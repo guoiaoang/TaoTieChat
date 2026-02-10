@@ -8,7 +8,7 @@ ContactModel::ContactModel(Contacts contacts, QObject *parent)
     : QAbstractListModel(parent), m_contacts(contacts) {
     // 防止未初始化
     if(m_contacts == nullptr) {
-        m_contacts = QSharedPointer<TypeContacts>(new TypeContacts);
+        m_contacts = QSharedPointer<ContactsData>(new ContactsData);
     }
 }
 
@@ -32,16 +32,16 @@ QVariant ContactModel::data(const QModelIndex &index, int role) const {
     // role 转换为指定类型
     switch (role) {
     case Qt::DisplayRole:
-        role = int(TypeContact::ModelRole::NickName);
+        role = int(ContactData::Role::NickName);
         break;
     case Qt::EditRole:
-        role = int(TypeContact::ModelRole::Message);
+        role = int(ContactData::Role::Message);
         break;
     }
     // 返回有效的内容
-    if(    role > int(TypeContact::ModelRole::Begin)
-        && role < int(TypeContact::ModelRole::End  )) {
-        return contact->data(TypeContact::ModelRole(role));
+    if(    role > int(ContactData::Role::Begin)
+        && role < int(ContactData::Role::End  )) {
+        return ContactManager(contact).value(ContactData::Role(role));
     }
     return QVariant();
 }
@@ -61,7 +61,7 @@ void ContactModel::remove_contact(Contact contact) {
 
     int row = -1;
     for(; row < m_contacts->size(); ++row) {
-        if(m_contacts->at(row)->id() == contact->id()) {
+        if(ContactManager(m_contacts->at(row)).id() == ContactManager(contact).id()) {
             break;
         }
     }

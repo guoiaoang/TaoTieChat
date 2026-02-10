@@ -8,7 +8,7 @@ ContactWindow::ContactWindow(Contact contact, QWidget *parent)
     ui->setupUi(this);
     // new
     // 防止未初始化
-    if(m_contact       == nullptr) { m_contact       = QSharedPointer<TypeContact>(new TypeContact); }
+    if(m_contact       == nullptr) { m_contact       = QSharedPointer<ContactData>(new ContactData); }
     if(m_menu_manager  == nullptr) { m_menu_manager  = new QMenu  ; }
     if(m_action_remove == nullptr) { m_action_remove = new QAction; }
 
@@ -19,6 +19,7 @@ ContactWindow::ContactWindow(Contact contact, QWidget *parent)
     connect(m_action_remove    , &QAction::triggered  , this, &ContactWindow::on_action_remove  );
 
     // set
+    ui->button_avatar->setFixedSize(128, 128);
     m_action_remove->setText(tr("remove"));
     m_menu_manager->addAction(m_action_remove);
     // update
@@ -33,17 +34,28 @@ ContactWindow::~ContactWindow() {
 
 void ContactWindow::update(Contact contact) {
     m_contact = contact;
-    if(m_contact       == nullptr) { m_contact       = QSharedPointer<TypeContact>(new TypeContact); }
+    if(m_contact       == nullptr) { m_contact       = QSharedPointer<ContactData>(new ContactData); }
     // show
-    ui->edit_nickname->setText(contact.data()->nickname());
-    QPixmap pixmap = QPixmap(contact.data()->avatar());
+    ui->edit_nickname->setText(ContactManager(contact).nickname());
+    QPixmap pixmap = QPixmap(ContactManager(contact).avatar());
     if(!pixmap.isNull()) {
         // ui->button_avatar->setLayout();
-        ui->button_avatar->setIconSize(QSize(128, 128));
-        ui->button_avatar->setIcon(QIcon(pixmap));
+        ui->button_avatar->setText(QString());
+        ui->button_avatar->setIconSize(QSize(ui->button_avatar->size()));
+        ui->button_avatar->setIcon(QIcon(pixmap.scaled(ui->button_avatar->size(), Qt::IgnoreAspectRatio, Qt::SmoothTransformation)));
+        // ui->button_avatar->setIconSize(QSzie(128, 128));
+        // ui->button_avatar->setIcon(QIcon(pixmap));
     }
     else {
-        ui->button_avatar->setText(contact.data()->avatar().left(2));
+        // 直接根据按钮高度估算一个值，比如高度的 50% - 60%
+        // setPointSize 与 setPixelSize 均可
+        QFont font = ui->button_avatar->font();
+        font.setPointSize(ui->button_avatar->height() * 0.5);
+        // font.setPixelSize(ui->button_avatar->height() * 0.5);
+        font.setBold(true);
+        ui->button_avatar->setFont(font);
+        ui->button_avatar->setIcon(QIcon()); // 清除之前的图标
+        ui->button_avatar->setText(ContactManager(contact).avatar().left(2));
     }
 }
 

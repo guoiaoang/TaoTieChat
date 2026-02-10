@@ -120,16 +120,41 @@ ChatWindow::ChatWindow(QWidget *parent)
     }
     // contact test data
     {
-        Contact contact = QSharedPointer<TypeContact>(new TypeContact);
-        contact->set_data("Contact ID 01", TypeContact::Type::FRIEND, "Contact Avatar 01", "Contact NickName 01", "Last Message 01");
-        // contact->datas()[TypeContact::ModelRole::ID      ] = "Contact ID 01"      ;
-        // contact->datas()[TypeContact::ModelRole::Avatar  ] = "Contact Avatar 01"  ;
-        // contact->datas()[TypeContact::ModelRole::NickName] = "Contact NickName 01";
-        // contact->datas()[TypeContact::ModelRole::Message ] = "Last Message 01"    ;
+        // // Contact contact = ContactManager::create();
+        // Contact contact;
+        // auto p = &contact;
+        // qDebug().noquote().nospace() << "p : " << (void*)p;
+        // // 地址不同，赋值也只是作用于临时对象
+        // [](Contact contact = nullptr) {
+        //     auto p = &contact;
+        //     qDebug().noquote().nospace() << "p : " << (void*)p;
+        //     if(contact == nullptr) {
+        //         contact = ContactManager::create();
+        //     }
+        // }(contact);
+        // // 引用不能默认为 nullptr  // ok
+        // [](Contact&contact) {
+        //     if(contact == nullptr) {
+        //         contact = ContactManager::create();
+        //     }
+        // }(contact);
+        // [](Contact &contact = Contact()) {}(contact); // 无法绑定左值引用
+        // [](Contact&&contact = Contact()) {}(contact); // 调用参数不匹配
+        // // 太折腾
+        // [](Contact *contact = nullptr) {
+        //     if(contact == nullptr) {
+        //         return;
+        //     }
+        //     if(*contact == nullptr) {
+        //         *contact = ContactManager::create();
+        //     }
+        // }(&contact);
+        Contact contact = ContactManager::create();
+        ContactManager(contact).update("Contact ID 01", ContactData::Type::FRIEND, "Contact Avatar 01", "Contact NickName 01", "Last Message 01");
         add_contact(contact);
-        add_contact(QSharedPointer<TypeContact>(new TypeContact("Contact ID 02", TypeContact::Type::FRIEND, "Contact Avatar 02", "Contact NickName 02", "Last Message 02")));
-        add_contact(QSharedPointer<TypeContact>(new TypeContact("Contact ID 03", TypeContact::Type::FRIEND, "Contact Avatar 03", "Contact NickName 03", "Last Message 03")));
-        add_contact(QSharedPointer<TypeContact>(new TypeContact("Contact ID 04", TypeContact::Type::FRIEND, ":/qt-project.org/qmessagebox/images/qtlogo-64.png", "Contact NickName 04", "Last Message 04")));
+        add_contact(ContactManager("Contact ID 02", ContactData::Type::FRIEND, "Contact Avatar 02", "Contact NickName 02", "Last Message 02").contact());
+        add_contact(ContactManager("Contact ID 03", ContactData::Type::FRIEND, "Contact Avatar 03", "Contact NickName 03", "Last Message 03").contact());
+        add_contact(ContactManager("Contact ID 04", ContactData::Type::FRIEND, ":/qt-project.org/qmessagebox/images/qtlogo-64.png", "Contact NickName 04", "Last Message 04").contact());
     }
 
     // select
@@ -237,15 +262,15 @@ void ChatWindow::on_chat_room_item_activated(const QModelIndex &index) {
 }
 
 void ChatWindow::add_chat_room(Contact contact) {
-    qDebug() << "contact : " << contact->nickname();
+    qDebug() << "contact : " << ContactManager(contact).nickname();
 }
 
 void ChatWindow::show_chat_room_messages(Contact contact) {
-    qDebug() << "contact : " << contact->nickname();
+    qDebug() << "contact : " << ContactManager(contact).nickname();
 }
 
 void ChatWindow::add_contact(Contact contact) {
-    qDebug() << "contact : " << contact->nickname();
+    qDebug() << "contact : " << ContactManager(contact).nickname();
     m_contact_model->add_contact(contact);
 }
 
@@ -267,7 +292,7 @@ void ChatWindow::on_contact_selection_changed(const QModelIndex &current, const 
             break;
         }
         Contact contact_already = contact_window_already->contact();
-        if(contact_already.data()->id() == contact.data()->id()) {
+        if(ContactManager(contact_already).id() == ContactManager(contact).id()) {
             contact_window_update = contact_window_already;
             break;
         }

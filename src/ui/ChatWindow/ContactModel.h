@@ -19,6 +19,9 @@ public:
 
     void add_contact(Contact contact);
     void remove_contact(Contact contact);
+    int  contacts_size() const;
+    // Contacts &contacts() { return m_contacts; }
+    // 用于获取高亮的联系人信息
     Contact contact(const QModelIndex &index) const;
 
 private:

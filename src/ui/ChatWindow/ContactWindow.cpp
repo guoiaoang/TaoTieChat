@@ -1,5 +1,6 @@
 #include "ContactWindow.h"
 #include "ui_ContactWindow.h"
+#include "MediaWindow.h"
 
 ContactWindow::ContactWindow(QWidget *parent) : ContactWindow(nullptr, parent) {}
 
@@ -13,10 +14,18 @@ ContactWindow::ContactWindow(Contact contact, QWidget *parent)
     if(m_action_remove == nullptr) { m_action_remove = new QAction; }
 
     // connect
-    connect(ui->button_avatar  , &QToolButton::clicked, this, &ContactWindow::on_button_avatar  );
-    connect(ui->button_messages, &QToolButton::clicked, this, &ContactWindow::on_button_messages);
-    connect(ui->button_manager , &QToolButton::clicked, this, &ContactWindow::on_button_manager );
-    connect(m_action_remove    , &QAction::triggered  , this, &ContactWindow::on_action_remove  );
+    connect(ui->button_avatar  , &QToolButton  ::clicked    , this, &ContactWindow::on_button_avatar  );
+    connect(ui->button_messages, &QToolButton  ::clicked    , this, &ContactWindow::on_button_messages);
+    connect(ui->button_manager , &QToolButton  ::clicked    , this, &ContactWindow::on_button_manager );
+    connect(m_action_remove    , &QAction      ::triggered  , this, &ContactWindow::on_action_remove  );
+    connect(this               , &ContactWindow::show_avatar, this, [this](Contact contact) {
+        ContactManager cm(contact);
+        MediaWindow*media_window = &MediaWindow::instance();
+        // media_window->load(cm.get_avatar_path());
+        media_window->load(cm.get_avatar_pixmap());
+        media_window->set_media_name(cm.get_nick_name());
+        media_window->show();
+    });
 
     // set
     ui->button_avatar->setFixedSize(128, 128);
@@ -34,15 +43,21 @@ ContactWindow::~ContactWindow() {
 
 void ContactWindow::update(Contact contact) {
     m_contact = contact;
-    if(m_contact       == nullptr) { m_contact       = QSharedPointer<ContactData>(new ContactData); }
+    if(m_contact == nullptr) { m_contact = QSharedPointer<ContactData>(new ContactData); }
     // show
-    ui->edit_nickname->setText(ContactManager(contact).nickname());
-    QPixmap pixmap = QPixmap(ContactManager(contact).avatar());
-    if(!pixmap.isNull()) {
+    ui->edit_nickname->setText(ContactManager(contact).get_nick_name());
+    // QPixmap pixmap = QPixmap(ContactManager(contact).get_avatar_path());
+    // 头像：1.有图片就显示图片；2.没有图片再从路径加载图片；3.加载图片失败就显示路径。
+    QPixmap avatar_pixmap = ContactManager(contact).get_avatar_pixmap();
+    QString avatar_path   = ContactManager(contact).get_avatar_path  ();
+    if(avatar_pixmap.isNull()) {
+        avatar_pixmap.load(avatar_path);
+    }
+    if(!avatar_pixmap.isNull()) {
         // ui->button_avatar->setLayout();
         ui->button_avatar->setText(QString());
         ui->button_avatar->setIconSize(QSize(ui->button_avatar->size()));
-        ui->button_avatar->setIcon(QIcon(pixmap.scaled(ui->button_avatar->size(), Qt::IgnoreAspectRatio, Qt::SmoothTransformation)));
+        ui->button_avatar->setIcon(QIcon(avatar_pixmap.scaled(ui->button_avatar->size(), Qt::IgnoreAspectRatio, Qt::SmoothTransformation)));
         // ui->button_avatar->setIconSize(QSzie(128, 128));
         // ui->button_avatar->setIcon(QIcon(pixmap));
     }
@@ -55,7 +70,7 @@ void ContactWindow::update(Contact contact) {
         font.setBold(true);
         ui->button_avatar->setFont(font);
         ui->button_avatar->setIcon(QIcon()); // 清除之前的图标
-        ui->button_avatar->setText(ContactManager(contact).avatar().left(2));
+        ui->button_avatar->setText(avatar_path.left(2));
     }
 }
 

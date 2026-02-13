@@ -23,20 +23,21 @@ int ContactModel::rowCount(const QModelIndex &parent) const {
 
 QVariant ContactModel::data(const QModelIndex &index, int role) const {
     // 先校验范围是否合法
-    if (!index.isValid() || index.row() < 0 || index.row() > m_contacts->size()) {
+    if (!index.isValid() || index.row() < 0 || index.row() >= m_contacts->size()) {
         return QVariant();
     }
     // 获取行号与内容
     auto row = index.row();  // 获取第几条数据
-    auto contact = m_contacts->at(row);  // 获取数据内容
+    auto contact = AccountsManager::contact(m_contacts, row);  // 获取数据内容
     // role 转换为指定类型
     switch (role) {
     case Qt::DisplayRole:
-        role = int(ContactData::Role::NickName);
+        role = int(ContactData::Role::Nickname);
         break;
-    case Qt::EditRole:
-        role = int(ContactData::Role::Message);
-        break;
+    // 联系人页面不启用对联系人信息的修改，需要在弹窗中修改
+    // case Qt::EditRole:
+    //     role = int(ContactData::Role::Message);
+    //     break;
     }
     // 返回有效的内容
     if(    role > int(ContactData::Role::Begin)
@@ -59,9 +60,11 @@ void ContactModel::remove_contact(Contact contact) {
         return;
     }
 
+    QString account_id = ContactManager(contact).get_account_id();
     int row = -1;
-    for(; row < m_contacts->size(); ++row) {
-        if(ContactManager(m_contacts->at(row)).id() == ContactManager(contact).id()) {
+    for(int i = 0; i < m_contacts->size(); ++i) {
+        if(ContactManager(m_contacts->at(i)).get_account_id() == account_id) {
+            row = i;
             break;
         }
     }
@@ -69,14 +72,18 @@ void ContactModel::remove_contact(Contact contact) {
     if(row >= 0) {
         // 变更必须被包裹才会触发界面的更新
         beginRemoveRows(QModelIndex(), row, row);
-        m_contacts->remove(row);
+        m_contacts->removeAt(row);
         endRemoveRows();
     }
+}
+
+int ContactModel::contacts_size() const {
+    return m_contacts->size();
 }
 
 Contact ContactModel::contact(const QModelIndex &index) const {
     if (!index.isValid() || index.row() < 0 || index.row() >= m_contacts->size()) {
         return nullptr;
     }
-    return m_contacts->at(index.row());
+    return AccountsManager::contact(m_contacts, index.row());
 }

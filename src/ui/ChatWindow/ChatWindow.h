@@ -1,24 +1,14 @@
 #pragma once
 
-#include <QtDebug>
-#include <QDialog>
-#include <QSplitter>
-#include <QMenu>
-#include <QAction>
-#include <QListWidgetItem>
-#include <QScrollBar>
-#include <QMap>
-#include <QButtonGroup>
-#include <QDir>          // 遍历子目录，较老版本 // QDir::entryList()
-#include <QDirIterator>  // 遍历子目录，较新版本，单个遍历
-#include <QDirListing>   // 遍历子目录，最新版本，c++20 方式
-#include <QStringList>
-#include <QFileInfo>
-
+#include "Utils.h"
 #include "MessageWindow.h"
 #include "ContactModel.h"
 #include "ContactDelegate.h"
 #include "ContactWindow.h"
+
+#ifdef DEBUG
+#include "Dev.h"
+#endif // DEBUG
 
 namespace Ui {
 class ChatWindow;
@@ -60,7 +50,7 @@ signals:
     void signout();
 
 private:
-    Ui::ChatWindow *ui;
+    Ui::ChatWindow *ui                = nullptr;
     QSplitter      *m_split_contact   = nullptr;
     QMenu          *m_menu_settings   = nullptr;
     QAction        *m_action_signout  = nullptr;
@@ -69,9 +59,15 @@ private:
     QAction        *m_action_add      = nullptr;
     QAction        *m_action_create   = nullptr;
 
-    QMap<Contact, MessageWindow*> m_message_windows;  // 聊天室 ID 与对应窗口的绑定
-    UserMessages  m_user_messages;
+    // QMap<Contact, MessageWindow*> m_message_windows;  // 聊天室 ID 与对应窗口的绑定
+
     // model/view/delegate
     ContactModel    *m_contact_model    = nullptr;
     ContactDelegate *m_contact_delegate = nullptr;
+
+    // ====================================================================== //
+#ifdef DEBUG
+private:
+    friend Dev::ChatWindowDev;
+#endif // DEBUG
 };

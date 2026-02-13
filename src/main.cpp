@@ -1,39 +1,15 @@
 #include "MainWindow.h"
-
-#include <QApplication>
-#include <QLocale>
-#include <QTranslator>
-
-void InitDebugOutputFormat() {
-    const QString QT_MESSAGE_PATTERN =
-        "[%{time yyyy-MM-dd hh:mm:ss.zzz ttt}"
-        " %{if-debug}D%{endif}"
-        "%{if-info}I%{endif}"
-        "%{if-warning}W%{endif}"
-        "%{if-critical}C%{endif}"
-        "%{if-fatal}F%{endif}]"
-        " %{file}:%{line} - %{function}"
-        " >> %{message}";
-    qSetMessagePattern(QT_MESSAGE_PATTERN);
-}
+#include "Utils.h"
 
 int main(int argc, char *argv[]) {
-    QApplication a(argc, argv);
+    Q_INIT_RESOURCE(TaoTieChat);  // `TaoTieChat.qrc` 中的资源名称
+    QApplication application(argc, argv);
+    Utils::InitDebugOutputFormat();
+    Utils::load_translator(application);
+    Utils::load_font(":/rc/fonts/InconsolataNerdFontMono-Regular.ttf");
 
-    QTranslator translator;
-    const QStringList uiLanguages = QLocale::system().uiLanguages();
-    for (const QString &locale : uiLanguages) {
-        const QString baseName = "TaoTieChat_" + QLocale(locale).name();
-        if (translator.load(":/i18n/" + baseName)) {
-            a.installTranslator(&translator);
-            break;
-        }
-    }
+    MainWindow main_window;
+    main_window.show();
 
-    InitDebugOutputFormat();
-
-    MainWindow w;
-    w.show();
-
-    return a.exec();
+    return application.exec();
 }

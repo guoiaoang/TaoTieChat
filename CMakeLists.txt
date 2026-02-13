@@ -8,14 +8,18 @@
 cmake_minimum_required(VERSION 3.19)
 project(TaoTieChat LANGUAGES CXX)
 
-find_package(Qt6 6.5 REQUIRED COMPONENTS Core Widgets LinguistTools)
+set(CMAKE_AUTOMOC ON)
+set(CMAKE_AUTOUIC ON)
+set(CMAKE_AUTORCC ON)
+
+set(CMAKE_CXX_STANDARD 20)
+set(CMAKE_CXX_STANDARD_REQUIRED ON)
+
+find_package(Qt6 6.5 REQUIRED COMPONENTS Core Widgets LinguistTools Svg SvgWidgets Network)
 # find_package(QT NAMES Qt6 Qt5      REQUIRED COMPONENTS Core Widgets LinguistTools)
 # find_package(Qt${QT_VERSION_MAJOR} REQUIRED COMPONENTS Core Widgets LinguistTools)
 
 qt_standard_project_setup()
-
-set(CMAKE_CXX_STANDARD 20)
-set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
 message(STATUS "CMAKE_TOOLCHAIN_FILE : ${CMAKE_TOOLCHAIN_FILE}")
 message(STATUS "CMAKE_BUILD_TYPE     : ${CMAKE_BUILD_TYPE}")
@@ -41,15 +45,40 @@ message(STATUS "QT_MAINTENANCE_TOOL  : ${QT_MAINTENANCE_TOOL}")
 # # add_definitions(-DSOURCE_ROOT="${CMAKE_CURRENT_SOURCE_DIR}/src")
 # add_compile_definitions(SOURCE_ROOT="${CMAKE_CURRENT_SOURCE_DIR}/src")
 
+# set(TS_FILES  ${CMAKE_CURRENT_SOURCE_DIR}/src/translations/TaoTieChat_zh_CN.ts)
+
+# 程序中需调用 `Q_INIT_RESOURCE(...);` 资源初始化函数，防止与子项目中的资源冲突
+set(QRC_FILES ${CMAKE_CURRENT_SOURCE_DIR}/src/rc/TaoTieChat.qrc)
+
+# if(WIN32)
+#     set(RC_FILES  ${PROJECT_NAME}.rc)
+#     # list(APPEND PROJECT_SOURCES ${RC_FILES})
+# endif()
+
+# CMAKE_BUILD_TYPE
+if(NOT CMAKE_BUILD_TYPE)
+    set_property(CACHE CMAKE_BUILD_TYPE PROPERTY VALUE "Release")
+elseif(CMAKE_BUILD_TYPE STREQUAL "Debug")
+    add_compile_definitions(DEBUG)
+endif()
+
 include_directories(${CMAKE_CURRENT_SOURCE_DIR}/src)
+include_directories(${CMAKE_CURRENT_SOURCE_DIR}/src/utils)
 include_directories(${CMAKE_CURRENT_SOURCE_DIR}/src/data)
 include_directories(${CMAKE_CURRENT_SOURCE_DIR}/src/ui/MainWindow)
 include_directories(${CMAKE_CURRENT_SOURCE_DIR}/src/ui/AuthWindow)
 include_directories(${CMAKE_CURRENT_SOURCE_DIR}/src/ui/ChatWindow)
+include_directories(${CMAKE_CURRENT_SOURCE_DIR}/src/ui/PluginsWindow)
 
 qt_add_executable(TaoTieChat
     WIN32 MACOSX_BUNDLE
     ${CMAKE_CURRENT_SOURCE_DIR}/src/main.cpp
+    # Utils / data
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/utils/Utils.h
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/utils/Utils.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/utils/Dev.h              # 开发时的调试代码
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/utils/Dev.cpp            # 开发时的调试代码
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/utils/RegistryFactory.h  # 暂未使用
     ${CMAKE_CURRENT_SOURCE_DIR}/src/data/data.h
     # 主窗口
     ${CMAKE_CURRENT_SOURCE_DIR}/src/ui/MainWindow/MainWindow.h
@@ -76,6 +105,13 @@ qt_add_executable(TaoTieChat
     ${CMAKE_CURRENT_SOURCE_DIR}/src/ui/ChatWindow/ContactWindow.h
     ${CMAKE_CURRENT_SOURCE_DIR}/src/ui/ChatWindow/ContactWindow.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/src/ui/ChatWindow/ContactWindow.ui
+    # PluginsWindow
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/ui/PluginsWindow/MediaWindow.h
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/ui/PluginsWindow/MediaWindow.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/ui/PluginsWindow/MediaWindow.ui
+    # resources
+    # ${CMAKE_CURRENT_SOURCE_DIR}/src/rc/TaoTieChat.qrc
+    ${QRC_FILES}
 )
 
 qt_add_translations(
@@ -87,6 +123,9 @@ target_link_libraries(TaoTieChat
     PRIVATE
         Qt::Core
         Qt::Widgets
+        Qt::Svg
+        Qt::SvgWidgets
+        Qt::Network
 )
 
 # target_compile_definitions(TaoTieChat PUBLIC SOURCE_ROOT="${CMAKE_CURRENT_SOURCE_DIR}/src")
@@ -105,3 +144,20 @@ qt_generate_deploy_app_script(
     NO_UNSUPPORTED_PLATFORM_ERROR
 )
 install(SCRIPT ${deploy_script})
+
+# function(run_windeployqt binary_target)
+#     # QT runtime error : `This application failed to start because no Qt platform plugin could be initialized. Reinstalling the application may fix this problem.`
+#     # [No Qt6 platform plugin could be initialized · Issue #20101 · microsoft/vcpkg](https://github.com/microsoft/vcpkg/issues/20101#issuecomment-1077747306)
+#     if(CMAKE_BUILD_TYPE STREQUAL "Debug")
+#         find_program(TOOL_WINDEPLOYQT NAMES windeployqt.debug.bat)
+#     else()
+#         find_program(TOOL_WINDEPLOYQT NAMES windeployqt)
+#     endif()
+
+#     add_custom_command(TARGET ${binary_target} POST_BUILD
+#         COMMAND ${TOOL_WINDEPLOYQT}
+#         $<TARGET_FILE:${binary_target}>
+#         COMMENT "Running windeployqt..."
+#     )
+# endfunction(run_windeployqt)
+# run_windeployqt(${CMAKE_PROJECT_NAME})

@@ -2,6 +2,13 @@
 
 #include <QStyledItemDelegate>
 #include <QPainter>
+#include <QPixmap>
+#include <QString>
+#include <QtDebug>
+#include <QFont>
+#include <QFontMetrics>
+#include <QColor>
+#include <QSize>
 
 #include "data.h"
 

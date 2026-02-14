@@ -37,6 +37,11 @@ public:
 signals:
     void media_changed(const QPixmap&pixmap);
 
+public slots:
+    void on_media_open();
+    void on_media_save();
+    void on_media_save_as();
+
 public:
     bool eventFilter(QObject *watched, QEvent *event) override;
 
@@ -68,3 +73,8 @@ private:
     friend Dev::MediaWindowDev;
 #endif // DEBUG
 };
+
+
+// 可参考项目：
+//   * Qt/Examples/Qt-5.15.2/widgets/widgets/imageviewer/imageviewer.cpp
+//   * Qt/Examples/Qt-5.15.2/widgets/widgets/movie/movieplayer.cpp

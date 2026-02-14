@@ -74,6 +74,9 @@
 #include <QTranslator>
 #include <QFontDatabase>
 #include <QFont>
+#include <QFileDialog>
+#include <QStandardPaths>
+#include <QMessageBox>
 
 class Utils {
 public:
@@ -205,6 +208,43 @@ public:
             qDebug().noquote().nospace() << QString("load font with path \"%2\" error!").arg(font_path);
         }
         return false;
+    }
+
+    static QIcon to_icon(const QString&text, const QPen&pen = QPen(Qt::white), const QSize size = QSize(128, 128)) {
+        QFont icon_font = Utils::get_suitable_font_size("Inconsolata Nerd Font Mono", size, text);
+        if(icon_font == QFont()) {
+            return QIcon();
+        }
+
+        // 1. 在内存中创建一个指定大小和格式的图像
+        // Format_ARGB32_Premultiplied 支持透明背景，且绘图效率最高
+        QImage image(size, QImage::Format_ARGB32_Premultiplied);
+
+        // 2. 初始化背景（如果不填充，内存中的原始数据可能是花屏的）
+        image.fill(Qt::transparent); // 设置为透明背景
+
+        // 3. 创建画家，绑定到 image 内存块
+        QPainter painter(&image);
+        painter.setRenderHint(QPainter::Antialiasing);
+        painter.setRenderHint(QPainter::TextAntialiasing);
+
+        // 4. 绘图操作
+        // painter.setPen(Qt::blue);
+        // painter.setFont(QFont("Arial", 20, QFont::Bold));
+        painter.setPen(pen);
+        painter.setFont(icon_font);
+        painter.drawText(image.rect(), Qt::AlignCenter, text);
+
+        painter.end(); // 完成绘制，数据已写入 image 内存
+
+        // // 5. 使用结果
+        // // 可以直接转为 QPixmap 显示
+        // ui->label->setPixmap(QPixmap::fromImage(image));
+        // // 或者保存到本地文件
+        // image.save("output.png");
+
+        QIcon icon(QPixmap::fromImage(image));
+        return icon;
     }
 
 private:

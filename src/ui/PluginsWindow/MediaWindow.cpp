@@ -22,6 +22,81 @@ MediaWindow::MediaWindow(QWidget *parent)
     m_action_full_screen = new QAction;  // 全屏显示
     m_action_pin         = new QAction;  // 窗口置顶
 
+    // // icon
+    m_action_open        ->setIcon(QIcon::fromTheme(QIcon::ThemeIcon::DocumentOpen  ));
+    m_action_save        ->setIcon(QIcon::fromTheme(QIcon::ThemeIcon::DocumentSave  ));
+    m_action_save_as     ->setIcon(QIcon::fromTheme(QIcon::ThemeIcon::DocumentSaveAs));
+    m_action_prev        ->setIcon(QIcon::fromTheme(QIcon::ThemeIcon::GoPrevious    ));
+    m_action_next        ->setIcon(QIcon::fromTheme(QIcon::ThemeIcon::GoNext        ));
+    m_action_fit         ->setIcon(QIcon::fromTheme(QIcon::ThemeIcon::ZoomFitBest   ));
+    m_action_zoom_in     ->setIcon(QIcon::fromTheme(QIcon::ThemeIcon::ZoomIn        ));
+    m_action_zoom_out    ->setIcon(QIcon::fromTheme(QIcon::ThemeIcon::ZoomOut       ));
+    m_action_normal_size ->setIcon(QIcon::fromTheme(QIcon::ThemeIcon::ViewRestore   ));
+    m_action_full_screen ->setIcon(QIcon::fromTheme(QIcon::ThemeIcon::ViewFullscreen));
+    m_action_pin         ->setIcon(QIcon::fromTheme(QIcon::ThemeIcon::GoUp          ));
+
+    static QIcon icon_nf_oct_pin                      = Utils::to_icon("");
+    static QIcon icon_nf_md_pin_outline               = Utils::to_icon("󰤱");
+    static QIcon icon_nf_md_pin_off_outline           = Utils::to_icon("󰤰");
+    static QIcon icon_nf_md_menu                      = Utils::to_icon("󰍜");
+    static QIcon icon_nf_md_menu_open                 = Utils::to_icon("󰮫");
+    static QIcon icon_nf_md_fullscreen                = Utils::to_icon("󰊓");
+    static QIcon icon_nf_md_window_minimize           = Utils::to_icon("󰖰");
+    static QIcon icon_nf_md_window_maximize           = Utils::to_icon("󰖯");
+    static QIcon icon_nf_md_window_restore            = Utils::to_icon("󰖲");
+    static QIcon icon_nf_oct_zoom_in                  = Utils::to_icon("");
+    static QIcon icon_nf_oct_zoom_out                 = Utils::to_icon("");
+    static QIcon icon_nf_cod_zoom_in                  = Utils::to_icon("");
+    static QIcon icon_nf_cod_zoom_out                 = Utils::to_icon("");
+    static QIcon icon_nf_md_folder_open_outline       = Utils::to_icon("󰷏");
+    static QIcon icon_nf_md_content_save_outline      = Utils::to_icon("󰠘");
+    static QIcon icon_nf_md_content_save_edit_outline = Utils::to_icon("󰳼");
+    static QIcon icon_nf_fa_arrow_right               = Utils::to_icon("");
+    static QIcon icon_nf_fa_arrow_left                = Utils::to_icon("");
+    static QIcon icon_nf_md_fit_to_screen_outline     = Utils::to_icon("󱣵");
+    static QIcon icon_nf_md_restore                   = Utils::to_icon("󰦛");
+
+    // icon
+    m_action_open        ->setIcon(icon_nf_md_folder_open_outline);
+    m_action_save        ->setIcon(icon_nf_md_content_save_outline);
+    m_action_save_as     ->setIcon(icon_nf_md_content_save_edit_outline);
+    m_action_prev        ->setIcon(icon_nf_fa_arrow_left);
+    m_action_next        ->setIcon(icon_nf_fa_arrow_right);
+    m_action_fit         ->setIcon(icon_nf_md_fit_to_screen_outline);
+    m_action_zoom_in     ->setIcon(icon_nf_oct_zoom_in);
+    m_action_zoom_out    ->setIcon(icon_nf_oct_zoom_out);
+    m_action_normal_size ->setIcon(icon_nf_md_restore);
+    m_action_full_screen ->setIcon(icon_nf_md_fullscreen);
+    m_action_pin         ->setIcon(icon_nf_md_pin_outline);
+
+    connect(m_action_full_screen, &QAction::triggered, this, [this]() {
+        if(m_action_full_screen->isChecked()) {
+            this->showFullScreen();
+            // m_action_full_screen ->setIcon(QIcon::fromTheme(QIcon::ThemeIcon::ListRemove));
+            m_action_full_screen ->setIcon(icon_nf_md_window_restore);
+        } else {
+            this->showNormal();
+            // m_action_full_screen ->setIcon(QIcon::fromTheme(QIcon::ThemeIcon::ViewFullscreen));
+            m_action_full_screen ->setIcon(icon_nf_md_fullscreen);
+        }
+    });
+    connect(m_action_pin, &QAction::triggered, this, [this]() {
+        if(m_action_pin->isChecked()) {
+            this->setWindowFlags(windowFlags() | Qt::WindowStaysOnTopHint);
+            // m_action_pin ->setIcon(QIcon::fromTheme(QIcon::ThemeIcon::GoDown));
+            m_action_pin ->setIcon(icon_nf_md_pin_off_outline);
+        } else {
+            this->setWindowFlags(windowFlags() & ~Qt::WindowStaysOnTopHint);
+            // m_action_pin ->setIcon(QIcon::fromTheme(QIcon::ThemeIcon::GoUp));
+            m_action_pin ->setIcon(icon_nf_md_pin_outline);
+        }
+        show(); // 必须调用 show() 重新刷新窗口状态
+    });
+
+    connect(m_action_open   , &QAction::triggered, this, &MediaWindow::on_media_open   );
+    connect(m_action_save   , &QAction::triggered, this, &MediaWindow::on_media_save   );
+    connect(m_action_save_as, &QAction::triggered, this, &MediaWindow::on_media_save_as);
+
     // text
     m_action_open        ->setText(tr("Open"         ));
     m_action_save        ->setText(tr("Save"         ));
@@ -34,19 +109,6 @@ MediaWindow::MediaWindow(QWidget *parent)
     m_action_normal_size ->setText(tr("Normal Size"  ));
     m_action_full_screen ->setText(tr("Full Screen"  ));
     m_action_pin         ->setText(tr("Pin"          ));
-
-    // icon
-    m_action_open        ->setIcon(QIcon::fromTheme(QIcon::ThemeIcon::DocumentOpen  ));
-    m_action_save        ->setIcon(QIcon::fromTheme(QIcon::ThemeIcon::DocumentSave  ));
-    m_action_save_as     ->setIcon(QIcon::fromTheme(QIcon::ThemeIcon::DocumentSaveAs));
-    m_action_prev        ->setIcon(QIcon::fromTheme(QIcon::ThemeIcon::GoPrevious    ));
-    m_action_next        ->setIcon(QIcon::fromTheme(QIcon::ThemeIcon::GoNext        ));
-    m_action_fit         ->setIcon(QIcon::fromTheme(QIcon::ThemeIcon::ZoomFitBest   ));
-    m_action_zoom_in     ->setIcon(QIcon::fromTheme(QIcon::ThemeIcon::ZoomIn        ));
-    m_action_zoom_out    ->setIcon(QIcon::fromTheme(QIcon::ThemeIcon::ZoomOut       ));
-    m_action_normal_size ->setIcon(QIcon::fromTheme(QIcon::ThemeIcon::ViewRestore   ));
-    m_action_full_screen ->setIcon(QIcon::fromTheme(QIcon::ThemeIcon::ViewFullscreen));
-    m_action_pin         ->setIcon(QIcon::fromTheme(QIcon::ThemeIcon::GoUp          ));
 
     // shortcut
     m_action_open       ->setShortcut(QKeySequence::Open      );
@@ -63,14 +125,14 @@ MediaWindow::MediaWindow(QWidget *parent)
     m_action_next->setEnabled(false);
     // // 功能未实现，先禁用
     // m_action_open        ->setEnabled(false);
-    // m_action_save        ->setEnabled(false);
+    // m_action_save        ->setEnabled(false);  // 会同时禁用菜单
     // m_action_save_as     ->setEnabled(false);
-    // m_action_prev        ->setEnabled(false);
-    // m_action_next        ->setEnabled(false);
+    m_action_prev        ->setEnabled(false);
+    m_action_next        ->setEnabled(false);
     // m_action_fit         ->setEnabled(false);
-    // m_action_zoom_in     ->setEnabled(false);
-    // m_action_zoom_out    ->setEnabled(false);
-    // m_action_normal_size ->setEnabled(false);
+    m_action_zoom_in     ->setEnabled(false);
+    m_action_zoom_out    ->setEnabled(false);
+    m_action_normal_size ->setEnabled(false);
     // m_action_full_screen ->setEnabled(false);
     // m_action_pin         ->setEnabled(false);
     // property // Checkable
@@ -98,7 +160,8 @@ MediaWindow::MediaWindow(QWidget *parent)
 
     // add to toolbar
     m_toolbar->addAction (m_action_open            );
-    m_toolbar->addAction (m_action_save            ); m_toolbar->addSeparator();
+    // m_toolbar->addAction (m_action_save            ); m_toolbar->addSeparator();
+    m_toolbar->addAction (m_action_save_as         ); m_toolbar->addSeparator(); // 不添加保存按钮,只添加另存为按钮
     m_toolbar->addAction (m_action_prev            );
     m_toolbar->addAction (m_action_next            ); m_toolbar->addSeparator();
     m_toolbar->addActions(m_action_group->actions()); m_toolbar->addSeparator();
@@ -107,7 +170,8 @@ MediaWindow::MediaWindow(QWidget *parent)
     // toolbar options
     m_toolbar->setWindowTitle(tr("Toolbar"));
     m_toolbar->setMovable(false);
-
+    m_toolbar->setIconSize(QSize(32, 32)); // 这里设置显示的图标大小
+    m_toolbar->setContextMenuPolicy(Qt::PreventContextMenu);  // 不显示右键菜单
     // add toolbar to window
     this->addToolBar(m_toolbar);
 
@@ -224,4 +288,78 @@ bool MediaWindow::eventFilter(QObject *watched, QEvent *event) {
         }
     }
     return QMainWindow::eventFilter(watched, event);
+}
+
+void MediaWindow::on_media_open() {
+    QFileDialog dialog(this, tr("Open File"));
+    QFileDialog::AcceptMode acceptMode = QFileDialog::AcceptOpen;
+
+    const QStringList picturesLocations = QStandardPaths::standardLocations(QStandardPaths::PicturesLocation);
+    dialog.setDirectory(picturesLocations.isEmpty() ? QDir::currentPath() : picturesLocations.last());
+
+    QStringList mimeTypeFilters;
+    const QByteArrayList supportedMimeTypes = acceptMode == QFileDialog::AcceptOpen ? QImageReader::supportedMimeTypes() : QImageWriter::supportedMimeTypes();
+    for (const QByteArray &mimeTypeName : supportedMimeTypes) {
+        mimeTypeFilters.append(mimeTypeName);
+    }
+    mimeTypeFilters.sort();
+    dialog.setMimeTypeFilters(mimeTypeFilters);
+    dialog.selectMimeTypeFilter("image/jpeg");
+    if (acceptMode == QFileDialog::AcceptSave) {
+        dialog.setDefaultSuffix("jpg");
+    }
+
+    auto loadFile = [this](const QString &fileName) {
+        QPixmap pixmap(fileName);
+        if(pixmap.isNull()) {
+            QMessageBox::information(this, QGuiApplication::applicationDisplayName(), tr("Cannot load %1").arg(QDir::toNativeSeparators(fileName)));
+            return false;
+        }
+
+        m_media_pixmap = pixmap;
+
+        setWindowFilePath(fileName);
+
+        const QString message = tr("Opened \"%1\", %2x%3, Depth: %4").arg(QDir::toNativeSeparators(fileName)).arg(pixmap.width()).arg(pixmap.height()).arg(pixmap.depth());
+        statusBar()->showMessage(message);
+        return true;
+    };
+
+    while (dialog.exec() == QDialog::Accepted && !loadFile(dialog.selectedFiles().first())) {}
+}
+
+void MediaWindow::on_media_save() {
+    // QFileInfo file_info(m_media_path);
+}
+
+void MediaWindow::on_media_save_as() {
+    QFileDialog dialog(this, tr("Save File As"));
+    QFileDialog::AcceptMode acceptMode = QFileDialog::AcceptSave;
+
+    const QStringList picturesLocations = QStandardPaths::standardLocations(QStandardPaths::PicturesLocation);
+    dialog.setDirectory(picturesLocations.isEmpty() ? QDir::currentPath() : picturesLocations.last());
+
+    QStringList mimeTypeFilters;
+    const QByteArrayList supportedMimeTypes = acceptMode == QFileDialog::AcceptOpen ? QImageReader::supportedMimeTypes() : QImageWriter::supportedMimeTypes();
+    for (const QByteArray &mimeTypeName : supportedMimeTypes) {
+        mimeTypeFilters.append(mimeTypeName);
+    }
+    mimeTypeFilters.sort();
+    dialog.setMimeTypeFilters(mimeTypeFilters);
+    dialog.selectMimeTypeFilter("image/jpeg");
+    if (acceptMode == QFileDialog::AcceptSave) {
+        dialog.setDefaultSuffix("jpg");
+    }
+
+    auto saveFile = [this](const QString &fileName) {
+        if(!m_media_pixmap.save(fileName)) {
+            QMessageBox::information(this, QGuiApplication::applicationDisplayName(), tr("Cannot write %1").arg(QDir::toNativeSeparators(fileName)));
+            return false;
+        }
+        const QString message = tr("Wrote \"%1\"").arg(QDir::toNativeSeparators(fileName));
+        statusBar()->showMessage(message);
+        return true;
+    };
+
+    while (dialog.exec() == QDialog::Accepted && !saveFile(dialog.selectedFiles().first())) {}
 }

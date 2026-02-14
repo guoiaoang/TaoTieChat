@@ -22,7 +22,7 @@ MediaWindowDev::MediaWindowDev(MediaWindow*media_window, QWidget *parent) {
     // // 使用 UTF-16 转义，需确保编译器支持  // 编译失败
     // label_text = QString::fromUtf16(u"\uf435 \udb82\udd31 \udb82\udd30");
 
-    QFont label_font = Utils::get_suitable_font_size("Inconsolata Nerd Font Mono", size, "󰤱󰤰");
+    QFont label_font = Utils::get_suitable_font_size("Inconsolata Nerd Font Mono", size, label_text);
 
     QPalette label_palette = label_widget->palette();
     label_palette.setBrush(QPalette::WindowText, QBrush(QColor(Qt::red)));

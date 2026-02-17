@@ -67,6 +67,9 @@ private:
     QPixmap  m_media_pixmap;
     QString  m_media_name  ;
 
+    bool   m_fit_to_window = true;  // 图片自适应窗口大小
+    double m_scale_factory = 1.0;   // 图片非自适应窗口大小时的缩放倍数
+
     // ====================================================================== //
 #ifdef DEBUG
 private:

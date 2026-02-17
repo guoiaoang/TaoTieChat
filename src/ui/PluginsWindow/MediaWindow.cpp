@@ -70,12 +70,30 @@ MediaWindow::MediaWindow(QWidget *parent)
     m_action_pin         ->setIcon(icon_nf_md_pin_outline);
 
     connect(m_action_full_screen, &QAction::triggered, this, [this]() {
+        // 用于恢复之前的窗口大小状态
+        static auto window_state_old = this->windowState();
         if(m_action_full_screen->isChecked()) {
+            // 更新保存之前的窗口大小状态
+            window_state_old = this->windowState();
+            // 执行命令
             this->showFullScreen();
             // m_action_full_screen ->setIcon(QIcon::fromTheme(QIcon::ThemeIcon::ListRemove));
             m_action_full_screen ->setIcon(icon_nf_md_window_restore);
         } else {
-            this->showNormal();
+            // 还原窗口状态
+            if(window_state_old == Qt::WindowNoState) {
+                this->showNormal();
+            }
+            else if(window_state_old == Qt::WindowMinimized) {
+                this->showMinimized();
+            }
+            else if(window_state_old == Qt::WindowMaximized) {
+                // TODO: QT 的 showFullScreen() 状态到 showMaximized() 状态，会先恢复常规大小后再最大化
+                this->showMaximized();
+            }
+            else if(window_state_old == Qt::WindowFullScreen) {
+                this->showFullScreen();
+            }
             // m_action_full_screen ->setIcon(QIcon::fromTheme(QIcon::ThemeIcon::ViewFullscreen));
             m_action_full_screen ->setIcon(icon_nf_md_fullscreen);
         }
@@ -92,6 +110,8 @@ MediaWindow::MediaWindow(QWidget *parent)
         }
         show(); // 必须调用 show() 重新刷新窗口状态
     });
+    connect(m_action_fit        , &QAction::triggered, this, [this](){ m_fit_to_window = true ; update_media(); });
+    connect(m_action_normal_size, &QAction::triggered, this, [this](){ m_fit_to_window = false; update_media(); });
 
     connect(m_action_open   , &QAction::triggered, this, &MediaWindow::on_media_open   );
     connect(m_action_save   , &QAction::triggered, this, &MediaWindow::on_media_save   );
@@ -132,7 +152,7 @@ MediaWindow::MediaWindow(QWidget *parent)
     // m_action_fit         ->setEnabled(false);
     m_action_zoom_in     ->setEnabled(false);
     m_action_zoom_out    ->setEnabled(false);
-    m_action_normal_size ->setEnabled(false);
+    // m_action_normal_size ->setEnabled(false);
     // m_action_full_screen ->setEnabled(false);
     // m_action_pin         ->setEnabled(false);
     // property // Checkable
@@ -161,7 +181,7 @@ MediaWindow::MediaWindow(QWidget *parent)
     // add to toolbar
     m_toolbar->addAction (m_action_open            );
     // m_toolbar->addAction (m_action_save            ); m_toolbar->addSeparator();
-    m_toolbar->addAction (m_action_save_as         ); m_toolbar->addSeparator(); // 不添加保存按钮,只添加另存为按钮
+    m_toolbar->addAction (m_action_save_as         ); m_toolbar->addSeparator(); // 不添加保存按钮，只添加另存为按钮
     m_toolbar->addAction (m_action_prev            );
     m_toolbar->addAction (m_action_next            ); m_toolbar->addSeparator();
     m_toolbar->addActions(m_action_group->actions()); m_toolbar->addSeparator();
@@ -185,6 +205,9 @@ MediaWindow::MediaWindow(QWidget *parent)
     // ui->layout_central->installEventFilter(this);
     ui->scrollArea->viewport()->installEventFilter(this);
     // ui->scrollArea->setWidgetResizable(true);
+
+    // 窗口最大化、还原时触发图片自动拉伸
+    this->installEventFilter(this);
 
 // #ifdef DEBUG
 //     Dev::MediaWindowDev(this, parent);
@@ -245,11 +268,26 @@ void MediaWindow::set_media_name(const QString&media_name) {
 }
 
 bool MediaWindow::update_media() {
-    // 更新缩放图片：使其适应 Label 大小，并保持纵横比
-    // Qt::KeepAspectRatio 保证图片不变形
-    // Qt::SmoothTransformation 保证缩放后的图片清晰（消除锯齿）
-    QPixmap pixmap_scaled = m_media_pixmap.scaled(ui->label->size(), Qt::KeepAspectRatio, Qt::SmoothTransformation);
-    ui->label->setPixmap(pixmap_scaled);
+    if(m_fit_to_window) {
+        // 更新缩放图片：使其适应 Label 大小，并保持纵横比
+        // Qt::KeepAspectRatio 保证图片不变形
+        // Qt::SmoothTransformation 保证缩放后的图片清晰（消除锯齿）
+        QPixmap pixmap_scaled = m_media_pixmap.scaled(ui->label->size(), Qt::KeepAspectRatio, Qt::SmoothTransformation);
+        ui->label->setPixmap(pixmap_scaled);
+    }
+    else {
+        // 检测精度
+        const double ff = 0.001;
+        if(m_scale_factory > 1.0 - ff && m_scale_factory < 1.0 + ff) {
+            // 如果缩放倍数为1附近的值，那么直接显示原图，避免不必要的缩放计算和可能的模糊
+            ui->label->setPixmap(m_media_pixmap);
+        }
+        else {
+            // 缩放倍数不为1时需要进行处理
+            QPixmap pixmap_scaled = m_media_pixmap.scaled(m_media_pixmap.size() * m_scale_factory, Qt::KeepAspectRatio, Qt::SmoothTransformation);
+            ui->label->setPixmap(pixmap_scaled);
+        }
+    }
     return true;
 
     // // 更新缩放图片：使其适应 ScrollArea 的 viewport 大小，并保持纵横比
@@ -286,6 +324,10 @@ bool MediaWindow::eventFilter(QObject *watched, QEvent *event) {
         else if(watched == ui->scrollArea->viewport()) {
             update_media();
         }
+    }
+    else if(event->type() == QEvent::WindowStateChange) {
+        // 窗口最大化与还原时可能需要手动触发图片缩放的更新
+        update_media();
     }
     return QMainWindow::eventFilter(watched, event);
 }

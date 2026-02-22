@@ -116,6 +116,13 @@
 #include <QXmlStreamAttributes>
 #include <QXmlStreamReader>
 #include <QXmlStreamWriter>
+#include <QUuid>
+
+// 宏工具：将宏参数转换为字符串
+#define STRINGIFY(x) #x
+#define TOSTRING(x) STRINGIFY(x)
+// 宏展开：强制 Q_INIT_RESOURCE 的参数先进行宏展开
+#define Q_INIT_RESOURCE_EXPAND(name) Q_INIT_RESOURCE(name)
 
 class Utils {
 public:
@@ -136,11 +143,12 @@ public:
     }
 
     static bool load_translator(QApplication&application) {
-        QTranslator translator;
+        // ":/rc/translations/TaoTieChat_zh_CN.qm"
+        static QTranslator translator;  // QTranslator 对象必须始终存在，翻译才会生效
         const QStringList ui_languages = QLocale::system().uiLanguages();
         for (const QString &locale : ui_languages) {
-            const QString base_name = "TaoTieChat_" + QLocale(locale).name();
-            if (translator.load(":/i18n/" + base_name)) {
+            const QString base_name = QString("%1_%2").arg(TOSTRING(PROJECT_NAME)).arg(QLocale(locale).name());
+            if (translator.load(":/rc/translations/" + base_name)) {
                 application.installTranslator(&translator);
                 // break;
                 return true;
@@ -181,7 +189,7 @@ public:
         constexpr qreal font_size_max = 2500;
 
         // QFont font(font_name);
-        qreal font_size_old = font.pointSizeF();
+        // qreal font_size_old = font.pointSizeF();
         QRectF rect_src_normalized(0, 0, rect.width(), rect.height());
 
         // 测试是否有意义
@@ -284,6 +292,13 @@ public:
 
         QIcon icon(QPixmap::fromImage(image));
         return icon;
+    }
+
+    // 获取随机字符串作为全局唯一的 ID
+    // QUuid::WithBraces 形如：{00000000-0000-0000-0000-000000000000}  // 8-4-4-4-12=32 位
+    // QUuid::Id128 : 不使用间隔符
+    static QString get_new_uuid_string() {
+        return QUuid::createUuid().toString(QUuid::Id128);
     }
 
 private:

@@ -1,0 +1,14 @@
+{
+    "[cpp]": {
+        "editor.defaultFormatter": "ms-vscode.cpptools",
+        "editor.formatOnSave": false,
+        "editor.semanticHighlighting.enabled": true
+    },
+    "[c]": {
+        "editor.defaultFormatter": "ms-vscode.cpptools",
+        "editor.semanticHighlighting.enabled": true
+    },
+    "C_Cpp.intelliSenseEngine": "default",
+    "C_Cpp.formatting": "vcFormat",
+    "editor.semanticHighlighting.enabled": true
+}

@@ -1,5 +1,6 @@
 <RCC>
     <qresource prefix="/rc">
         <file>fonts/InconsolataNerdFontMono-Regular.ttf</file>
+        <file>translations/TaoTieChat_zh_CN.qm</file>
     </qresource>
 </RCC>

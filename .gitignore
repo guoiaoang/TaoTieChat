@@ -79,5 +79,10 @@ CMakeLists.txt.user*
 .pch/
 .rcc/
 .uic/
-/build*/
+
+# mine added
 .qtcreator
+/build*/
+/out
+/.vscode/cache
+*.qm

@@ -95,7 +95,10 @@ ChatWindow::ChatWindow(QWidget *parent)
     connect(ui->page_list_contact->selectionModel(), &QItemSelectionModel::currentChanged, this, &ChatWindow::on_contact_selection_changed);
 
 #ifdef DEBUG
-    Dev::ChatWindowDev(this, parent);
+    // Dev::ChatWindowDev(this, parent);
+    for(auto contact : *m_local_user_data->get_contacts()) {
+        add_contact(contact);
+    }
 #endif // DEBUG
 }
 

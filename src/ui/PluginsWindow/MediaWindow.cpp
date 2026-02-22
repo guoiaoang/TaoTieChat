@@ -35,26 +35,27 @@ MediaWindow::MediaWindow(QWidget *parent)
     m_action_full_screen ->setIcon(QIcon::fromTheme(QIcon::ThemeIcon::ViewFullscreen));
     m_action_pin         ->setIcon(QIcon::fromTheme(QIcon::ThemeIcon::GoUp          ));
 
-    static QIcon icon_nf_oct_pin                      = Utils::to_icon("");
-    static QIcon icon_nf_md_pin_outline               = Utils::to_icon("󰤱");
-    static QIcon icon_nf_md_pin_off_outline           = Utils::to_icon("󰤰");
-    static QIcon icon_nf_md_menu                      = Utils::to_icon("󰍜");
-    static QIcon icon_nf_md_menu_open                 = Utils::to_icon("󰮫");
-    static QIcon icon_nf_md_fullscreen                = Utils::to_icon("󰊓");
-    static QIcon icon_nf_md_window_minimize           = Utils::to_icon("󰖰");
-    static QIcon icon_nf_md_window_maximize           = Utils::to_icon("󰖯");
-    static QIcon icon_nf_md_window_restore            = Utils::to_icon("󰖲");
-    static QIcon icon_nf_oct_zoom_in                  = Utils::to_icon("");
-    static QIcon icon_nf_oct_zoom_out                 = Utils::to_icon("");
-    static QIcon icon_nf_cod_zoom_in                  = Utils::to_icon("");
-    static QIcon icon_nf_cod_zoom_out                 = Utils::to_icon("");
-    static QIcon icon_nf_md_folder_open_outline       = Utils::to_icon("󰷏");
-    static QIcon icon_nf_md_content_save_outline      = Utils::to_icon("󰠘");
-    static QIcon icon_nf_md_content_save_edit_outline = Utils::to_icon("󰳼");
-    static QIcon icon_nf_fa_arrow_right               = Utils::to_icon("");
-    static QIcon icon_nf_fa_arrow_left                = Utils::to_icon("");
-    static QIcon icon_nf_md_fit_to_screen_outline     = Utils::to_icon("󱣵");
-    static QIcon icon_nf_md_restore                   = Utils::to_icon("󰦛");
+    QColor icon_color = this->palette().color(QPalette::WindowText);
+    static QIcon icon_nf_oct_pin                      = Utils::to_icon("", icon_color);
+    static QIcon icon_nf_md_pin_outline               = Utils::to_icon("󰤱", icon_color);
+    static QIcon icon_nf_md_pin_off_outline           = Utils::to_icon("󰤰", icon_color);
+    static QIcon icon_nf_md_menu                      = Utils::to_icon("󰍜", icon_color);
+    static QIcon icon_nf_md_menu_open                 = Utils::to_icon("󰮫", icon_color);
+    static QIcon icon_nf_md_fullscreen                = Utils::to_icon("󰊓", icon_color);
+    static QIcon icon_nf_md_window_minimize           = Utils::to_icon("󰖰", icon_color);
+    static QIcon icon_nf_md_window_maximize           = Utils::to_icon("󰖯", icon_color);
+    static QIcon icon_nf_md_window_restore            = Utils::to_icon("󰖲", icon_color);
+    static QIcon icon_nf_oct_zoom_in                  = Utils::to_icon("", icon_color);
+    static QIcon icon_nf_oct_zoom_out                 = Utils::to_icon("", icon_color);
+    static QIcon icon_nf_cod_zoom_in                  = Utils::to_icon("", icon_color);
+    static QIcon icon_nf_cod_zoom_out                 = Utils::to_icon("", icon_color);
+    static QIcon icon_nf_md_folder_open_outline       = Utils::to_icon("󰷏", icon_color);
+    static QIcon icon_nf_md_content_save_outline      = Utils::to_icon("󰠘", icon_color);
+    static QIcon icon_nf_md_content_save_edit_outline = Utils::to_icon("󰳼", icon_color);
+    static QIcon icon_nf_fa_arrow_right               = Utils::to_icon("", icon_color);
+    static QIcon icon_nf_fa_arrow_left                = Utils::to_icon("", icon_color);
+    static QIcon icon_nf_md_fit_to_screen_outline     = Utils::to_icon("󱣵", icon_color);
+    static QIcon icon_nf_md_restore                   = Utils::to_icon("󰦛", icon_color);
 
     // icon
     m_action_open        ->setIcon(icon_nf_md_folder_open_outline);

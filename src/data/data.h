@@ -1,7 +1,6 @@
 #pragma once
 
 #include "Utils.h"
-// #include "RegistryFactory.h"
 
 // ========================================================================== //
 // // 定义声明
@@ -313,7 +312,29 @@ public:
 
 // ========================================================================== //
 
+class ContactsManeger{
+public:
+    static Contacts create() {
+        return QSharedPointer<ContactsData>(new ContactsData);
+    }
+};
+
+// ========================================================================== //
+
+class MessagesManeger{
+public:
+    static Messages create() {
+        return QSharedPointer<MessagesData>(new MessagesData);
+    }
+};
+
+// ========================================================================== //
+
 class AccountsManager{
+public:
+    static Accounts create() {
+        return QSharedPointer<AccountsData>(new AccountsData);
+    }
 public:
     AccountsManager* instance() {
         static AccountsManager s_accounts;
@@ -360,4 +381,169 @@ public:
     // static QString id(Contact contact) { return ContactManager(contact).id(); }
 public:
     Accounts m_accounts;
+};
+
+// ========================================================================== //
+
+// 本地用户数据接口
+class LocalUserData{
+public:
+    LocalUserData(){}
+    virtual ~LocalUserData(){}
+public:
+    // 添加好友
+    virtual bool add_contact(Contact contact) { return false; }
+    // 获取好友列表
+    virtual Contact get_contact(const QString&contact_id) { return nullptr; }
+    virtual Contacts get_contacts() { return nullptr; }
+    // 新建聊天室
+    virtual void add_chat_room(){}
+    // 获取聊天室列表
+    virtual void get_chat_room(){}
+    virtual void get_chat_rooms(){}
+    // 添加群
+    virtual void add_group(){}
+    // 获取群组列表
+    virtual void get_group(){}
+    virtual void get_groups(){}
+};
+
+// ========================================================================== //
+
+// struct NetworkUserData{
+//     enum class RequestType{
+//         UserSignup,  // 注册
+//         UserSignin,  // 登陆
+//         UserLogout,  // 退出
+//         UserSearch,  // 搜索用户
+//         UserFriendAdd,    // 添加好友
+//         UserFriendRemove, // 删除好友
+//         UserGroupCreate,  // 创建群组
+//         UserGroupJoin,    // 加入群组
+//         UserGroupExit     // 退出群组
+//     };
+//     RequestType request_type;
+//     Contact contact;  // 相关用户信息
+//     QString content;  // 相关内容
+// };
+
+namespace NetworkBody{
+    struct UserSignupData  {
+        QString account_id;  // 返回的参数
+        QString user_id   ;  // 返回的参数
+        QString username  ;  // 传入的参数
+        QString password  ;  // 传入的参数
+        QString question  ;  // 传入的参数
+        QString answer    ;  // 传入的参数
+    };
+    using UserSignup = QSharedPointer<UserSignupData>;
+
+    struct UserSigninData  {
+        QString account_id;
+        QString username;
+        QString password;
+    };
+    using UserSignin = QSharedPointer<UserSigninData>;
+
+    struct UserLogoutData  {
+        QString account_id;
+    };
+    using UserLogout = QSharedPointer<UserLogoutData>;
+
+    struct UserSearchData  {
+        QString keyword;
+    };
+    using UserSearch = QSharedPointer<UserSearchData>;
+
+    struct UserFriendAddData    {
+        QString account_id;
+        QString friend_id;
+    };
+    using UserFriendAdd = QSharedPointer<UserFriendAddData>;
+
+    struct UserFriendRemoveData {
+        QString account_id;
+        QString friend_id;
+    };
+    using UserFriendRemove = QSharedPointer<UserFriendRemoveData>;
+
+    struct UserGroupCreateData  {
+        QString account_id;
+        QString group_name;
+        QStringList member_ids;
+    };
+    using UserGroupCreate = QSharedPointer<UserGroupCreateData>;
+
+    struct UserGroupDestroyData  {
+        QString account_id;
+        QString group_name;
+        QStringList member_ids;
+    };
+    using UserGroupDestroy = QSharedPointer<UserGroupDestroyData>;
+
+    struct UserGroupJoinData    {
+        QString account_id;
+        QString group_id;
+    };
+    using UserGroupJoin = QSharedPointer<UserGroupJoinData>;
+
+    struct UserGroupExitData    {
+        QString account_id;
+        QString group_id;
+    };
+    using UserGroupExit = QSharedPointer<UserGroupExitData>;
+}
+
+// ========================================================================== //
+
+// 网络收发数据接口
+// 默认创建异步收发接口
+class NetworkUserData{
+public:
+    NetworkUserData() {}
+    virtual ~NetworkUserData() {}
+public:
+    virtual bool init   () { return false; }
+    virtual bool destroy() { return false; }
+public:
+    // ============================== 用户管理 ============================== //
+    // 注册
+    virtual bool request_user_signup (const NetworkBody::UserSignup& request) { return false; }
+    virtual bool responce_user_signup(const NetworkBody::UserSignup& request) { return false; }
+    // 登陆
+    virtual bool request_user_signin (const NetworkBody::UserSignin& request) { return false; }
+    virtual bool responce_user_signin(const NetworkBody::UserSignin& request) { return false; }
+    // 退出
+    virtual bool request_user_logout (const NetworkBody::UserLogout& request) { return false; }
+    virtual bool responce_user_logout(const NetworkBody::UserLogout& request) { return false; }
+    // 搜索用户
+    virtual bool request_user_search (const NetworkBody::UserSearch& request) { return false; }
+    virtual bool responce_user_search(const NetworkBody::UserSearch& request) { return false; }
+    // 添加好友
+    virtual bool request_user_friend_add (const NetworkBody::UserFriendAdd& request) { return false; }
+    virtual bool responce_user_friend_add(const NetworkBody::UserFriendAdd& request) { return false; }
+    // 删除好友
+    virtual bool request_user_friend_remove (const NetworkBody::UserFriendRemove& request) { return false; }
+    virtual bool responce_user_friend_remove(const NetworkBody::UserFriendRemove& request) { return false; }
+    // 创建群组
+    virtual bool request_user_group_create (const NetworkBody::UserGroupCreate& request) { return false; }
+    virtual bool responce_user_group_create(const NetworkBody::UserGroupCreate& request) { return false; }
+    // 删除群组
+    virtual bool request_user_group_destroy (const NetworkBody::UserGroupDestroy& request) { return false; }
+    virtual bool responce_user_group_destroy(const NetworkBody::UserGroupDestroy& request) { return false; }
+    // 加入群组
+    virtual bool request_user_group_join (const NetworkBody::UserGroupJoin& request) { return false; }
+    virtual bool responce_user_group_join(const NetworkBody::UserGroupJoin& request) { return false; }
+    // 退出群组
+    virtual bool request_user_group_exit (const NetworkBody::UserGroupExit& request) { return false; }
+    virtual bool responce_user_group_exit(const NetworkBody::UserGroupExit& request) { return false; }
+    // ============================== 资料权限 ============================== //
+    bool request_user_info_view () { return false; }
+    bool responce_user_info_view() { return false; }
+    bool request_user_info_edit () { return false; }
+    bool responce_user_info_edit() { return false; }
+    // ============================== 消息管理 ============================== //
+    bool request_message_send () { return false; }
+    bool responce_message_send() { return false; }
+private:
 };

@@ -1,0 +1,22 @@
+{
+    "version": 10,
+    "configurePresets": [
+        {
+            "$comment":[
+                ""
+            ],
+            "name": "user-qt6-msvc-config",
+            "condition": {
+                "type": "equals",
+                "lhs": "${hostSystemName}",
+                "rhs": "Windows"
+            },
+            "description": "user qt6 msvc 2022 debug config",
+            "displayName": "user qt6 msvc debug config",
+            "inherits":[
+                "qt6_msvs_config"
+            ],
+            "toolchainFile": "C:/app/dev/Qt/6.10.1/msvc2022_64/lib/cmake/Qt6/qt.toolchain.cmake"
+        }
+    ]
+}

@@ -1,0 +1,116 @@
+// 数据结构设计 :
+//   所有账户根据账号 ID 进行映射
+//   账户内容包含联系人信息/聊天室信息/消息内容三部分
+//   联系人信息包含自己/好友/群聊成员等不同类型的联系人
+//   相同的联系人可以出现在不同的聊天室中，且有不同的身份，因此不同的聊天室内均需保留副本
+//   messages 不在 chat room 之下，以防消息丢失
+//   messages 下按 chat room id 分块，以防消息过多导致性能问题
+// 数据基本基于自身视角，全局通用数据较少，必须挂在当前账号下面
+
+// 账号 ID 与聊天室 ID 均为全局唯一
+
+// 聊天消息未删除时应当保留对应的聊天室信息
+
+// 已删除好友/被删除好友/已删除群聊/被删除群聊等复杂情况的处理？?
+
+// 分级加载
+
+// 默认显示好友列表/群组列表/未移除的消息
+
+// 消息列表需要单独做一个表
+
+// 微信消息列表默认显示：
+//   个人____________：头像，昵称/备注，____，时间，_______ 消息，置顶，未读数，______，勿扰，____，隐藏
+//   群聊____________：头像，昵称/备注，____，时间，发送者，消息，置顶，未读数，______，勿扰，折叠，隐藏
+//   邮箱____________：头像，昵称_____，____，时间，发送者，消息，置顶，未读__，______，勿扰，____，隐藏
+//   文件传输助手____：头像，昵称_____，____，时间，______，消息，置顶，未读__，______，勿扰，____，隐藏
+//   {关注号}等______：头像，昵称_____，____，时间，______，消息，置顶，______，关注__，勿扰，____，隐藏
+//   <服务通知>______：头像，昵称_____，____，时间，发送者，消息，____，未读__，______，勿扰，____，隐藏
+//   <服务号>________：头像，昵称_____，____，时间，发送者，消息，____，未读__，______，____，____，隐藏
+//   <折叠的聊天>____：头像，昵称_____，____，时间，发送者，消息，____，未读__，______，____，____，隐藏
+//   {企业微信联系人}：头像，昵称_____，企业，时间，发送者，消息，____，未读__，______，勿扰，____，隐藏
+// QQ 群聊提醒状态：
+//   允许消息提醒，接收消息但不提醒，收进群助手但不提醒，屏蔽群消息
+// 微信联系人列表显示：
+//   个人__________：头像，昵称/备注，星标
+//   群聊__________：头像，昵称/备注，____
+//   公众号________：头像，昵称/备注，____
+//   服务号________：头像，昵称/备注，____
+//   企业微信联系人：头像，昵称/备注，星标，企业名称
+
+{
+    "accounts" : {
+        "{account_id}" : {
+            // 自身 ID 可以直接使用 account_id 进行标识
+            // "self" : "self_contact_id",
+            "friends" : {
+                "{friend_contact_id}" : {
+                    "uuid" : "{friend_contact_id}",
+                    "state" : "friend",  // friend, stranger, deleted, etc.  // 好友、陌生人、已/被删除等状态
+                    "username" : "friend_user",
+                    "nickname" : "Friend User",
+                    "profile_picture" : "path/to/friend_profile_picture.jpg",
+                }
+            },
+            "groups" : {
+                "{group_contact_id}" : {
+                    "uuid" : "{group_contact_id}",
+                    "state" : "group",  // friend, stranger, deleted, etc.  // 好友、陌生人、已/被删除等状态
+                    "username" : "group_user",
+                    "nickname" : "Group User",
+                    "profile_picture" : "path/to/group_profile_picture.jpg",
+                },
+            },
+
+
+            // 同一好友可能出现在多个聊天室内，因此不同聊天室可以保留好友 ID ,再加上该好友在该聊天室内信息
+            "contacts" : {
+                "{contact_id}" : {
+                    "uuid" : "{contact_id}",
+                    "state" : "friend",  // friend, stranger, deleted, etc.  // 好友、陌生人、已/被删除等状态
+                    "username" : "friend_user",
+                    "nickname" : "Friend User",
+                    "profile_picture" : "path/to/friend_profile_picture.jpg",
+                    "gender" : "male",
+                    "starred" : true,
+                    "disturb" : false,
+                    "region" : "Example Region",
+                    "notes" : "Met at the conference.",
+                    "sign" : "Carpe Diem",
+                    "from" : "WeChat",
+                },
+                // ...
+            },
+            // 与好友的聊天也使用 chat room 进行管理，此时 chat room id 使用好友 ID 进行标识
+            // 当添加成员时申请新的 chat room id, 此时才启用群聊的相关变量
+            "chatrooms" : {
+                "{chatroom_id}" : {
+                    "id" : "{chatroom_id}",
+                    "name" : "Example Chatroom",
+                    "profile_picture" : "path/to/chatroom_profile_picture.jpg",
+                    "members" : {
+                        "{contact_id1}" : {
+                            "role" : "admin",
+                        },
+                        "{contact_id2}": {
+                            "role" : "member",
+                        },
+                        // ...
+                    },
+                }
+            },
+            "messages" : {
+                "{chat_room_id}" : {
+                    "{message_id}" : {
+                        "id" : "{message_id}",
+                        "sender_id" : "{contact_id1}",
+                        "content" : "Welcome to the chatroom!",
+                        "timestamp" : "2024-06-01T12:00:00Z",
+                    },
+                    // ...
+                }
+            }
+        },
+        // ...
+    }
+}

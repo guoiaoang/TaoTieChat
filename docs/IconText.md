@@ -36,4 +36,5 @@
 |   󰳼 | nf-md-content_save_edit_outline | `\udb83\udcfc`  |
 |    | nf-fa-arrow_right               | `\uf061`        |
 |    | nf-fa-arrow_left                | `\uf060`        |
-|   󱣵 | nf-md-fit_to_screen_outline     | ` \udb86\udcf5` |
+|   󱣵 | nf-md-fit_to_screen_outline     | `\udb86\udcf5`  |
+|   󰦛 | nf-md-restore                   | `\udb82\udd9b`  |

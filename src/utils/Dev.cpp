@@ -113,6 +113,7 @@ ChatWindowDev::ChatWindowDev(ChatWindow*chat_window, QWidget *parent) {
 
         // test data
         {
+#ifdef DEBUG
             // ":/"
             {
                 for(QDirListing::DirEntry file : QDirListing(":/", QDirListing::IteratorFlag::Recursive | QDirListing::IteratorFlag::FilesOnly)) {
@@ -146,6 +147,7 @@ ChatWindowDev::ChatWindowDev(ChatWindow*chat_window, QWidget *parent) {
                     chat_window->add_contact(ContactManager("Contact ThemeIcon ID " + count, pixmap, path, "Contact ThemeIcon NickName " + count, path).contact());
                 }
             }
+#endif // DEBUG
         }
     }
 

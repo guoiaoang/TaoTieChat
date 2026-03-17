@@ -3,7 +3,6 @@
 #include "Headers.h"
 #include "Utils.h"
 #include "NetworkClient.h"
-// #include <QGrpcHttp2Channel>
 
 namespace Ui {
 class AuthWindow;
@@ -20,11 +19,12 @@ public:
 
 private slots:
     bool handle_user_register();
-    bool handle_user_login();
-    bool handle_user_register_successd(QSharedPointer<UserRegisterParameters> params_register);
+    bool handle_user_login   ();
+    bool handle_user_register_successd(user_register_params params_register);
+    bool handle_user_login_successd   (user_login_reply     peply_login    );
 private:
-    bool user_register(QSharedPointer<UserRegisterParameters> params_register);
-    bool user_login(QSharedPointer<UserLoginParameters> params_login);
+    bool user_register(user_register_params params_register);
+    bool user_login   (user_login_params    params_login   );
 
 private:
     Ui::AuthWindow *ui = nullptr;

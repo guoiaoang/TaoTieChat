@@ -56,18 +56,49 @@ bool AuthWindow::user_register(user_register_params params_register) {
     return NetworkClient::instance().user_register(params_register, callback);
 }
 
-bool AuthWindow::user_login(QSharedPointer<UserLoginParameters> params_login) {
-    qDebug().noquote().nospace() << __FUNCSIG__;
-    return false;
+bool AuthWindow::user_login(user_login_params params_login) {
+    auto callback = [this](int error_code, const QString&error_message, user_login_params params_login, user_login_reply reply_login){
+        if(error_code != 0) {
+            qDebug().nospace().noquote() << "user_login error, code : " << error_code << ", message : " << error_message;
+            return;
+        }
+        handle_user_login_successd(reply_login);
+    };
+    return NetworkClient::instance().user_login(params_login, callback);
 }
 
 bool AuthWindow::handle_user_register_successd(QSharedPointer<UserRegisterParameters> params_register) {
     QMessageBox::information(this, tr("tips"), tr("register success. close this dialog to login."));
+
 #ifndef _DEBUG
     // TODO:清除界面数据
 #endif // _DEBUG
-    QSharedPointer<UserLoginParameters> params_login = QSharedPointer<UserLoginParameters>(new UserLoginParameters);
+
+    // 创建用于登陆的参数
+    user_login_params params_login = QSharedPointer<UserLoginParameters>(new UserLoginParameters);
     params_login->user_id = params_register->user_id;
     params_login->password = params_register->password;
     return user_login(params_login);
+}
+
+bool AuthWindow::handle_user_login_successd(user_login_reply reply_login) {
+    QMessageBox::information(this, tr("tips"), tr("login success. close this dialog to show chat window."));
+
+#ifndef _DEBUG
+    // TODO:清除界面数据
+#endif // _DEBUG
+
+    // 主界面可能需要的参数
+    QString user_id    = reply_login->request().userId();
+    QString account_id = reply_login->accountId();
+    QString token      = reply_login->token    ();
+    qDebug().nospace().noquote()
+        << "login success. "
+        << "user id: "       << user_id
+        << ", account id : " << account_id
+        << ", token : "      << token;
+
+    // this, &AuthWindow::accepted
+    this->accepted();
+    return true;
 }

@@ -59,6 +59,51 @@ ChatWindow::ChatWindow(QWidget *parent)
     m_split_contact->setStretchFactor(1, 1);
     ui->chat_layout->replaceWidget(ui->contact_widget, m_split_contact);
 
+    // 设置图标
+    const  QSize  size_avatar(48, 48);
+    const  QSize  size_button(36, 36);
+    static QColor icon_color          = this->palette().color(QPalette::WindowText);
+    static QColor icon_color_disabled = this->palette().color(QPalette::Disabled, QPalette::WindowText);
+    static QIcon  icon_profile            = Utils::to_icon("󰙄", icon_color);
+    static QIcon  icon_chat_room_normal   = Utils::to_icon("󰻞", icon_color);
+    static QIcon  icon_chat_room_disabled = Utils::to_icon("󰻞", icon_color_disabled);
+    static QIcon  icon_contacts_normal    = Utils::to_icon("󰖸", icon_color);
+    static QIcon  icon_contacts_disabled  = Utils::to_icon("󰖸", icon_color_disabled);
+    static QIcon  icon_settings           = Utils::to_icon("", icon_color);
+    static QIcon  icon_chat_room;
+    static QIcon  icon_contacts;
+    icon_chat_room.addPixmap(icon_chat_room_normal  .pixmap(size_button), QIcon::Normal  , QIcon::Off);
+    icon_chat_room.addPixmap(icon_chat_room_disabled.pixmap(size_button), QIcon::Disabled, QIcon::Off);
+    icon_contacts .addPixmap(icon_contacts_normal   .pixmap(size_button), QIcon::Normal  , QIcon::Off);
+    icon_contacts .addPixmap(icon_contacts_disabled .pixmap(size_button), QIcon::Disabled, QIcon::Off);
+    auto button_set = [](QToolButton* button, const QIcon& icon, const QSize& size = QSize(36, 36)) {
+        // QToolButton 默认显示模式为图标 + 文字，因此直接设置时会导致使用默认的小图标
+        button->setIcon(icon);
+        button->setIconSize(size);
+        // 设置按钮大小为图标大小，避免按钮过大导致布局不美观
+        button->setFixedSize(size);
+        // 默认不显示边框
+        button->setAutoRaise(true);
+        // 只显示图标，默认是图标 + 文字，因此如果不设置，按钮会显示一个默认的小图标
+        button->setToolButtonStyle(Qt::ToolButtonIconOnly);
+        // 设置悬浮提示词
+        button->setToolTip(button->text());
+    };
+    button_set(ui->navigate_button_chat_room, icon_chat_room);
+    button_set(ui->navigate_button_contact  , icon_contacts );
+    button_set(ui->button_settings          , icon_settings );
+    // tooltips
+    ui->navigate_label_avatar->setPixmap(icon_profile.pixmap(size_avatar));
+    ui->navigate_label_avatar->setFixedSize(size_avatar);
+    ui->navigate_label_avatar->setToolTip(ui->navigate_label_avatar->text());
+    // 控件居中对齐
+    ui->navigate_layout        ->setAlignment(ui->navigate_label_avatar    , Qt::AlignHCenter);
+    ui->navigate_layout_contact->setAlignment(ui->navigate_button_chat_room, Qt::AlignHCenter);
+    ui->navigate_layout_contact->setAlignment(ui->navigate_button_contact  , Qt::AlignHCenter);
+    ui->navigate_layout        ->setAlignment(ui->button_settings          , Qt::AlignHCenter);
+    // window icon
+    this->setWindowIcon(icon_profile);
+
     // 设置菜单
     // ui->navigate_button_menu->setMenu(m_menu_settings);
     // ui->navigate_button_menu->setPopupMode(QToolButton::InstantPopup);        // 点击按钮立即弹出菜单  // 带下三角
@@ -82,6 +127,7 @@ ChatWindow::ChatWindow(QWidget *parent)
     ui->page_list_chat_room->setSpacing(0);
     // 设置按像素滚动列表内容
     ui->page_list_chat_room->setVerticalScrollMode(QAbstractItemView::ScrollPerPixel);
+    ui->page_list_contact  ->setVerticalScrollMode(QAbstractItemView::ScrollPerPixel);
     // m_split_contact->setSizes(QList<int>{100, 100});
     ui->widget_contact_list->resize(300, ui->widget_contact_list->height());
 
@@ -92,7 +138,7 @@ ChatWindow::ChatWindow(QWidget *parent)
     ui->page_list_contact->setModel(m_contact_model);
     ui->page_list_contact->setItemDelegate(m_contact_delegate);
     // 使用 currentChanged 信号支持键盘上下键导航和鼠标点击
-    connect(ui->page_list_contact->selectionModel(), &QItemSelectionModel::currentChanged, this, &ChatWindow::on_contact_selection_changed);
+    connect(ui->page_list_contact->selectionModel(), &QItemSelectionModel::currentChanged, this, &ChatWindow::handle_contact_selection_changed);
 
 #ifdef DEBUG
     // Dev::ChatWindowDev(this, parent);
@@ -180,7 +226,7 @@ void ChatWindow::add_contact(Contact contact) {
     m_contact_model->add_contact(contact);
 }
 
-void ChatWindow::on_contact_selection_changed(const QModelIndex &current, const QModelIndex &previous) {
+void ChatWindow::handle_contact_selection_changed(const QModelIndex &current, const QModelIndex &previous) {
     // 索引值需要有效
     if (!current.isValid()) {
         return;

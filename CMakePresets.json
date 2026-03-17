@@ -2,9 +2,9 @@
     "version": 10,
     "configurePresets": [
         {
-            "$comment":[
-                "request : msvc 2022 with cmake, qt 6.10.1 msvc 2022, vcpkg, cmake",
-                "qt 6 cmake toolchain file : C:/app/dev/Qt/6.10.1/msvc2022_64/lib/cmake/Qt6/qt.toolchain.cmake",
+            "$comment": [
+                "request : msvc 2022 with cmake, qt 6.8.3 msvc 2022, vcpkg, cmake",
+                "qt 6 cmake toolchain file : C:/app/dev/Qt/6.8.3/msvc2022_64/lib/cmake/Qt6/qt.toolchain.cmake",
                 "vcpkg cmake toolchain file : C:/a/t/vcpkg/scripts/buildsystems/vcpkg.cmake",
                 "vcpkg root : C:/a/t/vcpkg",
                 "vcpkg triplet : x64-windows",
@@ -13,26 +13,218 @@
                 "vcpkg install grpc:x64-windows",
                 "vcpkg install protobuf:x64-windows"
             ],
-            "name": "qt6_msvs_config",
-            "displayName": "x64 debug",
+            "hidden": true,
             "condition": {
                 "type": "equals",
                 "lhs": "${hostSystemName}",
                 "rhs": "Windows"
             },
-            "description": "vcpkg + qt6 + cmake with msvc 2022 x64 debug config on windows",
+            "name": "qt683_vcpkg_msvs_config",
+            "description": "cmake + qt683 + vcpkg with msvc 2022 x64 debug config on windows",
+            "displayName": "qt 6.8.3 + vcpkg + msvs 2022 x64 debug - config",
             "generator": "Visual Studio 17 2022",
             "binaryDir": "${sourceDir}/out/build/${presetName}",
             "installDir": "${sourceDir}/out/install/${presetName}",
             "toolchainFile": "C:/a/t/vcpkg/scripts/buildsystems/vcpkg.cmake",
             "cacheVariables": {
                 "CMAKE_BUILD_TYPE": "Debug",
-                "CMAKE_PREFIX_PATH": "C:/app/dev/Qt/6.10.1/msvc2022_64/lib/cmake"
+                "CMAKE_PREFIX_PATH": "C:/app/dev/Qt/6.8.3/msvc2022_64/lib/cmake"
             },
             "environment": {
                 "VCPKG_ROOT": "C:/a/t/vcpkg",
                 "PATH": "C:/a/t/vcpkg;$penv{PATH}"
             }
+        },
+        {
+            "hidden": true,
+            "name": "direct_config",
+            "description": "direct config",
+            "displayName": "direct config",
+            "binaryDir": "${sourceDir}/out/build/${presetName}",
+            "installDir": "${sourceDir}/out/install/${presetName}"
+        },
+        {
+            "hidden": true,
+            "name": "build_type_debug",
+            "description": "build type debug",
+            "displayName": "build type debug",
+            "cacheVariables": {
+                "CMAKE_BUILD_TYPE": "Debug"
+            }
+        },
+        {
+            "hidden": true,
+            "name": "build_type_release",
+            "description": "build type release",
+            "displayName": "build type release",
+            "cacheVariables": {
+                "CMAKE_BUILD_TYPE": "Release"
+            }
+        },
+        {
+            "hidden": true,
+            "condition": {
+                "type": "equals",
+                "lhs": "${hostSystemName}",
+                "rhs": "Windows"
+            },
+            "name": "toolchain_file_qt683",
+            "description": "qt 6.8.3 cmake toolchain file",
+            "displayName": "qt 6.8.3 cmake toolchain file",
+            "toolchainFile": "C:/app/dev/Qt/6.8.3/msvc2022_64/lib/cmake/Qt6/qt.toolchain.cmake"
+        },
+        {
+            "hidden": true,
+            "condition": {
+                "type": "equals",
+                "lhs": "${hostSystemName}",
+                "rhs": "Windows"
+            },
+            "name": "toolchain_file_vcpkg",
+            "description": "vcpkg cmake toolchain file",
+            "displayName": "vcpkg cmake toolchain file",
+            "toolchainFile": "C:/a/t/vcpkg/scripts/buildsystems/vcpkg.cmake"
+        },
+        {
+            "hidden": true,
+            "condition": {
+                "type": "equals",
+                "lhs": "${hostSystemName}",
+                "rhs": "Windows"
+            },
+            "name": "prefix_path_qt683",
+            "description": "qt 6.8.3 cmake prefix path",
+            "displayName": "qt 6.8.3 cmake prefix path",
+            "cacheVariables": {
+                "CMAKE_PREFIX_PATH": "$penv{CMAKE_PREFIX_PATH};C:/app/dev/Qt/6.8.3/msvc2022_64/lib/cmake"
+            }
+        },
+        {
+            "hidden": true,
+            "condition": {
+                "type": "equals",
+                "lhs": "${hostSystemName}",
+                "rhs": "Windows"
+            },
+            "name": "generator_msvs_2022",
+            "description": "msvs 2022 generator",
+            "displayName": "msvs 2022 generator",
+            "generator": "Visual Studio 17 2022"
+        },
+        {
+            "$comment":[
+                "qt grpc 模块不包含编译程序，需要使用 vcpkg 安装，无 vcpkg 版本不适合使用"
+            ],
+            "hidden": true,
+            "condition": {
+                "type": "equals",
+                "lhs": "${hostSystemName}",
+                "rhs": "Windows"
+            },
+            "inherits": [
+                "direct_config",
+                "build_type_debug",
+                "toolchain_file_qt683",
+                "prefix_path_qt683",
+                "generator_msvs_2022"
+            ],
+            "name": "qt683_msvs_debug_config",
+            "description": "qt683 with msvc 2022 x64 debug config on windows",
+            "displayName": "qt 6.8.3 + msvs 2022 x64 debug - config"
+        },
+        {
+            "condition": {
+                "type": "equals",
+                "lhs": "${hostSystemName}",
+                "rhs": "Windows"
+            },
+            "inherits": [
+                "direct_config",
+                "build_type_debug",
+                "toolchain_file_vcpkg",
+                "prefix_path_qt683",
+                "generator_msvs_2022"
+            ],
+            "name": "vcpkg_qt683_msvs_debug_config",
+            "description": "vcpkg use qt 6.8.3 with msvc 2022 x64 debug config on windows",
+            "displayName": "vcpkg + qt 6.8.3 + msvc 2022 x64 debug - config"
+        },
+        {
+            "$comment":[
+                "copy from qt creator kit : Desktop_Qt_6_8_3_MSVC2022_64bit-Debug, ",
+                "with some modification, such as use ninja generator and set qt related environment variables, ",
+                "also set compiler to cl.exe directly to avoid vs project generation which will cause some problem when using vcpkg toolchain file",
+                "",
+                "source command:",
+                "-S C:/workspace/projects/qt/TaoTieChat",
+                "-B C:/workspace/projects/qt/TaoTieChat/build/Desktop_Qt_6_8_3_MSVC2022_64bit-Debug",
+                "\"-DCMAKE_BUILD_TYPE:STRING=Debug\"",
+                "\"-DCMAKE_PREFIX_PATH:PATH=C:/app/dev/Qt/6.8.3/msvc2022_64\"",
+                "\"-DCMAKE_COLOR_DIAGNOSTICS:BOOL=ON\"",
+                "\"-DCMAKE_PROJECT_INCLUDE_BEFORE:FILEPATH=C:\\workspace\\projects\\qt\\TaoTieChat\\build\\Desktop_Qt_6_8_3_MSVC2022_64bit-Debug/.qtc/package-manager/auto-setup.cmake\"",
+                "\"-DCMAKE_GENERATOR:STRING=Ninja\"",
+                "\"-DCMAKE_C_COMPILER:FILEPATH=C:/app/dev/msvs/2022/enterprise/VC/Tools/MSVC/14.44.35207/bin/HostX64/x64/cl.exe\"",
+                "\"-DQT_QMAKE_EXECUTABLE:FILEPATH=C:/app/dev/Qt/6.8.3/msvc2022_64/bin/qmake.exe\"",
+                "\"-DCMAKE_CXX_FLAGS_INIT:STRING=-DQT_QML_DEBUG\"",
+                "\"-DQT_MAINTENANCE_TOOL:FILEPATH=C:/app/dev/Qt/MaintenanceTool.exe\"",
+                "\"-DCMAKE_CXX_COMPILER:FILEPATH=C:/app/dev/msvs/2022/enterprise/VC/Tools/MSVC/14.44.35207/bin/HostX64/x64/cl.exe\"",
+                ""
+            ],
+            "condition": {
+                "type": "equals",
+                "lhs": "${hostSystemName}",
+                "rhs": "Windows"
+            },
+            "name": "Desktop_Qt_6_8_3_MSVC2022_64bit-Debug",
+            "description": "Desktop_Qt_6_8_3_MSVC2022_64bit-Debug",
+            "displayName": "Desktop_Qt_6_8_3_MSVC2022_64bit-Debug",
+            "generator": "Ninja",
+            "binaryDir": "${sourceDir}/out/build/${presetName}",
+            "installDir": "${sourceDir}/out/install/${presetName}",
+            "cmakeExecutable": "C:/app/dev/CMake/bin/cmake.exe",
+            "environment": {
+                "VCPKG_ROOT": "C:/a/t/vcpkg",
+                "PATH": "C:/a/t/vcpkg;$penv{PATH}",
+                "CMAKE_BUILD_TYPE": "Debug",
+                "CMAKE_PREFIX_PATH": "C:/app/dev/Qt/6.8.3/msvc2022_64",
+                "CMAKE_COLOR_DIAGNOSTICS": "ON",
+                "CMAKE_PROJECT_INCLUDE_BEFORE": "${sourceDir}/out/build/${presetName}/.qtc/package-manager/auto-setup.cmake",
+                "CMAKE_CXX_FLAGS_INIT": " -DQT_QML_DEBUG /DWIN32 /D_WINDOWS /GR /EHsc",
+                "CMAKE_C_COMPILER": "C:/app/dev/msvs/2022/enterprise/VC/Tools/MSVC/14.44.35207/bin/HostX64/x64/cl.exe",
+                "CMAKE_CXX_COMPILER": "C:/app/dev/msvs/2022/enterprise/VC/Tools/MSVC/14.44.35207/bin/HostX64/x64/cl.exe",
+                "QT_QMAKE_EXECUTABLE": "C:/app/dev/Qt/6.8.3/msvc2022_64/bin/qmake.exe",
+                "QT_MAINTENANCE_TOOL": "C:/app/dev/Qt/MaintenanceTool.exe"
+            }
+        }
+    ],
+    "buildPresets": [
+        {
+            "hidden": true,
+            "name": "build_qt683_msvs_debug",
+            "description": "build with qt 6.8.3 + msvs 2022 x64 debug config on windows",
+            "displayName": "qt 6.8.3 + msvs 2022 x64 debug - build",
+            "configurePreset": "qt683_msvs_debug_config"
+        },
+        {
+            "hidden": true,
+            "name": "build_vcpkg_qt683_msvs_debug",
+            "description": "build with vcpkg using qt 6.8.3 + msvs 2022 x64 debug config on windows",
+            "displayName": "vcpkg + qt 6.8.3 + msvs 2022 x64 debug - build",
+            "configurePreset": "vcpkg_qt683_msvs_debug_config"
+        },
+        {
+            "$comment":[
+                "\"C:\\app\\dev\\Qt\\Tools\\CMake_64\\bin\\cmake.exe\" --build C:/workspace/projects/qt/TaoTieChat/build/Desktop_Qt_6_8_3_MSVC2022_64bit-Debug --target all"
+            ],
+            "condition": {
+                "type": "equals",
+                "lhs": "${hostSystemName}",
+                "rhs": "Windows"
+            },
+            "name": "Desktop_Qt_6_8_3_MSVC2022_64bit-Debug",
+            "description": "Desktop_Qt_6_8_3_MSVC2022_64bit-Debug",
+            "displayName": "Desktop_Qt_6_8_3_MSVC2022_64bit-Debug",
+            "configurePreset": "Desktop_Qt_6_8_3_MSVC2022_64bit-Debug"
         }
     ]
 }

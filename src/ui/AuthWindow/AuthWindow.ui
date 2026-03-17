@@ -436,7 +436,7 @@
              <item row="1" column="0">
               <widget class="QLabel" name="signup_label_password">
                <property name="text">
-                <string>Password</string>
+                <string>Password:</string>
                </property>
                <property name="alignment">
                 <set>Qt::AlignmentFlag::AlignRight|Qt::AlignmentFlag::AlignTrailing|Qt::AlignmentFlag::AlignVCenter</set>

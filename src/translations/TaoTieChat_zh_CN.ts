@@ -22,12 +22,12 @@
     </message>
     <message>
         <location filename="../ui/AuthWindow/AuthWindow.ui" line="137"/>
+        <location filename="../ui/AuthWindow/AuthWindow.ui" line="439"/>
         <source>Password:</source>
         <translation>密码：</translation>
     </message>
     <message>
         <location filename="../ui/AuthWindow/AuthWindow.ui" line="153"/>
-        <location filename="../ui/AuthWindow/AuthWindow.ui" line="439"/>
         <location filename="../ui/AuthWindow/AuthWindow.ui" line="455"/>
         <source>Password</source>
         <translation>密码</translation>
@@ -76,7 +76,7 @@
     <message>
         <location filename="../ui/AuthWindow/AuthWindow.ui" line="619"/>
         <source>Signin</source>
-        <translation>注册</translation>
+        <translation>登录</translation>
     </message>
 </context>
 <context>
@@ -112,22 +112,22 @@
         <translation></translation>
     </message>
     <message>
-        <location filename="../ui/ChatWindow/ChatWindow.cpp" line="67"/>
+        <location filename="../ui/ChatWindow/ChatWindow.cpp" line="112"/>
         <source>settings</source>
         <translation>设置</translation>
     </message>
     <message>
-        <location filename="../ui/ChatWindow/ChatWindow.cpp" line="69"/>
+        <location filename="../ui/ChatWindow/ChatWindow.cpp" line="114"/>
         <source>Signout</source>
         <translation>退出登陆</translation>
     </message>
     <message>
-        <location filename="../ui/ChatWindow/ChatWindow.cpp" line="74"/>
+        <location filename="../ui/ChatWindow/ChatWindow.cpp" line="119"/>
         <source>Add as a friend or join a group</source>
         <translation>添加好友或群组</translation>
     </message>
     <message>
-        <location filename="../ui/ChatWindow/ChatWindow.cpp" line="75"/>
+        <location filename="../ui/ChatWindow/ChatWindow.cpp" line="120"/>
         <source>Create a group</source>
         <translation>创建群</translation>
     </message>
@@ -275,7 +275,7 @@
     <message>
         <location filename="../ui/PluginsWindow/MediaWindow.cpp" line="366"/>
         <source>Opened &quot;%1&quot;, %2x%3, Depth: %4</source>
-        <translation>已打开 &quot;%1&quot;, %2x%3， 深度： %4</translation>
+        <translation>已打开 &quot;%1&quot;, %2x%3，深度： %4</translation>
     </message>
     <message>
         <location filename="../ui/PluginsWindow/MediaWindow.cpp" line="379"/>

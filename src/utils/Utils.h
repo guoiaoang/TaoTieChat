@@ -1,135 +1,13 @@
 #pragma once
 
-// std cxx
-#include <iostream>
-#include <string>
-#include <sstream>
-#include <functional>
-#include <algorithm>
-#include <vector>
-#include <set>
-#include <list>
-#include <map>
-#include <memory>
-#include <mutex>
-#include <thread>
-#include <chrono>
-#include <filesystem>
-// qt
-#include <QAction>
-#include <QActionGroup>
-#include <QApplication>
-#include <QBitmap>
-#include <QBuffer>
-#include <QButtonGroup>
-#include <QByteArray>
-#include <QByteArrayList>
-#include <QByteArrayMatcher>
-#include <QByteArrayView>
-#include <QCommandLineParser>
-#include <QDataStream>
-#include <QDate>
-#include <QDateEdit>
-#include <QDateTime>
-#include <QDialog>
-#include <QDir>          // 遍历子目录，较老版本 // QDir::entryList()
-#include <QDirIterator>  // 遍历子目录，较新版本，单个遍历
-#include <QDirListing>   // 遍历子目录，最新版本，c++20 方式
-#include <QFile>
-#include <QFileDialog>
-#include <QFileInfo>
-#include <QFont>
-#include <QFontDatabase>
-#include <QGuiApplication>
-#include <QIcon>
-#include <QImage>
-#include <QImageReader>
-#include <QImageWriter>
-#include <QJsonArray>
-#include <QJsonDocument>
-#include <QJsonObject>
-#include <QJsonParseError>
-#include <QJsonValue>
-#include <QLabel>
-#include <QList>
-#include <QListWidgetItem>
-#include <QLocale>
-#include <QLocalServer>
-#include <QLocalSocket>
-#include <QMainWindow>
-#include <QMap>
-#include <QMenu>
-#include <QMessageBox>
-#include <QMetaEnum>
-#include <QMovie>
-#include <QMutex>
-#include <QObject>
-#include <QPainter>
-#include <QPalette>
-#include <QPicture>
-#include <QPixmap>
-#include <QPropertyAnimation>
-#include <QRegularExpression>
-#include <QRegularExpressionMatch>
-#include <QRegularExpressionMatchIterator>
-#include <QRegularExpressionValidator>
-#include <QSaveFile>
-#include <QScopedArrayPointer>
-#include <QScopedPointer>
-#include <QScopeGuard>
-#include <QScreen>
-#include <QScrollArea>
-#include <QScrollBar>
-#include <QScroller>
-#include <QSemaphore>
-#include <QSettings>
-#include <QSharedData>
-#include <QSharedDataPointer>
-#include <QSharedMemory>
-#include <QSharedPointer>
-#include <QShortcut>
-#include <QSpinBox>
-#include <QSplitter>
-#include <QSslCipher>
-#include <QStandardPaths>
-#include <QString>
-#include <QStringList>
-#include <QStyle>
-#include <QSvgGenerator>
-#include <QSvgRenderer>
-#include <QSvgWidget>
-#include <QSyntaxHighlighter>
-#include <QSysInfo>
-#include <QSystemTrayIcon>
-#include <QtDebug>
-#include <QThread>
-#include <QThreadPool>
-#include <QTimeEdit>
-#include <QTimeLine>
-#include <QTimer>
-#include <QTimeZone>
-#include <QToolBar>
-#include <QToolBox>
-#include <QTranslator>
-#include <QVariant>
-#include <QVector>
-#include <QXmlStreamAttributes>
-#include <QXmlStreamReader>
-#include <QXmlStreamWriter>
-#include <QUuid>
-
-// 宏工具：将宏参数转换为字符串
-#define STRINGIFY(x) #x
-#define TOSTRING(x) STRINGIFY(x)
-// 宏展开：强制 Q_INIT_RESOURCE 的参数先进行宏展开
-#define Q_INIT_RESOURCE_EXPAND(name) Q_INIT_RESOURCE(name)
+#include "Headers.h"
 
 class Utils {
 public:
     Utils();
 
 public:
-    static void InitDebugOutputFormat() {
+    static void init_debug_output_format() {
         constexpr const char* QT_MESSAGE_PATTERN =
             "[%{time yyyy-MM-dd hh:mm:ss.zzz ttt}"
             " %{if-debug}D%{endif}"

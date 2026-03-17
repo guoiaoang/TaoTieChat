@@ -44,7 +44,7 @@ public Q_SLOTS:
     // 添加到联系人列表
     void add_contact(Contact contact);
     // model/view 模式下的选择
-    void on_contact_selection_changed(const QModelIndex &current, const QModelIndex &previous);
+    void handle_contact_selection_changed(const QModelIndex &current, const QModelIndex &previous);
 
 signals:
     void signout();

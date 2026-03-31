@@ -1,58 +1,65 @@
 #include "NetworkClient.h"
 
-// 重载 QDebug 运算符
-QDebug operator<<(QDebug debug, const QGrpcStatus &status) {
+QDebug operator<<(QDebug debug, const TaoTieChat::Result &result) {
     QDebugStateSaver saver(debug); // 保持输出格式一致性
-    debug.nospace() << "QGrpcStatus("
-                    << "code: "    << status.code()    << ", "
-                    << "message: " << status.message()
+    if(result.hasSuccessCode()) {
+        debug.nospace() << "Result("
+                        << "success code:" << result.successCode() << ", "
+                        << "message:"      << result.message()
+                        << ")";
+    }
+    else if(result.hasSuccessCode()) {
+        debug.nospace() << "Result("
+                        << "error code:" << result.errorCode() << ", "
+                        << "message:"    << result.message()
+                        << ")";
+    }
+    else {
+        debug.nospace() << "Result(...)";
+    }
+    return debug;
+}
+
+QDebug operator<<(QDebug debug, const TaoTieChat::SignUpRequest &req) {
+    QDebugStateSaver saver(debug); // 保持输出格式一致性
+    debug.nospace() << "SignUpRequest("
+                    << "userId:"           << req.userId()           << ", "
+                    << "password:"         << req.password()         << ", "
+                    << "securityQuestion:" << req.securityQuestion() << ", "
+                    << "securityAnswer:"   << req.securityAnswer()
                     << ")";
     return debug;
 }
 
-QDebug operator<<(QDebug debug, const TaoTieChat::UserRegisterRequest &req) {
+QDebug operator<<(QDebug debug, const TaoTieChat::SignUpReply &rep) {
     QDebugStateSaver saver(debug); // 保持输出格式一致性
-    debug.nospace() << "TaoTieChat::UserRegisterRequest("
-                    << "userId: "           << req.userId()           << ", "
-                    << "password: "         << req.password()         << ", "
-                    << "securityQuestion: " << req.securityQuestion() << ", "
-                    << "securityAnswer: "   << req.securityAnswer()
+    debug.nospace() << "SignUpReply("
+                    << "Request:"   << rep.request  () << ", "
+                    << "result:"    << rep.result   () << ", "
+                    << "accountId:" << rep.accountId()
                     << ")";
     return debug;
 }
 
-QDebug operator<<(QDebug debug, const TaoTieChat::UserRegisterReply &rep) {
+QDebug operator<<(QDebug debug, const TaoTieChat::SignInRequest &req) {
     QDebugStateSaver saver(debug); // 保持输出格式一致性
-    debug.nospace() << "TaoTieChat::UserRegisterReply("
-                    << "UserRegisterRequest: " << rep.request()      << ", "
-                    << "success: "             << rep.success()      << ", "
-                    << "accountId: "           << rep.accountId()    << ", "
-                    << "errorMessage: "        << rep.errorMessage()
+    debug.nospace() << "SignInRequest("
+                    << "userId:"   << req.userId()   << ", "
+                    << "password:" << req.password()
                     << ")";
     return debug;
 }
 
-QDebug operator<<(QDebug debug, const TaoTieChat::UserLoginRequest &req) {
+QDebug operator<<(QDebug debug, const TaoTieChat::SignInReply &rep) {
     QDebugStateSaver saver(debug); // 保持输出格式一致性
-    debug.nospace() << "TaoTieChat::UserLoginRequest("
-                    << "userId: "   << req.userId()   << ", "
-                    << "password: " << req.password()
+    debug.nospace() << "SignInReply("
+                    << "Request:"   << rep.request  () << ", "
+                    << "result:"    << rep.result   () << ", "
+                    << "accountId:" << rep.accountId() << ", "
+                    << "token:"     << rep.token    ()
                     << ")";
     return debug;
 }
-
-QDebug operator<<(QDebug debug, const TaoTieChat::UserLoginReply &rep) {
-    QDebugStateSaver saver(debug); // 保持输出格式一致性
-    debug.nospace() << "TaoTieChat::UserLoginReply("
-                    << "UserLoginRequest: " << rep.request()      << ", "
-                    << "success: "          << rep.success()      << ", "
-                    << "accountId: "        << rep.accountId()    << ", "
-                    << "token: "            << rep.token()        << ", "
-                    << "errorMessage: "     << rep.errorMessage()
-                    << ")";
-    return debug;
-}
-
 
 bool NetworkClient::init() {
     if(m_inited) {
@@ -77,157 +84,157 @@ bool NetworkClient::init() {
     return true;
 }
 
-bool NetworkClient::user_register(user_register_params params_register, user_register_callback callback) {
-    QString&user_id  = params_register->user_id          ;
-    QString&password = params_register->password         ;
-    QString&confirm  = params_register->confirm          ;
-    QString&question = params_register->security_question;
-    QString&answer   = params_register->security_answer  ;
+// 成功失败都要返回，失败时要返回错误原因
+bool NetworkClient::signup(signup_params& params_signup, signup_callback callback) {
+    using Result = TaoTieChat::Result;
+    using ec = ::TaoTieChat::ErrorCodeGadget::ErrorCode;
+    using sc = ::TaoTieChat::SuccessCodeGadget::SuccessCode;
+    Result result;
 
-    // 只有 0 才表示成功 // 具体的错误码暂不列举
-    int     error_code = 11;
-    QString error_message;
+    // ================================================================== //
 
-    do{
-        if(user_id.isEmpty() || password.isEmpty() || confirm.isEmpty() || question.isEmpty() || answer.isEmpty()) {
-            // 请输入以上所有信息
-            error_code = 12;
-            error_message = tr("Please enter all of the above information.");
-            break;
-        }
-        if(password != confirm) {
-            // 密码与确认密码不一致
-            error_code = 13;
-            error_message = tr("The password and confirmation password do not match.");
-            break;
-        }
-        if (!m_client_account) {
-            error_code = 14;
-            error_message = tr("service not attached.");
-            break;
-        }
+    // 有用的参数
+    QString user_id  = params_signup->userId          ();
+    QString password = params_signup->password        ();
+    QString confirm  = params_signup->confirm         ();
+    QString question = params_signup->securityQuestion();
+    QString answer   = params_signup->securityAnswer  ();
 
-        // 继续而不直接返回
-        error_code = 0;
-    } while(false);
+    // 默认设为错误
+    Utils::set(result, ec::UNSET);
 
-    if(error_code != 0) {
+    // 参数简单校验
+    ;    if(user_id  .isEmpty()) { Utils::set(result, ec::SIGN_UP_USER_ID_EMPTY          ); }
+    else if(password .isEmpty()) { Utils::set(result, ec::SIGN_UP_PASSWORD_EMPTY         ); }
+    else if(confirm  .isEmpty()) { Utils::set(result, ec::SIGN_UP_CONFIRM_PASSWORD_EMPTY ); }
+    else if(question .isEmpty()) { Utils::set(result, ec::SIGN_UP_SECURITY_QUESTION_EMPTY); }
+    else if(answer   .isEmpty()) { Utils::set(result, ec::SIGN_UP_SECURITY_ANSWER_EMPTY  ); }
+    else if(password != confirm) { Utils::set(result, ec::SIGN_UP_DIFF_CONFIRM_PASSWORD  ); }
+    else if(!m_client_account  ) { Utils::set(result, ec::ERROR_INIT                     ); }
+    // else { Utils::set(result, sc::SUCCESS); }
+
+    signup_reply reply_data = TaoTieChat::SignUpReply();
+    reply_data->setResult(result);
+
+    // 失败时也要发送通知
+    if(result.hasErrorCode() && result.errorCode() != ec::UNSET){
         if(callback) {
-            callback(error_code, error_message, params_register, std::nullopt);
+            callback(params_signup, reply_data);
         }
         return false;
     }
 
     // TODO:在网络交互前应该对密码进行加密
-    TaoTieChat::UserRegisterRequest req;
+
+    // 构造参数
+    TaoTieChat::SignUpRequest req;
     req.setUserId          (user_id );
     req.setPassword        (password);
     req.setSecurityQuestion(question);
     req.setSecurityAnswer  (answer  );
-    std::unique_ptr<QGrpcCallReply> rep = m_client_account->UserRegister(req, QGrpcCallOptions{}.setDeadlineTimeout(std::chrono::seconds(30)));
-    const auto *rep_ptr = rep.get();
+
+    //
+    auto opts = QGrpcCallOptions{}.setDeadlineTimeout(std::chrono::seconds(30));
+    std::unique_ptr<QGrpcCallReply> reply_conn = m_client_account->SignUp(req, opts);
+    const auto *rep_conn_ptr = reply_conn.get();  // 必须
+    if (!rep_conn_ptr) {
+        Utils::set(result, ec::ERROR_CONN);
+        reply_data->setResult(result);
+        if (callback) {
+            callback(params_signup, reply_data);
+        }
+        return false;
+    }
     // 捕获输出返回信息  // 单次模型需要使用 `Qt::SingleShotConnection` 以便结束后销毁
-    connect(rep_ptr, &QGrpcCallReply::finished, rep_ptr,
-        [this,  reply = std::move(rep), params_register, callback](const QGrpcStatus &status) {
-            int     error_code = 21;
-            QString error_message;
-            user_register_reply rep = std::nullopt;
-
-            do {
-                if(!status.isOk()) {
-                    error_code = 22;
-                    error_message = "rep status not ok.";
-                    qDebug().noquote().nospace() << "rep status not ok. status : " << status;
-                    break;
-                }
-
-                rep = reply->read<TaoTieChat::UserRegisterReply>();
-                if(!rep) {
-                    error_code = 23;
-                    error_message = "rep deserialization failed.";
-                    qDebug().noquote().nospace() << "rep deserialization failed. status : " << status;
-                    break;
-                }
-
-                error_code = 0;
-                qDebug().noquote().nospace() << "rep : " << rep;
-            } while(false);
-
+    // lamda 表达式不可使用引用，会造成生命周期问题
+    connect(rep_conn_ptr, &QGrpcCallReply::finished, rep_conn_ptr,
+        [reply_conn = std::move(reply_conn), params_signup, callback](const QGrpcStatus &status) mutable {
+            signup_reply reply_data;
+            if(status.isOk()) {
+                reply_data = reply_conn->read<TaoTieChat::SignUpReply>();
+            }
             if(callback) {
-                callback(error_code, error_message, params_register, rep);
+                // 发送参数，返回参数
+                // 1. 返回参数为 nullopt 时代表返回错误，仅提示失败即可？？
+                // 2. 即使失败也要调用会回调，以便通知界面
+                callback(params_signup, reply_data);
             }
         }, Qt::SingleShotConnection);
     return true;
 }
 
-bool NetworkClient::user_login(user_login_params params_login, user_login_callback callback) {
-    QString&user_id  = params_login->user_id ;
-    QString&password = params_login->password;
+// 成功失败都要返回，失败时要返回错误原因
+bool NetworkClient::signin(signin_params& params_signin, signin_callback callback) {
+    using Result = TaoTieChat::Result;
+    using ec = ::TaoTieChat::ErrorCodeGadget::ErrorCode;
+    using sc = ::TaoTieChat::SuccessCodeGadget::SuccessCode;
+    Result      result;
+    // user_login_reply reply_data = TaoTieChat::SignInReply();
+    // reply_data->setResult(Result{});
 
-    // 只有 0 才表示成功 // 具体的错误码暂不列举
-    int     error_code = 11;
-    QString error_message;
+    // ================================================================== //
 
-    do{
-        if(user_id.isEmpty() || password.isEmpty()) {
-            // 请输入以上所有信息
-            error_code = 12;
-            error_message = tr("Please enter all of the above information.");
-            break;
-        }
-        if (!m_client_account) {
-            error_code = 14;
-            error_message = tr("service not attached.");
-            break;
-        }
+    // 有用的参数
+    QString user_id  = params_signin->userId  ();
+    QString password = params_signin->hasPassword() == false ? QString() : params_signin->password();
+    QString token    = params_signin->hasToken   () == false ? QString() : params_signin->token   ();
+    QString auth_str = password + token;
 
-        // 继续而不直接返回
-        error_code = 0;
-    } while(false);
+    // 默认设为错误
+    Utils::set(result, ec::UNSET);
 
-    if(error_code != 0) {
+    // 参数简单校验
+    ;    if(user_id .isEmpty ()) { Utils::set(result, ec::SIGN_IN_USER_ID_EMPTY ); }
+    else if(auth_str.isEmpty ()) { Utils::set(result, ec::SIGN_IN_INVALID_LOGIN_METHOD); }
+    else if(!m_client_account  ) { Utils::set(result, ec::ERROR_INIT            ); }
+    // else { Utils::set(result, sc::SUCCESS); }
+
+    signin_reply reply_data = TaoTieChat::SignInReply();
+    reply_data->setResult(result);
+    // reply_data->result().setErrorCode(result.errorCode());
+    // reply_data->result().setMessage(result.message());
+
+    // 失败时也要发送通知
+    if(result.hasErrorCode() && result.errorCode() != ec::UNSET) {
         if(callback) {
-            callback(error_code, error_message, params_login, std::nullopt);
+            callback(params_signin, reply_data);
         }
         return false;
     }
 
     // TODO:在网络交互前应该对密码进行加密
-    TaoTieChat::UserLoginRequest req;
-    req.setUserId(user_id);
+
+    // 构造参数
+    TaoTieChat::SignInRequest req;
+    req.setUserId  (user_id );
     req.setPassword(password);
-    std::unique_ptr<QGrpcCallReply> rep = m_client_account->UserLogin(req, QGrpcCallOptions{}.setDeadlineTimeout(std::chrono::seconds(30)));
-    const auto *rep_ptr = rep.get();
+
+    //
+    auto opts = QGrpcCallOptions{}.setDeadlineTimeout(std::chrono::seconds(30));
+    std::unique_ptr<QGrpcCallReply> reply_conn = m_client_account->SignIn(req, opts);
+    const auto *rep_conn_ptr = reply_conn.get();  // 必须
+    if (!rep_conn_ptr) {
+        Utils::set(result, ec::ERROR_CONN);
+        reply_data->setResult(result);
+        if (callback) {
+            callback(params_signin, reply_data);
+        }
+        return false;
+    }
     // 捕获输出返回信息  // 单次模型需要使用 `Qt::SingleShotConnection` 以便结束后销毁
-    connect(rep_ptr, &QGrpcCallReply::finished, rep_ptr,
-            [this,  reply = std::move(rep), params_login, callback](const QGrpcStatus &status) {
-                int     error_code = 21;
-                QString error_message;
-                user_login_reply rep = std::nullopt;
-
-                do {
-                    if(!status.isOk()) {
-                        error_code = 22;
-                        error_message = "rep status not ok.";
-                        qDebug().noquote().nospace() << "rep status not ok. status : " << status;
-                        break;
-                    }
-
-                    rep = reply->read<TaoTieChat::UserLoginReply>();
-                    if(!rep) {
-                        error_code = 23;
-                        error_message = "rep deserialization failed.";
-                        qDebug().noquote().nospace() << "rep deserialization failed. status : " << status;
-                        break;
-                    }
-
-                    error_code = 0;
-                    qDebug().noquote().nospace() << "rep : " << rep;
-                } while(false);
-
-                if(callback) {
-                    callback(error_code, error_message, params_login, rep);
-                }
-            }, Qt::SingleShotConnection);
+    // lamda 表达式不可使用引用，会造成生命周期问题
+    connect(rep_conn_ptr, &QGrpcCallReply::finished, rep_conn_ptr,
+        [reply_conn = std::move(reply_conn), params_signin, callback](const QGrpcStatus &status) mutable {
+            signin_reply reply_data;
+            if(status.isOk()) {
+                reply_data = reply_conn->read<TaoTieChat::SignInReply>();
+            }
+            if(callback) {
+                // 发送参数，返回参数
+                // 1. 返回参数为 nullopt 时代表返回错误，仅提示失败即可？？
+                // 2. 即使失败也要调用会回调，以便通知界面
+                callback(params_signin, reply_data);
+            }
+        }, Qt::SingleShotConnection);
     return true;
 }

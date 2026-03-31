@@ -2,6 +2,7 @@
 #include "MediaWindow.h"
 #include "ChatWindow.h"
 
+#ifdef DEBUG
 // 开发测试代码
 namespace Dev{
 
@@ -136,7 +137,7 @@ ChatWindowDev::ChatWindowDev(ChatWindow*chat_window, QWidget *parent) {
             // [since 6.7] enum class QIcon::ThemeIcon
             {
                 // 最后一个元素不能使用，会造成程序静默退出
-                QMetaEnum metaEnum = QMetaEnum::fromType<Rebuild::QIcon::ThemeIcon>();
+                QMetaEnum metaEnum = QMetaEnum::fromType<QIconDev::ThemeIcon>();
                 // int count_len = QString::number(metaEnum.keyCount()).length();
                 for(int index = 0; index < metaEnum.keyCount() - 1; ++index) {
                     // QPixmap::fromImage(QImage(64, 64, QImage::Format_ARGB32_Premultiplied));
@@ -197,3 +198,5 @@ ChatWindowDev::~ChatWindowDev() {
 // ========================================================================== //
 
 }
+
+#endif // DEBUG

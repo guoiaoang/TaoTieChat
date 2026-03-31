@@ -5,6 +5,7 @@
 #include "ContactModel.h"
 #include "ContactDelegate.h"
 #include "ContactWindow.h"
+#include "SearchWindow.h"
 
 #ifdef DEBUG
 #include "Dev.h"
@@ -49,6 +50,9 @@ public Q_SLOTS:
 signals:
     void signout();
 
+protected:
+    bool eventFilter(QObject *obj, QEvent *event) override;
+
 private:
     Ui::ChatWindow *ui                = nullptr;
     QSplitter      *m_split_contact   = nullptr;
@@ -64,6 +68,8 @@ private:
     // model/view/delegate
     ContactModel    *m_contact_model    = nullptr;
     ContactDelegate *m_contact_delegate = nullptr;
+
+    SearchWindow    *m_search_window = nullptr;
 
     // ====================================================================== //
 #ifdef DEBUG

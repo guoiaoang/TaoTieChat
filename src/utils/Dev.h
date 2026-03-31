@@ -1,11 +1,22 @@
 #pragma once
 
 #include "Utils.h"
+#include "data.h"
+#include "RegistryFactory.h"
+#include "data.h"
+#include <queue>
+#include <QStyle>
+#include <QApplication>
+
+#ifdef DEBUG
+class MediaWindow;
+class ChatWindow;
+
+namespace Dev {
 
 // ========================================================================== //
 
-namespace Rebuild{
-class QIcon : public QObject {
+class QIconDev : public QObject {
     Q_OBJECT
 public:
     enum class ThemeIcon {
@@ -166,14 +177,8 @@ public:
     };
     Q_ENUM(ThemeIcon)
 };
-}
 
 // ========================================================================== //
-
-// 开发测试代码
-class MediaWindow;
-class ChatWindow;
-namespace Dev{
 
 class MediaWindowDev : public QMainWindow {
     Q_OBJECT
@@ -189,14 +194,9 @@ public:
     ~ChatWindowDev();
 };
 
-}
-
 // ========================================================================== //
 
-#include "data.h"
-
 // 测试数据
-namespace Test{
 class TestData{
 public:
     static TestData *instance() {
@@ -278,13 +278,8 @@ static void test_data_add_users() {
         }
     }
 }
-}
 
 // ========================================================================== //
-
-#include "RegistryFactory.h"
-#include <QStyle>
-#include <QApplication>
 
 class LocalUserDataTest : public LocalUserData{
 public:
@@ -339,7 +334,7 @@ public:
             // [since 6.7] enum class QIcon::ThemeIcon
             {
                 // 最后一个元素不能使用，会造成程序静默退出
-                QMetaEnum metaEnum = QMetaEnum::fromType<Rebuild::QIcon::ThemeIcon>();
+                QMetaEnum metaEnum = QMetaEnum::fromType<QIconDev::ThemeIcon>();
                 // int count_len = QString::number(metaEnum.keyCount()).length();
                 for(int index = 0; index < metaEnum.keyCount() - 1; ++index) {
                     // QPixmap::fromImage(QImage(64, 64, QImage::Format_ARGB32_Premultiplied));
@@ -385,53 +380,48 @@ REG_FAC(LocalUserData, LocalUserDataTest, test_local)
 
 // ========================================================================== //
 
-#include "data.h"
-#include <queue>
-
-namespace SereverBody{
-    struct AccountInfoData {
-        QString account_id;  // 账号 ID，唯一标识符，仅用于内部账号标识
-        QString user_id;     // 用户 ID，唯一标识符，用于搜索及显示
-        QString username;    // 用户名，非唯一标识符，也可用于搜索及展示
-        QPixmap avatar;      // 头像
-        QString password;    // 密码
-        QString question;    // 密保问题
-        QString answer;      // 密保答案
-        QString gender;      // 性别
-        QString birthday;    // 生日
-        QString email;       // 邮箱
-        QString phone;       // 电话
-        QString sign;        // 个性签名
-        QStringList region;           // 地区
-        QDateTime   register_time;    // 注册时间
-        QDateTime   last_active_time; // 上次活跃时间
-    };
-    using AccountInfo = QSharedPointer<AccountInfoData>;
-    struct AccountsInfoData {
-        QList<AccountInfo> accounts;  // 账号信息列表
-    };
-    using AccountsInfo = QSharedPointer<AccountsInfoData>;
+struct AccountInfoData {
+    QString account_id;  // 账号 ID，唯一标识符，仅用于内部账号标识
+    QString user_id;     // 用户 ID，唯一标识符，用于搜索及显示
+    QString username;    // 用户名，非唯一标识符，也可用于搜索及展示
+    QPixmap avatar;      // 头像
+    QString password;    // 密码
+    QString question;    // 密保问题
+    QString answer;      // 密保答案
+    QString gender;      // 性别
+    QString birthday;    // 生日
+    QString email;       // 邮箱
+    QString phone;       // 电话
+    QString sign;        // 个性签名
+    QStringList region;           // 地区
+    QDateTime   register_time;    // 注册时间
+    QDateTime   last_active_time; // 上次活跃时间
+};
+using AccountInfo = QSharedPointer<AccountInfoData>;
+struct AccountsInfoData {
+    QList<AccountInfo> accounts;  // 账号信息列表
+};
+using AccountsInfo = QSharedPointer<AccountsInfoData>;
 
 // ========================================================================== //
 
-    class AccountInfoManager{
-    public:
-        static AccountInfo create() {
-            return QSharedPointer<AccountInfoData>(new AccountInfoData);
-        }
-    };
-    class AccountsInfoManager{
-    public:
-        static AccountsInfo create() {
-            return QSharedPointer<AccountsInfoData>(new AccountsInfoData);
-        }
-    };
-}
+class AccountInfoManager{
+public:
+    static AccountInfo create() {
+        return QSharedPointer<AccountInfoData>(new AccountInfoData);
+    }
+};
+class AccountsInfoManager{
+public:
+    static AccountsInfo create() {
+        return QSharedPointer<AccountsInfoData>(new AccountsInfoData);
+    }
+};
 
 class NetworkUserDataTest : public NetworkUserData {
 public:
     NetworkUserDataTest()
-        : m_accounts_info(SereverBody::AccountsInfoManager::create()) {
+        : m_accounts_info(AccountsInfoManager::create()) {
     }
 
     virtual ~NetworkUserDataTest() override {}
@@ -445,7 +435,7 @@ public:
         // 服务端暂不阻止相同信息的重复注册
 
         // 读取 uuid 列表并缓存
-        SereverBody::AccountsInfo accounts_info = get_accounts_info();
+        AccountsInfo accounts_info = get_accounts_info();
         QSharedPointer<QSet<QString>> cached_uuids = QSharedPointer<QSet<QString>>(new QSet<QString>);
         for(const auto& account_info : accounts_info->accounts) {
             cached_uuids->insert(account_info->account_id);
@@ -463,7 +453,7 @@ public:
         }
 
         // 生成保存的信息
-        SereverBody::AccountInfo account_info = SereverBody::AccountInfoManager::create();
+        AccountInfo account_info = AccountInfoManager::create();
         account_info->account_id = account_id;
         account_info->user_id    = user_id;
         account_info->username   = request->username;
@@ -497,10 +487,13 @@ public:
     virtual bool request_user_logout (const NetworkBody::UserLogout& request) override { return false; }
     virtual bool responce_user_logout(const NetworkBody::UserLogout& request) override { return false; }
 private:
-    SereverBody::AccountsInfo get_accounts_info() { return m_accounts_info; }
+    AccountsInfo get_accounts_info() { return m_accounts_info; }
 
 private:
-    SereverBody::AccountsInfo m_accounts_info = nullptr;  // 账号信息列表
+    AccountsInfo m_accounts_info = nullptr;  // 账号信息列表
 };
 REG_FAC(NetworkUserData, NetworkUserDataTest, test_network)
 // static QSharedPointer<NetworkUserData> g_network_user_data = RegistryFactory<NetworkUserData>::create("test_network");;
+
+}
+#endif // DEBUG

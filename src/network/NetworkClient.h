@@ -7,38 +7,29 @@
 #include <QtGrpc/QGrpcStatus>
 #include <QDebug>
 
-
-struct UserRegisterParameters {
-    QString user_id;
-    QString password;
-    QString confirm;
-    QString security_question;
-    QString security_answer;
-};
-
-struct UserLoginParameters {
-    QString user_id;
-    QString password;
-};
-
 // 重载 QDebug 运算符
-inline QDebug operator<<(QDebug debug, const QGrpcStatus &status);
+QDebug operator<<(QDebug debug, const TaoTieChat::Result &result);
 // register
-inline QDebug operator<<(QDebug debug, const TaoTieChat::UserRegisterRequest &req);
-inline QDebug operator<<(QDebug debug, const TaoTieChat::UserRegisterReply   &rep);
+QDebug operator<<(QDebug debug, const TaoTieChat::SignUpRequest &req);
+QDebug operator<<(QDebug debug, const TaoTieChat::SignUpReply   &rep);
 // login
-inline QDebug operator<<(QDebug debug, const TaoTieChat::UserLoginRequest    &req);
-inline QDebug operator<<(QDebug debug, const TaoTieChat::UserLoginReply      &rep);
+QDebug operator<<(QDebug debug, const TaoTieChat::SignInRequest    &req);
+QDebug operator<<(QDebug debug, const TaoTieChat::SignInReply      &rep);
 
 // auto callback = std::function<void(int error_code, const QString&error_message, ...)>;
-// register
-using user_register_params   = QSharedPointer<UserRegisterParameters>;
-using user_register_reply    = std::optional<TaoTieChat::UserRegisterReply>;
-using user_register_callback = std::function<void(int, const QString&, user_register_params, user_register_reply)>;
-// login
-using user_login_params   = QSharedPointer<UserLoginParameters>;
-using user_login_reply    = std::optional<TaoTieChat::UserLoginReply>;
-using user_login_callback = std::function<void(int, const QString&, user_login_params, user_login_reply)>;
+// using ResultInfo             = std::shared_ptr<TaoTieChat::SignUpReply>;
+// user register
+using signup_params   = std::shared_ptr<TaoTieChat::SignUpRequest>;
+using signup_reply    = std::optional  <TaoTieChat::SignUpReply  >;
+using signup_callback = std::function  <void(signup_params&, signup_reply&)>;
+// user login
+using signin_params   = std::shared_ptr<TaoTieChat::SignInRequest>;
+using signin_reply    = std::optional  <TaoTieChat::SignInReply  >;
+using signin_callback = std::function  <void(signin_params&, signin_reply&)>;
+// search users
+using search_users_params   = std::shared_ptr<TaoTieChat::SearchUsersRequest>;
+using search_users_reply    = std::optional  <TaoTieChat::SearchUsersReply  >;
+using search_users_callback = std::function  <void(search_users_params &, search_users_reply&)>;
 
 class NetworkClient : public QObject{
     Q_OBJECT
@@ -56,8 +47,11 @@ public:
     bool init();
 
 public:
-    bool user_register(user_register_params params_register, user_register_callback callback = nullptr);
-    bool user_login   (user_login_params    params_login   , user_login_callback    callback = nullptr);
+    bool signup(signup_params& params_signup, signup_callback callback = nullptr);
+    bool signin(signin_params& params_signin, signin_callback callback = nullptr);
+    //
+    bool search_users (const QString&user ) { return false; }
+    bool search_groups(const QString&group) { return false; }
 
 private:
     bool m_inited = false;

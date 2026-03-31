@@ -18,13 +18,18 @@ public:
     ~AuthWindow();
 
 private slots:
-    bool handle_user_register();
-    bool handle_user_login   ();
-    bool handle_user_register_successd(user_register_params params_register);
-    bool handle_user_login_successd   (user_login_reply     peply_login    );
+    void handle_page_signin_tips_error(const QString&message);
+    void handle_page_signin_tips_clean();
+    void handle_page_signup_tips_error(const QString&message);
+    void handle_page_signup_tips_clean();
+    //
+    bool handle_signup();
+    bool handle_signin();
+    bool handle_signup_successd(signup_params params_signup);
+    bool handle_signin_successd(signin_params params_signin);
 private:
-    bool user_register(user_register_params params_register);
-    bool user_login   (user_login_params    params_login   );
+    bool signup(signup_params params_signup);
+    bool signin(signin_params params_signin);
 
 private:
     Ui::AuthWindow *ui = nullptr;

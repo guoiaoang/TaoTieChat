@@ -18,6 +18,8 @@ ChatWindow::ChatWindow(QWidget *parent)
     // model/view
     m_contact_model    = new ContactModel;
     m_contact_delegate = new ContactDelegate;
+    // search
+    m_search_window = new SearchWindow;
 
     // 连接消息
     // 点击了聊天室按钮
@@ -45,6 +47,8 @@ ChatWindow::ChatWindow(QWidget *parent)
     // connect(ui->page_list_chat_room, &QListView::itemClicked, this, &ChatWindow::on_chat_room_item_clicked);
     // // 使用 currentChanged 信号支持键盘上下键导航和鼠标点击
     // connect(ui->page_list_contact->selectionModel(), &QItemSelectionModel::currentChanged, this, &ChatWindow::on_contact_selection_changed);
+    // 用于同步显示搜索词
+    connect(m_search_window, &SearchWindow::SearchEditTextChanged, ui->edit_search, &QLineEdit::setText);
 
     // 执行操作
     ui->navigate_button_chat_room->click();  // 初始化状态
@@ -102,7 +106,9 @@ ChatWindow::ChatWindow(QWidget *parent)
     ui->navigate_layout_contact->setAlignment(ui->navigate_button_contact  , Qt::AlignHCenter);
     ui->navigate_layout        ->setAlignment(ui->button_settings          , Qt::AlignHCenter);
     // window icon
-    this->setWindowIcon(icon_profile);
+    // 设置应用级别的图标后就不需要再手动设置窗口级别的图标了
+    // this->setWindowIcon(icon_profile);
+    QApplication::setWindowIcon(icon_profile);
 
     // 设置菜单
     // ui->navigate_button_menu->setMenu(m_menu_settings);
@@ -140,6 +146,15 @@ ChatWindow::ChatWindow(QWidget *parent)
     // 使用 currentChanged 信号支持键盘上下键导航和鼠标点击
     connect(ui->page_list_contact->selectionModel(), &QItemSelectionModel::currentChanged, this, &ChatWindow::handle_contact_selection_changed);
 
+    //
+    // m_search_window->setWindowFlag(Qt::Window);
+    // m_search_window->setAttribute(Qt::WA_DeleteOnClose);  // 关闭窗口时自动销毁内存（防止内存泄漏）
+    // m_search_window->setWindowFlags(Qt::Tool | Qt::WindowStaysOnTopHint);
+    // m_search_window->setParent(this);
+
+    // 点击编辑框时使用弹窗替代
+    ui->edit_search->installEventFilter(this);
+
 #ifdef DEBUG
     // Dev::ChatWindowDev(this, parent);
     for(auto contact : *m_local_user_data->get_contacts()) {
@@ -149,8 +164,6 @@ ChatWindow::ChatWindow(QWidget *parent)
 }
 
 ChatWindow::~ChatWindow() {
-    delete ui;
-    ui = nullptr;
     if(m_split_contact) {
         delete m_split_contact;
         m_split_contact = nullptr;
@@ -186,6 +199,14 @@ ChatWindow::~ChatWindow() {
     if(m_contact_delegate) {
         delete m_contact_delegate;
         m_contact_delegate = nullptr;
+    }
+    if(m_search_window) {
+        delete m_search_window;
+        m_search_window = nullptr;
+    }
+    if(ui) {
+        delete ui;
+        ui = nullptr;
     }
 }
 
@@ -260,4 +281,33 @@ void ChatWindow::handle_contact_selection_changed(const QModelIndex &current, co
     }
     // 显示
     ui->stacked_contact_detail->setCurrentWidget(contact_window_update);
+}
+
+void widget_raise(QWidget*widget) {
+    // 1. 获取当前窗口标志位
+    Qt::WindowFlags flags = widget->windowFlags();
+
+    // 2. 临时添加“置顶”标志并显示（这一步会让窗口跳到最前）
+    widget->setWindowFlags(flags | Qt::WindowStaysOnTopHint);
+    widget->show();
+
+    // 3. 立即移除“置顶”标志，恢复普通窗口属性
+    widget->setWindowFlags(flags & ~Qt::WindowStaysOnTopHint);
+    widget->show(); // 必须再次调用 show() 刷新标志位
+
+    // 4. 最后确保获取焦点和激活
+    widget->raise();
+    widget->activateWindow();
+}
+
+bool ChatWindow::eventFilter(QObject *obj, QEvent *event) {
+    if(obj == ui->edit_search) {
+        if(event->type() == QEvent::MouseButtonRelease) {
+            m_search_window->show();
+            m_search_window->activateWindow();
+            m_search_window->raise();
+            return true;
+        }
+    }
+    return QDialog::eventFilter(obj, event);
 }

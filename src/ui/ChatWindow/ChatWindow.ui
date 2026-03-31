@@ -120,17 +120,14 @@
            </property>
            <item>
             <widget class="QLineEdit" name="edit_search">
-             <property name="enabled">
-              <bool>false</bool>
-             </property>
              <property name="maxLength">
               <number>256</number>
              </property>
+             <property name="readOnly">
+              <bool>true</bool>
+             </property>
              <property name="placeholderText">
               <string>Search</string>
-             </property>
-             <property name="clearButtonEnabled">
-              <bool>true</bool>
              </property>
             </widget>
            </item>

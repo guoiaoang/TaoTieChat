@@ -14,10 +14,11 @@
 // #define ENABLE_QDEBUG_LOGGER
 // #define ENABLE_SIMPLE_QT_LOGGER
 // #define ENABLE_SPDLOG
-#elif // ENABLE_SERVER
+#elif defined(ENABLE_SERVER)  // ENABLE_SERVER
 #define ENABLE_HEADERS_STD
 #define ENABLE_GOOGLE_GRPC
 #define ENABLE_SPDLOG
+#define ENABLE_ABSL_LIB
 #endif // ENABLE_CLIENT
 
 // ================ 内容 ================ //
@@ -221,6 +222,16 @@ using grpc::ServerUnaryReactor;
 using grpc::CallbackServerContext;
 #endif // ENABLE_GOOGLE_GRPC
 
+#ifdef ENABLE_ABSL_LIB
+#include "absl/flags/flag.h"
+#include "absl/flags/parse.h"
+#include "absl/log/absl_log.h"
+#include "absl/log/check.h"
+#include "absl/log/initialize.h"
+#include "absl/log/globals.h"
+#include "absl/strings/str_format.h"
+#endif // ENABLE_ABSL_LIB
+
 // grpc
 #ifdef ENABLE_CLIENT
 // client
@@ -230,12 +241,22 @@ using TaoTieChat::StatusService::Client;
 using TaoTieChat::StatusRequest;
 using TaoTieChat::StatusReply;
 // using TaoTieChat::AccountService::Client;
-using TaoTieChat::UserRegisterRequest;
-using TaoTieChat::UserRegisterReply;
-#else // ENABLE_SERVER
+using TaoTieChat::SignUpRequest;
+using TaoTieChat::SignUpReply;
+using TaoTieChat::SignInRequest;
+using TaoTieChat::SignInReply;
+#elif defined(ENABLE_SERVER)  // ENABLE_SERVER
 // server
 #include "taotie_chat.grpc.pb.h"
-// using grpc::ServerReaderWriter;
+using grpc::ServerReaderWriter;
+using TaoTieChat::StatusService;
+using TaoTieChat::StatusRequest;
+using TaoTieChat::StatusReply;
+using TaoTieChat::AccountService;
+using TaoTieChat::SignUpRequest;
+using TaoTieChat::SignUpReply;
+using TaoTieChat::SignInRequest;
+using TaoTieChat::SignInReply;
 #endif // ENABLE_CLIENT
 
 // logs
@@ -337,4 +358,3 @@ using TaoTieChat::UserRegisterReply;
 #define LOG_CRITICAL(...) std::cerr << __VA_ARGS__ << std::endl
 #define LOG_FATAL(...)    std::cerr << __VA_ARGS__ << std::endl
 #endif  // LOGGER_USE_SPDLOG
-

@@ -75,6 +75,10 @@ set(SRC_FILES
     ${CMAKE_CURRENT_SOURCE_DIR}/src/ui/PluginsWindow/MediaWindow.h
     ${CMAKE_CURRENT_SOURCE_DIR}/src/ui/PluginsWindow/MediaWindow.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/src/ui/PluginsWindow/MediaWindow.ui
+    # # 搜索页面
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/ui/SearchWindow/SearchWindow.h
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/ui/SearchWindow/SearchWindow.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/ui/SearchWindow/SearchWindow.ui
     # network 与服务器之间的通信服务
     ${CMAKE_CURRENT_SOURCE_DIR}/src/network/NetworkClient.h
     ${CMAKE_CURRENT_SOURCE_DIR}/src/network/NetworkClient.cpp
@@ -112,6 +116,7 @@ include_directories(${CMAKE_CURRENT_SOURCE_DIR}/src/ui/MainWindow)
 include_directories(${CMAKE_CURRENT_SOURCE_DIR}/src/ui/AuthWindow)
 include_directories(${CMAKE_CURRENT_SOURCE_DIR}/src/ui/ChatWindow)
 include_directories(${CMAKE_CURRENT_SOURCE_DIR}/src/ui/PluginsWindow)
+include_directories(${CMAKE_CURRENT_SOURCE_DIR}/src/ui/SearchWindow)
 # include_directories(${CMAKE_CURRENT_SOURCE_DIR}/third/simpleQtLogger)
 include_directories(${PROTO_HEADERS_DIR})
 

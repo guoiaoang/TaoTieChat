@@ -55,7 +55,6 @@ protected:
 
 private:
     Ui::ChatWindow *ui                = nullptr;
-    QSplitter      *m_split_contact   = nullptr;
     QMenu          *m_menu_settings   = nullptr;
     QAction        *m_action_signout  = nullptr;
     QAction        *m_action_settings = nullptr;

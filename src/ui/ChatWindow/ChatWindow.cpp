@@ -7,7 +7,6 @@ ChatWindow::ChatWindow(QWidget *parent)
     // // connect(ui->button_chat, &QToolButton::clicked, this, &ChatWindow::accept);
 
     // 创建对象
-    m_split_contact   = new QSplitter;
     m_menu_settings   = new QMenu  ;
     m_action_signout  = new QAction;
     m_action_settings = new QAction;
@@ -52,16 +51,8 @@ ChatWindow::ChatWindow(QWidget *parent)
 
     // 执行操作
     ui->navigate_button_chat_room->click();  // 初始化状态
-    // 替换为可滑动窗口
-    // ui->contact_layout->removeWidget(ui->stacked_contact_list);
-    ui->contact_layout->removeWidget(ui->widget_contact_list);
-    ui->contact_layout->removeWidget(ui->stacked_contact_detail);
-    // m_split_contact->addWidget(ui->stacked_contact_list);
-    m_split_contact->addWidget(ui->widget_contact_list);
-    m_split_contact->addWidget(ui->stacked_contact_detail);
-    m_split_contact->setStretchFactor(0, 0); // 编号 0 的窗口拉伸因子为 0 // 整个窗口调整大小时左侧宽度不调整
-    m_split_contact->setStretchFactor(1, 1);
-    ui->chat_layout->replaceWidget(ui->contact_widget, m_split_contact);
+    ui->chat_splitter->setStretchFactor(0, 0); // 编号 0 的窗口拉伸因子为 0 // 整个窗口调整大小时左侧宽度不调整
+    ui->chat_splitter->setStretchFactor(1, 1);
 
     // 设置图标
     const  QSize  size_avatar(48, 48);
@@ -164,10 +155,6 @@ ChatWindow::ChatWindow(QWidget *parent)
 }
 
 ChatWindow::~ChatWindow() {
-    if(m_split_contact) {
-        delete m_split_contact;
-        m_split_contact = nullptr;
-    }
     if(m_menu_settings) {
         delete m_menu_settings;
         m_menu_settings = nullptr;

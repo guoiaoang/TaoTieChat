@@ -2,7 +2,7 @@
 #include "ui_AuthWindow.h"
 #include <QGrpcChannelOptions>
 #include <QGrpcHttp2Channel>
-
+#include <QCheckBox>
 
 AuthWindow::AuthWindow(QWidget *parent)
     : QDialog(parent), ui(new Ui::AuthWindow) {
@@ -22,6 +22,17 @@ AuthWindow::AuthWindow(QWidget *parent)
     connect(ui->signup_edit_confirm , &QLineEdit::textChanged, this, &AuthWindow::handle_page_signup_tips_clean);
     connect(ui->signup_edit_question, &QLineEdit::textChanged, this, &AuthWindow::handle_page_signup_tips_clean);
     connect(ui->signup_edit_answer  , &QLineEdit::textChanged, this, &AuthWindow::handle_page_signup_tips_clean);
+    // 记住密码与自动登录选项
+    connect(ui->signin_check_rember, &QCheckBox::checkStateChanged, this, [this](){
+        if(!ui->signin_check_rember->isChecked()) {
+            ui->signin_check_auto->setChecked(false);
+        }
+    });
+    connect(ui->signin_check_auto  , &QCheckBox::checkStateChanged, this, [this](){
+        if(ui->signin_check_auto->isChecked()) {
+            ui->signin_check_rember->setChecked(true);
+        }
+    });
 
     // 不知道什么情况，自动生成的翻译有问题，应该为"登陆"却显示为"注册"
     ui->signup_button_signin->setText(ui->signin_button_signin->text());
@@ -29,6 +40,12 @@ AuthWindow::AuthWindow(QWidget *parent)
     if(!NetworkClient::instance().init()) {
         qDebug().nospace().noquote() << "NetworkClient::instance().init() failed.";
     }
+
+    // 暂时禁用/隐藏未完整实现的功能
+    ui->signin_check_rember->setEnabled(false);
+    ui->signin_check_auto  ->setEnabled(false);
+    ui->signin_check_rember->hide();
+    ui->signin_check_auto  ->hide();
 }
 
 AuthWindow::~AuthWindow() {
@@ -74,7 +91,11 @@ bool AuthWindow::handle_signin() {
     signin_params params_signin = std::make_shared<TaoTieChat::SignInRequest>();
     params_signin->setUserId  (ui->signin_edit_username->text());
     params_signin->setPassword(ui->signin_edit_password->text());
-    return signin(params_signin);
+    // 传递登录选项，用于保存登录信息
+    std::shared_ptr<AuthOpt> auth_opt = std::make_shared<AuthOpt>();
+    auth_opt->rember_password = ui->signin_check_rember->isChecked();
+    auth_opt->auto_login      = ui->signin_check_auto  ->isChecked();
+    return signin(params_signin, auth_opt);
 }
 
 bool AuthWindow::signup(signup_params params_signup) {
@@ -95,11 +116,11 @@ bool AuthWindow::signup(signup_params params_signup) {
     return NetworkClient::instance().signup(params_signup, callback);
 }
 
-bool AuthWindow::signin(signin_params params_signin) {
-    auto callback = [this](signin_params params_signin, signin_reply reply_signin) {
+bool AuthWindow::signin(signin_params params_signin, std::shared_ptr<AuthOpt> auth_opt) {
+    auto callback = [this, auth_opt](signin_params params_signin, signin_reply reply_signin) {
         // 用户登录成功
         if(reply_signin && reply_signin->hasResult() && reply_signin->result().hasSuccessCode()) {
-            handle_signin_successd(params_signin);
+            handle_signin_successd(params_signin, auth_opt);
             return;
         }
         // 用户登录失败
@@ -120,14 +141,14 @@ bool AuthWindow::handle_signup_successd(signup_params params_signup) {
     // TODO:清除界面数据
 #endif // _DEBUG
 
-    // 创建用于登陆的参数  // 注册返回的信息不包含token,因此需要使用密码登录
+    // 创建用于登陆的参数  // 注册返回的信息不包含 token，因此需要使用密码登录
     signin_params params_signin = std::make_shared<TaoTieChat::SignInRequest>();
     params_signin->setUserId  (params_signup->userId  ());
     params_signin->setPassword(params_signup->password());
     return signin(params_signin);
 }
 
-bool AuthWindow::handle_signin_successd(signin_params params_signin) {
+bool AuthWindow::handle_signin_successd(signin_params params_signin, std::shared_ptr<AuthOpt> auth_opt) {
 #ifndef DEBUG
     QMessageBox::information(this, tr("tips"), tr("login success. \nclose this dialog to show chat window."));
     // TODO:清除界面数据
@@ -138,6 +159,10 @@ bool AuthWindow::handle_signin_successd(signin_params params_signin) {
     // QString account_id = reply_login->accountId();
     // QString token      = reply_login->token    ();
     // qDebug().nospace().noquote() << "login success. reply:" << reply_login;
+
+    if(auth_opt && auth_opt->rember_password) {
+        // 保存登录记录
+    }
 
     // this, &AuthWindow::accepted
     this->accepted();

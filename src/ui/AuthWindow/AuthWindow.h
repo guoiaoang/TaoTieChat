@@ -8,6 +8,12 @@ namespace Ui {
 class AuthWindow;
 }
 
+// 附加选项
+struct AuthOpt{
+    bool rember_password = false;
+    bool auto_login = false;
+};
+
 class AuthWindow : public QDialog{
     Q_OBJECT
 
@@ -26,10 +32,10 @@ private slots:
     bool handle_signup();
     bool handle_signin();
     bool handle_signup_successd(signup_params params_signup);
-    bool handle_signin_successd(signin_params params_signin);
+    bool handle_signin_successd(signin_params params_signin, std::shared_ptr<AuthOpt> auth_opt = nullptr);  // nullptr 不能使用引用
 private:
     bool signup(signup_params params_signup);
-    bool signin(signin_params params_signin);
+    bool signin(signin_params params_signin, std::shared_ptr<AuthOpt> auth_opt = nullptr);
 
 private:
     Ui::AuthWindow *ui = nullptr;

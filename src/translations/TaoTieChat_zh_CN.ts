@@ -10,73 +10,107 @@
     </message>
     <message>
         <location filename="../ui/AuthWindow/AuthWindow.ui" line="114"/>
-        <location filename="../ui/AuthWindow/AuthWindow.ui" line="416"/>
+        <location filename="../ui/AuthWindow/AuthWindow.ui" line="434"/>
         <source>Username:</source>
         <translation>用户名：</translation>
     </message>
     <message>
         <location filename="../ui/AuthWindow/AuthWindow.ui" line="127"/>
-        <location filename="../ui/AuthWindow/AuthWindow.ui" line="429"/>
+        <location filename="../ui/AuthWindow/AuthWindow.ui" line="447"/>
         <source>Username</source>
         <translation>用户名</translation>
     </message>
     <message>
         <location filename="../ui/AuthWindow/AuthWindow.ui" line="137"/>
-        <location filename="../ui/AuthWindow/AuthWindow.ui" line="439"/>
+        <location filename="../ui/AuthWindow/AuthWindow.ui" line="457"/>
         <source>Password:</source>
         <translation>密码：</translation>
     </message>
     <message>
         <location filename="../ui/AuthWindow/AuthWindow.ui" line="153"/>
-        <location filename="../ui/AuthWindow/AuthWindow.ui" line="455"/>
+        <location filename="../ui/AuthWindow/AuthWindow.ui" line="473"/>
         <source>Password</source>
         <translation>密码</translation>
     </message>
     <message>
-        <location filename="../ui/AuthWindow/AuthWindow.ui" line="183"/>
+        <location filename="../ui/AuthWindow/AuthWindow.ui" line="167"/>
+        <source>Auto Login</source>
+        <translation>自动登录</translation>
+    </message>
+    <message>
+        <location filename="../ui/AuthWindow/AuthWindow.ui" line="174"/>
+        <source>Rember Password</source>
+        <translation>记住密码</translation>
+    </message>
+    <message>
+        <location filename="../ui/AuthWindow/AuthWindow.ui" line="201"/>
         <source>Singin</source>
         <translation>登陆</translation>
     </message>
     <message>
-        <location filename="../ui/AuthWindow/AuthWindow.ui" line="249"/>
-        <location filename="../ui/AuthWindow/AuthWindow.ui" line="560"/>
+        <location filename="../ui/AuthWindow/AuthWindow.ui" line="267"/>
+        <location filename="../ui/AuthWindow/AuthWindow.ui" line="578"/>
         <source>Signup</source>
         <translation>注册</translation>
     </message>
     <message>
-        <location filename="../ui/AuthWindow/AuthWindow.ui" line="465"/>
+        <location filename="../ui/AuthWindow/AuthWindow.ui" line="483"/>
         <source>Confirm:</source>
         <translation>确认：</translation>
     </message>
     <message>
-        <location filename="../ui/AuthWindow/AuthWindow.ui" line="481"/>
+        <location filename="../ui/AuthWindow/AuthWindow.ui" line="499"/>
         <source>Confirm Password</source>
         <translation>确认密码</translation>
     </message>
     <message>
-        <location filename="../ui/AuthWindow/AuthWindow.ui" line="491"/>
+        <location filename="../ui/AuthWindow/AuthWindow.ui" line="509"/>
         <source>Question:</source>
         <translation>问题：</translation>
     </message>
     <message>
-        <location filename="../ui/AuthWindow/AuthWindow.ui" line="504"/>
+        <location filename="../ui/AuthWindow/AuthWindow.ui" line="522"/>
         <source>Security questions</source>
         <translation>密保问题</translation>
     </message>
     <message>
-        <location filename="../ui/AuthWindow/AuthWindow.ui" line="514"/>
+        <location filename="../ui/AuthWindow/AuthWindow.ui" line="532"/>
         <source>Answer:</source>
         <translation>答案：</translation>
     </message>
     <message>
-        <location filename="../ui/AuthWindow/AuthWindow.ui" line="527"/>
+        <location filename="../ui/AuthWindow/AuthWindow.ui" line="545"/>
         <source>Security question answer</source>
         <translation>密保答案</translation>
     </message>
     <message>
-        <location filename="../ui/AuthWindow/AuthWindow.ui" line="619"/>
+        <location filename="../ui/AuthWindow/AuthWindow.ui" line="637"/>
         <source>Signin</source>
         <translation>登录</translation>
+    </message>
+    <message>
+        <location filename="../ui/AuthWindow/AuthWindow.cpp" line="99"/>
+        <location filename="../ui/AuthWindow/AuthWindow.cpp" line="117"/>
+        <source>login failed!</source>
+        <translation>登录失败！</translation>
+    </message>
+    <message>
+        <location filename="../ui/AuthWindow/AuthWindow.cpp" line="128"/>
+        <location filename="../ui/AuthWindow/AuthWindow.cpp" line="143"/>
+        <source>tips</source>
+        <translation>提示</translation>
+    </message>
+    <message>
+        <location filename="../ui/AuthWindow/AuthWindow.cpp" line="128"/>
+        <source>SignUp success. close this dialog to SignIn.</source>
+        <translation>注册成功。关闭当前弹窗以便登录。</translation>
+    </message>
+    <message>
+        <location filename="../ui/AuthWindow/AuthWindow.cpp" line="143"/>
+        <source>login success. 
+close this dialog to show chat window.</source>
+        <translation>登录成功。
+关闭当前窗口以便显示聊天窗口。</translation>
     </message>
 </context>
 <context>
@@ -107,27 +141,27 @@
         <translation>搜索</translation>
     </message>
     <message>
-        <location filename="../ui/ChatWindow/ChatWindow.ui" line="140"/>
+        <location filename="../ui/ChatWindow/ChatWindow.ui" line="137"/>
         <source>+</source>
         <translation></translation>
     </message>
     <message>
-        <location filename="../ui/ChatWindow/ChatWindow.cpp" line="112"/>
+        <location filename="../ui/ChatWindow/ChatWindow.cpp" line="118"/>
         <source>settings</source>
         <translation>设置</translation>
     </message>
     <message>
-        <location filename="../ui/ChatWindow/ChatWindow.cpp" line="114"/>
+        <location filename="../ui/ChatWindow/ChatWindow.cpp" line="120"/>
         <source>Signout</source>
         <translation>退出登陆</translation>
     </message>
     <message>
-        <location filename="../ui/ChatWindow/ChatWindow.cpp" line="119"/>
+        <location filename="../ui/ChatWindow/ChatWindow.cpp" line="125"/>
         <source>Add as a friend or join a group</source>
         <translation>添加好友或群组</translation>
     </message>
     <message>
-        <location filename="../ui/ChatWindow/ChatWindow.cpp" line="120"/>
+        <location filename="../ui/ChatWindow/ChatWindow.cpp" line="126"/>
         <source>Create a group</source>
         <translation>创建群</translation>
     </message>
@@ -349,6 +383,34 @@
         <location filename="../ui/ChatWindow/MessageWindow.ui" line="131"/>
         <source>Send</source>
         <translation>发送</translation>
+    </message>
+</context>
+<context>
+    <name>SearchWindow</name>
+    <message>
+        <location filename="../ui/SearchWindow/SearchWindow.ui" line="14"/>
+        <source>SearchWindow</source>
+        <translation>搜索窗口</translation>
+    </message>
+    <message>
+        <location filename="../ui/SearchWindow/SearchWindow.ui" line="22"/>
+        <source>Search:</source>
+        <translation>搜索：</translation>
+    </message>
+    <message>
+        <location filename="../ui/SearchWindow/SearchWindow.ui" line="36"/>
+        <source>Search</source>
+        <translation>搜索</translation>
+    </message>
+    <message>
+        <location filename="../ui/SearchWindow/SearchWindow.ui" line="54"/>
+        <source>User</source>
+        <translation>用户</translation>
+    </message>
+    <message>
+        <location filename="../ui/SearchWindow/SearchWindow.ui" line="90"/>
+        <source>Groups</source>
+        <translation>群组</translation>
     </message>
 </context>
 </TS>

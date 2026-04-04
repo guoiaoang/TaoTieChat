@@ -1,5 +1,6 @@
 #include "NetworkClient.h"
 
+// 重载 QDebug 运算符
 QDebug operator<<(QDebug debug, const TaoTieChat::Result &result) {
     QDebugStateSaver saver(debug); // 保持输出格式一致性
     if(result.hasSuccessCode()) {
@@ -20,6 +21,7 @@ QDebug operator<<(QDebug debug, const TaoTieChat::Result &result) {
     return debug;
 }
 
+// register
 QDebug operator<<(QDebug debug, const TaoTieChat::SignUpRequest &req) {
     QDebugStateSaver saver(debug); // 保持输出格式一致性
     debug.nospace() << "SignUpRequest("
@@ -30,7 +32,6 @@ QDebug operator<<(QDebug debug, const TaoTieChat::SignUpRequest &req) {
                     << ")";
     return debug;
 }
-
 QDebug operator<<(QDebug debug, const TaoTieChat::SignUpReply &rep) {
     QDebugStateSaver saver(debug); // 保持输出格式一致性
     debug.nospace() << "SignUpReply("
@@ -41,6 +42,7 @@ QDebug operator<<(QDebug debug, const TaoTieChat::SignUpReply &rep) {
     return debug;
 }
 
+// login
 QDebug operator<<(QDebug debug, const TaoTieChat::SignInRequest &req) {
     QDebugStateSaver saver(debug); // 保持输出格式一致性
     debug.nospace() << "SignInRequest("
@@ -49,7 +51,6 @@ QDebug operator<<(QDebug debug, const TaoTieChat::SignInRequest &req) {
                     << ")";
     return debug;
 }
-
 QDebug operator<<(QDebug debug, const TaoTieChat::SignInReply &rep) {
     QDebugStateSaver saver(debug); // 保持输出格式一致性
     debug.nospace() << "SignInReply("
@@ -57,6 +58,40 @@ QDebug operator<<(QDebug debug, const TaoTieChat::SignInReply &rep) {
                     << "result:"    << rep.result   () << ", "
                     << "accountId:" << rep.accountId() << ", "
                     << "token:"     << rep.token    ()
+                    << ")";
+    return debug;
+}
+
+// search users
+QDebug operator<<(QDebug debug, const TaoTieChat::UserBaseInfo      &info) {
+    QDebugStateSaver saver(debug); // 保持输出格式一致性
+    debug.nospace() << "UserBaseInfo("
+                    << "userId:"   << info.userId  () << ", "
+                    << "nickname:" << info.nickname() << ", "
+                    << "avatar:"   << info.avatar  () << ", "
+                    << "sign:"     << info.sign    () << ", "
+                    << "gender:"   << info.gender  () << ", "
+                    << "region:"   << info.region  () << ", "
+                    << "birthday:" << info.birthday() << ", "
+                    << "phones:"   << info.phones  () << ", "
+                    << "emails:"   << info.emails  ()
+                    << ")";
+    return debug;
+}
+QDebug operator<<(QDebug debug, const TaoTieChat::SearchUsersRequest&req ) {
+    QDebugStateSaver saver(debug); // 保持输出格式一致性
+    debug.nospace() << "SearchUsersRequest("
+                    << "usersKeyword:" << req.usersKeyword() << ", "
+                    << "usersFilter:"  << req.usersFilter () << ", "
+                    << ")";
+    return debug;
+}
+QDebug operator<<(QDebug debug, const TaoTieChat::SearchUsersReply  &rep ) {
+    QDebugStateSaver saver(debug); // 保持输出格式一致性
+    debug.nospace() << "SearchUsersReply("
+                    << "Request:"  << rep.request () << ", "
+                    << "result:"   << rep.result  () << ", "
+                    << "userInfo:" << rep.userInfo() << ", "
                     << ")";
     return debug;
 }
@@ -78,6 +113,11 @@ bool NetworkClient::init() {
         qDebug().nospace().noquote() << "attach AccountService Channel failed.";
         return false;
     }
+    m_client_search = std::make_unique<TaoTieChat::SearchService::Client>();
+    if (!m_client_search->attachChannel(m_channel)) {
+        qDebug().nospace().noquote() << "attach SearchService Channel failed.";
+        return false;
+    }
 
     m_inited = true;
 
@@ -85,7 +125,7 @@ bool NetworkClient::init() {
 }
 
 // 成功失败都要返回，失败时要返回错误原因
-bool NetworkClient::signup(signup_params& params_signup, signup_callback callback) {
+bool NetworkClient::signup(const signup_params& params_signup, const signup_callback& callback) {
     using Result = TaoTieChat::Result;
     using ec = ::TaoTieChat::ErrorCodeGadget::ErrorCode;
     using sc = ::TaoTieChat::SuccessCodeGadget::SuccessCode;
@@ -164,7 +204,7 @@ bool NetworkClient::signup(signup_params& params_signup, signup_callback callbac
 }
 
 // 成功失败都要返回，失败时要返回错误原因
-bool NetworkClient::signin(signin_params& params_signin, signin_callback callback) {
+bool NetworkClient::signin(const signin_params& params_signin, const signin_callback& callback) {
     using Result = TaoTieChat::Result;
     using ec = ::TaoTieChat::ErrorCodeGadget::ErrorCode;
     using sc = ::TaoTieChat::SuccessCodeGadget::SuccessCode;
@@ -204,14 +244,9 @@ bool NetworkClient::signin(signin_params& params_signin, signin_callback callbac
 
     // TODO:在网络交互前应该对密码进行加密
 
-    // 构造参数
-    TaoTieChat::SignInRequest req;
-    req.setUserId  (user_id );
-    req.setPassword(password);
-
     //
     auto opts = QGrpcCallOptions{}.setDeadlineTimeout(std::chrono::seconds(30));
-    std::unique_ptr<QGrpcCallReply> reply_conn = m_client_account->SignIn(req, opts);
+    std::unique_ptr<QGrpcCallReply> reply_conn = m_client_account->SignIn(*params_signin, opts);
     const auto *rep_conn_ptr = reply_conn.get();  // 必须
     if (!rep_conn_ptr) {
         Utils::set(result, ec::ERROR_CONN);
@@ -237,4 +272,66 @@ bool NetworkClient::signin(signin_params& params_signin, signin_callback callbac
             }
         }, Qt::SingleShotConnection);
     return true;
+}
+
+// 精准匹配，不返回包含查询词的内容
+bool NetworkClient::search_users (const search_users_params&params_search_users, const search_users_callback&callback) {
+    using Result = TaoTieChat::Result;
+    using ec = ::TaoTieChat::ErrorCodeGadget::ErrorCode;
+    using sc = ::TaoTieChat::SuccessCodeGadget::SuccessCode;
+    Result result;
+
+    // ================================================================== //
+
+    // 有用的参数
+    QString user_keyword = params_search_users->usersKeyword();
+    QString user_filter  = params_search_users->usersFilter();
+
+    // 默认设为错误
+    Utils::set(result, ec::UNSET);
+
+    // 参数简单校验
+    ;    if(user_keyword.isEmpty()) { Utils::set(result, ec::SEARCH_USERS_KEYWORD_EMPTY); }
+    else if(!m_client_search) { Utils::set(result, ec::ERROR_INIT); }
+    // else { Utils::set(result, sc::SUCCESS); }
+
+    search_users_reply reply_data = TaoTieChat::SearchUsersReply();
+    reply_data->setResult(result);
+
+    // 失败时也要发送通知
+    if(result.hasErrorCode() && result.errorCode() != ec::UNSET){
+        if(callback) {
+            callback(params_search_users, reply_data);
+        }
+        return false;
+    }
+
+    //
+    auto opts = QGrpcCallOptions{}.setDeadlineTimeout(std::chrono::seconds(30));
+    std::unique_ptr<QGrpcCallReply> reply_conn = m_client_search->SearchUsers(*params_search_users, opts);
+    const auto *rep_conn_ptr = reply_conn.get();  // 必须
+    if (!rep_conn_ptr) {
+        Utils::set(result, ec::ERROR_CONN);
+        reply_data->setResult(result);
+        if (callback) {
+            callback(params_search_users, reply_data);
+        }
+        return false;
+    }
+    // 捕获输出返回信息  // 单次模型需要使用 `Qt::SingleShotConnection` 以便结束后销毁
+    // lamda 表达式不可使用引用，会造成生命周期问题
+    connect(rep_conn_ptr, &QGrpcCallReply::finished, rep_conn_ptr,
+        [reply_conn = std::move(reply_conn), params_search_users, callback](const QGrpcStatus &status) mutable {
+            search_users_reply reply_data;
+            if(status.isOk()) {
+                reply_data = reply_conn->read<TaoTieChat::SearchUsersReply>();
+            }
+            if(callback) {
+                // 发送参数，返回参数
+                // 1. 返回参数为 nullopt 时代表返回错误，仅提示失败即可？？
+                // 2. 即使失败也要调用会回调，以便通知界面
+                callback(params_search_users, reply_data);
+            }
+        }, Qt::SingleShotConnection);
+    return false;
 }

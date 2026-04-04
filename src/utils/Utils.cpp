@@ -244,6 +244,8 @@ QString Utils::to_string(::TaoTieChat::ErrorCodeGadget::ErrorCode code) {
         {ec::SIGN_IN_PASSWORD_INCORRECT     , "Password is incorrect"         },
         {ec::SIGN_IN_TOKEN_INCORRECT        , "Token is incorrect"            },
         {ec::SIGN_IN_AUTH_FAILED            , "User ID or Password or Token error" },
+        {ec::SEARCH_USERS_KEYWORD_EMPTY     , "Search Users is empty"         },
+        {ec::SEARCH_USERS_KEYWORD_NOT_FOUND , "Search Users not found"        },
     };
 
     if (map_codes.contains(code)) {

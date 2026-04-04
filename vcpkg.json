@@ -7,6 +7,7 @@
         "grpc",
         "sqlcipher",
         "nlohmann-json",
+        "yaml-cpp",
         "spdlog",
         "boost-uuid"
     ],
@@ -41,6 +42,10 @@
                 {
                     "name": "nlohmann-json",
                     "version>=": "3.11.3"
+                },
+                {
+                    "name": "yaml-cpp",
+                    "version>=": "0.8.0"
                 },
                 {
                     "name": "spdlog",

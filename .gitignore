@@ -85,4 +85,3 @@ CMakeLists.txt.user*
 /build*/
 /out
 /.vscode/cache
-*.qm

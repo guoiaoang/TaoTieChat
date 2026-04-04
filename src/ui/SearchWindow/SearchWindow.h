@@ -18,9 +18,9 @@ public:
 Q_SIGNALS:
     void SearchEditTextChanged(const QString &);
 private:
-    bool do_search(const QString&key);
-    bool search_user(const QString&key);
-    bool search_group(const QString&key);
+    bool do_search(const QString&keyword);
+    bool search_users(const QString&keyword);
+    bool search_groups(const QString&keyword);
 
 private:
     Ui::SearchWindow *ui;

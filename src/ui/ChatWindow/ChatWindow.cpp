@@ -147,7 +147,6 @@ ChatWindow::ChatWindow(QWidget *parent)
     ui->edit_search->installEventFilter(this);
 
 #ifdef DEBUG
-    // Dev::ChatWindowDev(this, parent);
     for(auto contact : *m_local_user_data->get_contacts()) {
         add_contact(contact);
     }
@@ -270,29 +269,10 @@ void ChatWindow::handle_contact_selection_changed(const QModelIndex &current, co
     ui->stacked_contact_detail->setCurrentWidget(contact_window_update);
 }
 
-void widget_raise(QWidget*widget) {
-    // 1. 获取当前窗口标志位
-    Qt::WindowFlags flags = widget->windowFlags();
-
-    // 2. 临时添加“置顶”标志并显示（这一步会让窗口跳到最前）
-    widget->setWindowFlags(flags | Qt::WindowStaysOnTopHint);
-    widget->show();
-
-    // 3. 立即移除“置顶”标志，恢复普通窗口属性
-    widget->setWindowFlags(flags & ~Qt::WindowStaysOnTopHint);
-    widget->show(); // 必须再次调用 show() 刷新标志位
-
-    // 4. 最后确保获取焦点和激活
-    widget->raise();
-    widget->activateWindow();
-}
-
 bool ChatWindow::eventFilter(QObject *obj, QEvent *event) {
     if(obj == ui->edit_search) {
         if(event->type() == QEvent::MouseButtonRelease) {
-            m_search_window->show();
-            m_search_window->activateWindow();
-            m_search_window->raise();
+            Utils::widget_raise(m_search_window);
             return true;
         }
     }

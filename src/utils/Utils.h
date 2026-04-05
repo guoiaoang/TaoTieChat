@@ -29,8 +29,20 @@ public:
     // 注册指定路径的字体文件
     static bool load_font(const QString&font_path);
 
+    // 用于按钮
     static QIcon to_icon(const QString&text, const QPen&pen = QPen(Qt::white), const QSize size = QSize(128, 128));
+    // 用于头像
+    static QPixmap to_pixamp(const QString&text, const QSize size = QSize(128, 128));
 
+    // ====================================================================== //
+    // 窗口前置显示
+    static void widget_raise(QWidget*widget);
+    // 添加圆角遮罩
+    static QPixmap to_round_pixmap(const QPixmap& src, int radius = 10);
+    // 添加图形遮罩
+    static QPixmap apply_mask(const QPixmap& source, const QPixmap& mask);
+
+    // ====================================================================== //
     // 获取随机字符串作为全局唯一的 ID
     // QUuid::WithBraces 形如：{00000000-0000-0000-0000-000000000000}  // 8-4-4-4-12=32 位
     // QUuid::Id128 : 不使用间隔符

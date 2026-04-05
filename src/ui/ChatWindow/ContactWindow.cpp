@@ -19,16 +19,27 @@ ContactWindow::ContactWindow(Contact contact, QWidget *parent)
     connect(ui->button_manager , &QToolButton  ::clicked    , this, &ContactWindow::on_button_manager );
     connect(m_action_remove    , &QAction      ::triggered  , this, &ContactWindow::on_action_remove  );
     connect(this               , &ContactWindow::show_avatar, this, [this](Contact contact) {
+        // 获取显示内容
         ContactManager cm(contact);
+        QString nickname      = cm.get_nick_name    ();  // 昵称
+        QString user_id       = cm.get_user_id      ();  // 用户 ID
+        QString notes         = cm.get_notes        ();  // 备注
+        QPixmap avatar_pixmap = cm.get_avatar_pixmap();  // 头像图像
+        QString avatar_path   = cm.get_avatar_path  ();  // 头像路径
+        QString str_name = !nickname     .isEmpty() ? nickname      : user_id;
+        QPixmap avatar   = !avatar_pixmap.isNull () ? avatar_pixmap : QPixmap(avatar_path);
+        avatar = !avatar.isNull() ? avatar : Utils::to_pixamp(str_name);
+        //
         MediaWindow*media_window = &MediaWindow::instance();
         // media_window->load(cm.get_avatar_path());
-        media_window->load(cm.get_avatar_pixmap());
-        media_window->set_media_name(cm.get_nick_name());
-        media_window->show();
+        media_window->load(avatar);
+        media_window->set_media_name(str_name);
+        Utils::widget_raise(media_window);
     });
 
     // set
     ui->button_avatar->setFixedSize(128, 128);
+    ui->button_avatar->setToolButtonStyle(Qt::ToolButtonIconOnly);
     m_action_remove->setText(tr("remove"));
     m_menu_manager->addAction(m_action_remove);
     // update
@@ -44,34 +55,22 @@ ContactWindow::~ContactWindow() {
 void ContactWindow::update(Contact contact) {
     m_contact = contact;
     if(m_contact == nullptr) { m_contact = QSharedPointer<ContactData>(new ContactData); }
+    // 获取显示内容
+    ContactManager cm(contact);
+    QString nickname      = cm.get_nick_name    ();  // 昵称
+    QString user_id       = cm.get_user_id      ();  // 用户 ID
+    QString notes         = cm.get_notes        ();  // 备注
+    QPixmap avatar_pixmap = cm.get_avatar_pixmap();  // 头像图像
+    QString avatar_path   = cm.get_avatar_path  ();  // 头像路径
+    QString str_name = !nickname     .isEmpty() ? nickname      : user_id;
+    QPixmap avatar   = !avatar_pixmap.isNull () ? avatar_pixmap : QPixmap(avatar_path);
+    avatar = !avatar.isNull() ? avatar : Utils::to_pixamp(str_name);
+    // if(nickname     .isEmpty()) { cm.set_nick_name    (str_name); }  // 保存回去？？
+    // if(avatar_pixmap.isNull ()) { cm.set_avatar_pixmap(avatar  ); }  // 保存回去？？
     // show
-    ui->edit_nickname->setText(ContactManager(contact).get_nick_name());
-    // QPixmap pixmap = QPixmap(ContactManager(contact).get_avatar_path());
-    // 头像：1.有图片就显示图片；2.没有图片再从路径加载图片；3.加载图片失败就显示路径。
-    QPixmap avatar_pixmap = ContactManager(contact).get_avatar_pixmap();
-    QString avatar_path   = ContactManager(contact).get_avatar_path  ();
-    if(avatar_pixmap.isNull()) {
-        avatar_pixmap.load(avatar_path);
-    }
-    if(!avatar_pixmap.isNull()) {
-        // ui->button_avatar->setLayout();
-        ui->button_avatar->setText(QString());
-        ui->button_avatar->setIconSize(QSize(ui->button_avatar->size()));
-        ui->button_avatar->setIcon(QIcon(avatar_pixmap.scaled(ui->button_avatar->size(), Qt::IgnoreAspectRatio, Qt::SmoothTransformation)));
-        // ui->button_avatar->setIconSize(QSzie(128, 128));
-        // ui->button_avatar->setIcon(QIcon(pixmap));
-    }
-    else {
-        // 直接根据按钮高度估算一个值，比如高度的 50% - 60%
-        // setPointSize 与 setPixelSize 均可
-        QFont font = ui->button_avatar->font();
-        font.setPointSize(ui->button_avatar->height() * 0.5);
-        // font.setPixelSize(ui->button_avatar->height() * 0.5);
-        font.setBold(true);
-        ui->button_avatar->setFont(font);
-        ui->button_avatar->setIcon(QIcon()); // 清除之前的图标
-        ui->button_avatar->setText(avatar_path.left(2));
-    }
+    ui->edit_nickname->setText(str_name);
+    ui->button_avatar->setIconSize(QSize(ui->button_avatar->size()));
+    ui->button_avatar->setIcon(QIcon(avatar.scaled(ui->button_avatar->size(), Qt::IgnoreAspectRatio, Qt::SmoothTransformation)));
 }
 
 Contact ContactWindow::contact() const {

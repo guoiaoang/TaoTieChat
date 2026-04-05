@@ -2,10 +2,6 @@
 
 #include "Utils.h"
 
-#ifdef DEBUG
-#include "Dev.h"
-#endif // DEBUG
-
 namespace Ui {
 class MediaWindow;
 }
@@ -69,14 +65,7 @@ private:
 
     bool   m_fit_to_window = true;  // 图片自适应窗口大小
     double m_scale_factory = 1.0;   // 图片非自适应窗口大小时的缩放倍数
-
-    // ====================================================================== //
-#ifdef DEBUG
-private:
-    friend Dev::MediaWindowDev;
-#endif // DEBUG
 };
-
 
 // 可参考项目：
 //   * Qt/Examples/Qt-5.15.2/widgets/widgets/imageviewer/imageviewer.cpp

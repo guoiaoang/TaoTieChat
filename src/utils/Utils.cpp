@@ -128,6 +128,7 @@ bool Utils::load_font(const QString&font_path) {
     return false;
 }
 
+// 用于按钮
 QIcon Utils::to_icon(const QString&text, const QPen&pen, const QSize size) {
     QFont icon_font = Utils::get_suitable_font_size("Inconsolata Nerd Font Mono", size, text);
     if(icon_font == QFont()) {
@@ -163,6 +164,75 @@ QIcon Utils::to_icon(const QString&text, const QPen&pen, const QSize size) {
 
     QIcon icon(QPixmap::fromImage(image));
     return icon;
+}
+
+// 用于头像
+QPixmap Utils::to_pixamp(const QString&text, const QSize size) {
+    QPixmap pixmap(size);
+    pixmap.fill(Qt::transparent); // 设置透明背景
+    QPainter painter(&pixmap); // 将画笔绑定到 pixmap
+    painter.setRenderHint(QPainter::Antialiasing); // 开启抗锯齿，画圆更平滑
+
+    // 文字头像
+    QRect rect(0, 0, size.width(), size.height());
+    // // 画背景
+    // painter.setPen(Qt::NoPen);
+    // painter.setBrush(QColor(100, 150, 200));
+    // painter.drawRoundedRect(rect, 5, 5);
+    // 画文本
+    painter.setPen(Qt::white);
+    QFont font = painter.font();
+    font.setPointSize(qMin(size.height(), size.width()) * 0.5);
+    font.setBold(true);
+    painter.setFont(font);
+    painter.drawText(rect, Qt::AlignCenter, text.trimmed().left(2).toUpper());
+
+    painter.end(); // 完成绘画（或者等 painter 析构）
+    return pixmap;
+}
+
+// 添加圆角遮罩
+QPixmap Utils::to_round_pixmap(const QPixmap& src, int radius) {
+    QPixmap dest(src.size());
+    dest.fill(Qt::transparent); // 1. 先准备一张全透明底图
+
+    QPainter painter(&dest);
+    painter.setRenderHint(QPainter::Antialiasing); // 开启抗锯齿
+
+    // 2. 画出你想要的“形状”（这就是遮罩区域）
+    painter.setBrush(Qt::black);
+    painter.drawRoundedRect(dest.rect(), radius, radius);
+
+    // 3. 关键一步：设置合成模式为“取交集”
+    // SourceIn 模式：只保留新画内容与已有内容重叠的部分
+    painter.setCompositionMode(QPainter::CompositionMode_SourceIn);
+    painter.drawPixmap(0, 0, src); // 画上原图
+
+    return dest;
+}
+
+// 添加图形遮罩
+QPixmap Utils::apply_mask(const QPixmap& source, const QPixmap& mask) {
+    // 1. 准备一个结果图，大小与原图一致，初始全透明
+    QPixmap result(source.size());
+    result.fill(Qt::transparent);
+
+    QPainter painter(&result);
+    painter.setRenderHint(QPainter::Antialiasing);
+
+    // 2. 先画原图
+    painter.drawPixmap(0, 0, source);
+
+    // 3. 设置合成模式为 DestinationIn
+    // 效果：原图中只有遮罩图“不透明”的地方会被保留
+    painter.setCompositionMode(QPainter::CompositionMode_DestinationIn);
+
+    // 4. 画上你的遮罩图片
+    // 注意：如果遮罩大小不一致，需要用 scaled 拉伸到原图大小
+    painter.drawPixmap(0, 0, mask.scaled(source.size(), Qt::KeepAspectRatioByExpanding, Qt::SmoothTransformation));
+
+    painter.end();
+    return result;
 }
 
 // 获取随机字符串作为全局唯一的 ID
@@ -202,6 +272,26 @@ QString Utils::to_string(::TaoTieChat::SuccessCodeGadget::SuccessCode code) {
     }
 
     return "Unknown Success Code";
+}
+
+// 窗口前置显示
+void Utils::widget_raise(QWidget*widget) {
+    if(!widget) { return; }
+
+    // 1. 获取当前窗口标志位
+    Qt::WindowFlags flags = widget->windowFlags();
+
+    // 2. 临时添加“置顶”标志并显示（这一步会让窗口跳到最前）
+    widget->setWindowFlags(flags | Qt::WindowStaysOnTopHint);
+    widget->show();
+
+    // 3. 立即移除“置顶”标志，恢复普通窗口属性
+    widget->setWindowFlags(flags); // flags & ~Qt::WindowStaysOnTopHint);
+    widget->show(); // 必须再次调用 show() 刷新标志位
+
+    // 4. 最后确保获取焦点和激活
+    widget->raise();
+    widget->activateWindow();
 }
 
 // 获取错误信息

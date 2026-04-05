@@ -3,6 +3,9 @@
 #include <QScrollArea>
 #include "Utils.h"
 #include "NetworkClient.h"
+#include "ContactModel.h"
+#include "ContactDelegate.h"
+#include "ContactWindow.h"
 
 namespace Ui {
 class SearchWindow;
@@ -24,5 +27,9 @@ private:
 
 private:
     Ui::SearchWindow *ui;
-    QAction *m_action_search = nullptr;
+    QAction          *m_action_search  = nullptr;
+    // model/view/delegate
+    ContactModel     *m_users_model    = nullptr;
+    ContactDelegate  *m_users_delegate = nullptr;
+    ContactWindow    *m_user_window    = nullptr;
 };

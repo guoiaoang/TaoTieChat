@@ -73,10 +73,7 @@ private:
     // ====================================================================== //
 #ifdef DEBUG
 private:
-    friend Dev::ChatWindowDev;
-
     // LocalUserData
-    // QSharedPointer<LocalUserData> m_local_user_data = nullptr;
     QSharedPointer<LocalUserData> m_local_user_data = RegistryFactory<LocalUserData>::create("test_local");
 #endif // DEBUG
 };

@@ -7,12 +7,19 @@ SearchWindow::SearchWindow(QWidget *parent)
 
     // new
     m_action_search = new QAction(this);
+    // model/view
+    m_users_model    = new ContactModel   ;
+    m_users_delegate = new ContactDelegate;
+    m_user_window    = new ContactWindow  ;
 
     // connect
     connect(ui->searchpage_lineedit_key     , &QLineEdit::textChanged, this, [this](){
         QString str_search_key = ui->searchpage_lineedit_key->text();
         str_search_key = str_search_key.trimmed();
         ui->searchpage_toolbutton_search->setEnabled(!str_search_key.isEmpty());
+        if(str_search_key.isEmpty()) {
+            this->m_users_model->clean();  // 搜索词为空时清空搜索结果
+        }
     });
     connect(ui->searchpage_toolbutton_search, &QToolButton::triggered, this, [this](){
         // qDebug().nospace().noquote() << "searchpage_toolbutton_search triggered";
@@ -26,12 +33,44 @@ SearchWindow::SearchWindow(QWidget *parent)
     ui->searchpage_toolbutton_search->setDefaultAction(m_action_search);
     // 设置应用级别的图标后就不需要再手动设置窗口级别的图标了
     // this->setWindowIcon(QApplication::windowIcon());
+
+    // contact view/model/delegate
+    ui->page_list_users->setModel(m_users_model);
+    ui->page_list_users->setItemDelegate(m_users_delegate);
+    // 使用 currentChanged 信号支持键盘上下键导航和鼠标点击
+    // connect(ui->page_list_users->selectionModel(), &QItemSelectionModel::currentChanged, this, &ChatWindow::handle_contact_selection_changed);
+    // 响应双击事件
+    connect(ui->page_list_users, &QListView::doubleClicked, this, [this](const QModelIndex &index) {
+        // QString user_id = index.data((int)ContactData::Role::Userid).toString();  // ok
+        // // index 包含了被双击项的行、列及模型指针
+        // QString data = index.data(Qt::DisplayRole).toString();
+        // qDebug() << "双击了第" << index.row() << "行，内容为：" << data << ", user_id : " << user_id;
+        Contact contact = index.data((int)ContactData::Role::Contact).value<Contact>();
+        this->m_user_window->update(contact);
+        Utils::widget_raise(this->m_user_window);
+    });
+
+    // 群组功能当前未实现
+    ui->searchpage_widget_groups  ->hide();
+    ui->searchpage_toolbutton_user->hide();  // 只有一个作用时可暂不显示标签
 }
 
 SearchWindow::~SearchWindow() {
     if(m_action_search) {
         delete m_action_search;
         m_action_search = nullptr;
+    }
+    if(m_users_model) {
+        delete m_users_model;
+        m_users_model = nullptr;
+    }
+    if(m_users_delegate) {
+        delete m_users_delegate;
+        m_users_delegate = nullptr;
+    }
+    if(m_user_window) {
+        delete m_user_window;
+        m_user_window = nullptr;
     }
     if(ui) {
         delete ui;
@@ -62,7 +101,7 @@ bool SearchWindow::search_users(const QString&keyword) {
     // local_search_users();
     search_users_params params_search_users = std::make_shared<TaoTieChat::SearchUsersRequest>();
     params_search_users->setUsersKeyword(str_search_keyword);
-    auto network_search_users_callback = [](const search_users_params&param_search_users, const search_users_reply&reply_search_users) {
+    auto network_search_users_callback = [this](const search_users_params&param_search_users, const search_users_reply&reply_search_users) {
         using ec = TaoTieChat::ErrorCodeGadget::ErrorCode;
         using TaoTieChat::Result;
         using TaoTieChat::UserBaseInfo;
@@ -95,16 +134,28 @@ bool SearchWindow::search_users(const QString&keyword) {
         }
 
         // 暂不校验搜索词，直接刷新显示结果
+        this->m_users_model->clean();  // 显示结果前必须首先清空
         QList<UserBaseInfo> reply_users_info = reply_search_users->userInfo();
         if(reply_users_info.empty()) {
-            // clean_users_list();
             qDebug().noquote().nospace() << "network search users results is empty.";
             return;
         }
         for(auto&user_info : reply_users_info) {
             // 构造、清除后添加到搜索结果列表
-            // user_info->usetId();
             qDebug().noquote().nospace() << "user_info : " << user_info;
+
+            ContactManager cm(ContactManager::create());
+            cm.set_user_id    (user_info.userId  ());
+            cm.set_nick_name  (user_info.nickname());  // 当前没有设置昵称
+            cm.set_avatar_path(user_info.avatar  ());  // 当前没有设置头像
+            cm.set_signature  (user_info.sign    ());
+            cm.set_emails     (user_info.emails  ());
+            // cm.set_region     (user_info.region  ());  // TODO:添加或修复
+            // cm.set_birthday   (user_info.birthday());  // TODO:添加或修复
+            // cm.set_gender     (user_info.gender  ());  // TODO:添加或修复
+            cm.set_phones     (user_info.phones  ());
+            cm.set_contact    (cm.contact()); // 先手动保存自身
+            this->m_users_model->add_contact(cm.contact());
         }
     };
     NetworkClient::instance().search_users(params_search_users, network_search_users_callback);

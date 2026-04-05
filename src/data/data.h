@@ -42,18 +42,19 @@ using Accounts     = QSharedPointer<AccountsData>;
 // // 数据内容
 
 // 聊天室/群组/联系人信息
+// 使用 enum 而不是变量，主要是为了可以直接列举数量便于显示
 struct ContactData{
     Q_GADGET  // 使结构体支持元对象系统（反射、枚举转换）
 
 public:
     // 预定义内容：
-    //            头像,     昵称,    性别,             星标,            勿扰,
+    //            头像，昵称，性别，星标，勿扰，
     // Profile picture, nickname, gender, starred contacts, do not disturb(Silent),
-    //      账号ID,   地区,   备注,         电话,  邮箱,  标签,         描述,
+    //      账号 ID,   地区，备注，电话，邮箱，标签，描述，
     // account ID, region, notes, phone number, email, tags, description,
-    //   朋友圈,          共同群聊,           个性签名,            好友来源/来自
+    //   朋友圈，共同群聊，个性签名，好友来源/来自
     // Moments, shared group chats, personal signature, source of friends/from
-    //     消息,             未读
+    //     消息，未读
     // messages, unread messages
     enum class Role{
         Begin = Qt::ItemDataRole::UserRole,  // 开始标记
@@ -83,7 +84,8 @@ public:
         // Message ,  // 最后一条消息 // 用于预览  // TODO: 需要移动到 chat room
         // Unread  ,  // 是否有未读消息
         // 扩展及其他
-        // Ext     ,  // 扩展，可用于保存自定义数据
+        Contact    ,  // 可用于传递
+        Ext        ,  // 扩展，可用于保存自定义数据
         End        // 结束标记
     };
     Q_ENUM(Role)
@@ -211,6 +213,7 @@ public:
         cm.set_avatar_path  (avatar_path  );
         cm.set_nick_name    (nickname     );
         cm.set_notes        (notes        );
+        cm.set_contact      (cm.contact() );  // 保存自身
         update(cm.contact());
     }
 
@@ -266,42 +269,53 @@ public:
 
     QVariant &get(const ContactData::Role&role) { return contact_datas()[to_key(role)]; }
     // Calling QVariant::toString() on an unsupported variant returns an empty string.
-    bool        get_starred    (                             ) { return get(ContactData::Role::Starred  ).toBool      (); }
-    bool        get_silent     (                             ) { return get(ContactData::Role::Silent   ).toBool      (); }
-    QString     get_account_id (                             ) { return get(ContactData::Role::AccountID).toString    (); }
-    QString     get_user_id    (                             ) { return get(ContactData::Role::Userid   ).toString    (); }
-    QString     get_avatar_path(                             ) { return get(ContactData::Role::Avatar   ).toString    (); }
-    QString     get_nick_name  (                             ) { return get(ContactData::Role::Nickname ).toString    (); }
-    QString     get_notes      (                             ) { return get(ContactData::Role::Notes    ).toString    (); }
-    QString     get_description(                             ) { return get(ContactData::Role::Desc     ).toString    (); }
-    QString     get_gender     (                             ) { return get(ContactData::Role::Gender   ).toString    (); }
-    QString     get_moments    (                             ) { return get(ContactData::Role::Moments  ).toString    (); }
-    QString     get_signature  (                             ) { return get(ContactData::Role::Sign     ).toString    (); }
-    QString     get_from       (                             ) { return get(ContactData::Role::From     ).toString    (); }
-    QStringList get_region     (                             ) { return get(ContactData::Role::Region   ).toStringList(); }
-    QStringList get_phones     (                             ) { return get(ContactData::Role::Phones   ).toStringList(); }
-    QStringList get_emails     (                             ) { return get(ContactData::Role::Emails   ).toStringList(); }
-    QStringList get_tags       (                             ) { return get(ContactData::Role::Tags     ).toStringList(); }
-    QStringList get_groups     (                             ) { return get(ContactData::Role::Groups   ).toStringList(); }
-    void        set_starred    (const bool       &starred    ) {        get(ContactData::Role::Starred  ) = starred     ; }
-    void        set_silent     (const bool       &silent     ) {        get(ContactData::Role::Silent   ) = silent      ; }
-    void        set_account_id (const QString    &account_id ) {        get(ContactData::Role::AccountID) = account_id  ; }
-    void        set_user_id    (const QString    &user_id    ) {        get(ContactData::Role::Userid   ) = user_id     ; }
-    void        set_avatar_path(const QString    &avatar_path) {        get(ContactData::Role::Avatar   ) = avatar_path ; }
-    void        set_nick_name  (const QString    &nick_name  ) {        get(ContactData::Role::Nickname ) = nick_name   ; }
-    void        set_notes      (const QString    &notes      ) {        get(ContactData::Role::Notes    ) = notes       ; }
-    void        set_description(const QString    &description) {        get(ContactData::Role::Desc     ) = description ; }
-    void        set_gender     (const QString    &gender     ) {        get(ContactData::Role::Gender   ) = gender      ; }
-    void        set_moments    (const QString    &moments    ) {        get(ContactData::Role::Moments  ) = moments     ; }
-    void        set_signature  (const QString    &signature  ) {        get(ContactData::Role::Sign     ) = signature   ; }
-    void        set_from       (const QString    &from       ) {        get(ContactData::Role::From     ) = from        ; }
-    void        set_region     (const QStringList&region     ) {        get(ContactData::Role::Region   ) = region      ; }
-    void        set_phones     (const QStringList&phones     ) {        get(ContactData::Role::Phones   ) = phones      ; }
-    void        set_emails     (const QStringList&emails     ) {        get(ContactData::Role::Emails   ) = emails      ; }
-    void        set_tags       (const QStringList&tags       ) {        get(ContactData::Role::Tags     ) = tags        ; }
-    void        set_groups     (const QStringList&groups     ) {        get(ContactData::Role::Groups   ) = groups      ; }
+    bool        get_starred    () { return get(ContactData::Role::Starred  ).toBool      (); }
+    bool        get_silent     () { return get(ContactData::Role::Silent   ).toBool      (); }
+    QString     get_account_id () { return get(ContactData::Role::AccountID).toString    (); }
+    QString     get_user_id    () { return get(ContactData::Role::Userid   ).toString    (); }
+    QString     get_avatar_path() { return get(ContactData::Role::Avatar   ).toString    (); }
+    QString     get_nick_name  () { return get(ContactData::Role::Nickname ).toString    (); }
+    QString     get_notes      () { return get(ContactData::Role::Notes    ).toString    (); }
+    QString     get_description() { return get(ContactData::Role::Desc     ).toString    (); }
+    QString     get_gender     () { return get(ContactData::Role::Gender   ).toString    (); }
+    QString     get_moments    () { return get(ContactData::Role::Moments  ).toString    (); }
+    QString     get_signature  () { return get(ContactData::Role::Sign     ).toString    (); }
+    QString     get_from       () { return get(ContactData::Role::From     ).toString    (); }
+    QStringList get_region     () { return get(ContactData::Role::Region   ).toStringList(); }
+    QStringList get_phones     () { return get(ContactData::Role::Phones   ).toStringList(); }
+    QStringList get_emails     () { return get(ContactData::Role::Emails   ).toStringList(); }
+    QStringList get_tags       () { return get(ContactData::Role::Tags     ).toStringList(); }
+    QStringList get_groups     () { return get(ContactData::Role::Groups   ).toStringList(); }
+    void set_starred    (const bool       &starred    ) { get(ContactData::Role::Starred  ) = starred     ; }
+    void set_silent     (const bool       &silent     ) { get(ContactData::Role::Silent   ) = silent      ; }
+    void set_account_id (const QString    &account_id ) { get(ContactData::Role::AccountID) = account_id  ; }
+    void set_user_id    (const QString    &user_id    ) { get(ContactData::Role::Userid   ) = user_id     ; }
+    void set_avatar_path(const QString    &avatar_path) { get(ContactData::Role::Avatar   ) = avatar_path ; }
+    void set_nick_name  (const QString    &nick_name  ) { get(ContactData::Role::Nickname ) = nick_name   ; }
+    void set_notes      (const QString    &notes      ) { get(ContactData::Role::Notes    ) = notes       ; }
+    void set_description(const QString    &description) { get(ContactData::Role::Desc     ) = description ; }
+    void set_gender     (const QString    &gender     ) { get(ContactData::Role::Gender   ) = gender      ; }
+    void set_moments    (const QString    &moments    ) { get(ContactData::Role::Moments  ) = moments     ; }
+    void set_signature  (const QString    &signature  ) { get(ContactData::Role::Sign     ) = signature   ; }
+    void set_from       (const QString    &from       ) { get(ContactData::Role::From     ) = from        ; }
+    void set_region     (const QStringList&region     ) { get(ContactData::Role::Region   ) = region      ; }
+    void set_phones     (const QStringList&phones     ) { get(ContactData::Role::Phones   ) = phones      ; }
+    void set_emails     (const QStringList&emails     ) { get(ContactData::Role::Emails   ) = emails      ; }
+    void set_tags       (const QStringList&tags       ) { get(ContactData::Role::Tags     ) = tags        ; }
+    void set_groups     (const QStringList&groups     ) { get(ContactData::Role::Groups   ) = groups      ; }
+    // 指向自己
+    Contact& get_contact() {
+        return contact();
+        // return get(ContactData::Role::Contact).value<Contact>();
+    }
+    // 暂时这样
+    void set_contact     (const Contact  &contact      ) {
+        QVariant contact_variant;
+        contact_variant.setValue(contact);
+        get(ContactData::Role::Contact) = contact_variant;
+    }
     QPixmap get_avatar_pixmap() {
-        return get(ContactData::Role::Pixmap).value<QPixmap>();
+        return get(ContactData::Role::Pixmap ).value<QPixmap>();
     }
     void set_avatar_pixmap(const QPixmap &avatar_pixmap) {
         QVariant avatar_variant;

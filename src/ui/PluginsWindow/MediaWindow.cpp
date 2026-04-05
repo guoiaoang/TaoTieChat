@@ -209,10 +209,6 @@ MediaWindow::MediaWindow(QWidget *parent)
 
     // 窗口最大化、还原时触发图片自动拉伸
     this->installEventFilter(this);
-
-// #ifdef DEBUG
-//     Dev::MediaWindowDev(this, parent);
-// #endif // DEBUG
 }
 
 MediaWindow::~MediaWindow() {
@@ -234,7 +230,6 @@ MediaWindow::~MediaWindow() {
 }
 
 void MediaWindow::clean() {
-    // setWindowFilePath(QString());
     m_media_path   = QString();
     m_media_pixmap = QPixmap();
     m_media_name   = QString();
@@ -280,11 +275,11 @@ bool MediaWindow::update_media() {
         // 检测精度
         const double ff = 0.001;
         if(m_scale_factory > 1.0 - ff && m_scale_factory < 1.0 + ff) {
-            // 如果缩放倍数为1附近的值，那么直接显示原图，避免不必要的缩放计算和可能的模糊
+            // 如果缩放倍数为 1 附近的值，那么直接显示原图，避免不必要的缩放计算和可能的模糊
             ui->label->setPixmap(m_media_pixmap);
         }
         else {
-            // 缩放倍数不为1时需要进行处理
+            // 缩放倍数不为 1 时需要进行处理
             QPixmap pixmap_scaled = m_media_pixmap.scaled(m_media_pixmap.size() * m_scale_factory, Qt::KeepAspectRatio, Qt::SmoothTransformation);
             ui->label->setPixmap(pixmap_scaled);
         }

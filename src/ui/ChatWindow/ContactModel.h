@@ -17,6 +17,7 @@ public:
 
     // ====================================================================== //
 
+    void clean();
     void add_contact(Contact contact);
     void remove_contact(Contact contact);
     int  contacts_size() const;

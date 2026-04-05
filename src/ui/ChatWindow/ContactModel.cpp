@@ -47,6 +47,13 @@ QVariant ContactModel::data(const QModelIndex &index, int role) const {
     return QVariant();
 }
 
+void ContactModel::clean() {
+    beginResetModel();
+    // m_contacts.clear();  // 清除的是智能指针，而不是指针指向的对象，会导致 `m_contacts == nullptr`
+    m_contacts->clear();
+    endResetModel();
+}
+
 void ContactModel::add_contact(Contact contact) {
     int row = m_contacts->size();
     // 变更必须被包裹才会触发界面的更新

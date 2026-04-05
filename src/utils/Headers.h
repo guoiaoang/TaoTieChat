@@ -113,6 +113,7 @@
 #include <QMutex>
 #include <QObject>
 #include <QPainter>
+#include <QPainterPath>
 #include <QPalette>
 #include <QPicture>
 #include <QPixmap>

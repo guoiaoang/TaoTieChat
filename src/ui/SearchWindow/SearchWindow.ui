@@ -13,9 +13,9 @@
   <property name="windowTitle">
    <string>SearchWindow</string>
   </property>
-  <layout class="QVBoxLayout" name="verticalLayout_3">
+  <layout class="QVBoxLayout" name="searchpage_layout_main">
    <item>
-    <layout class="QHBoxLayout" name="horizontalLayout">
+    <layout class="QHBoxLayout" name="searchpage_layout_searchbar">
      <item>
       <widget class="QLabel" name="searchpage_label_search">
        <property name="text">
@@ -41,7 +41,22 @@
    </item>
    <item>
     <widget class="QWidget" name="searchpage_widget_user" native="true">
-     <layout class="QVBoxLayout" name="verticalLayout">
+     <layout class="QVBoxLayout" name="searchpage_layout_widget_users">
+      <property name="spacing">
+       <number>0</number>
+      </property>
+      <property name="leftMargin">
+       <number>0</number>
+      </property>
+      <property name="topMargin">
+       <number>0</number>
+      </property>
+      <property name="rightMargin">
+       <number>0</number>
+      </property>
+      <property name="bottomMargin">
+       <number>0</number>
+      </property>
       <item>
        <widget class="QToolButton" name="searchpage_toolbutton_user">
         <property name="sizePolicy">
@@ -65,10 +80,30 @@
           <rect>
            <x>0</x>
            <y>0</y>
-           <width>319</width>
-           <height>96</height>
+           <width>337</width>
+           <height>120</height>
           </rect>
          </property>
+         <layout class="QGridLayout" name="searchpage_layout_scrollarea_users">
+          <property name="leftMargin">
+           <number>0</number>
+          </property>
+          <property name="topMargin">
+           <number>0</number>
+          </property>
+          <property name="rightMargin">
+           <number>0</number>
+          </property>
+          <property name="bottomMargin">
+           <number>0</number>
+          </property>
+          <property name="spacing">
+           <number>0</number>
+          </property>
+          <item row="0" column="0">
+           <widget class="QListView" name="page_list_users"/>
+          </item>
+         </layout>
         </widget>
        </widget>
       </item>
@@ -77,7 +112,22 @@
    </item>
    <item>
     <widget class="QWidget" name="searchpage_widget_groups" native="true">
-     <layout class="QVBoxLayout" name="verticalLayout_2">
+     <layout class="QVBoxLayout" name="searchpage_layout_widget_groups">
+      <property name="spacing">
+       <number>0</number>
+      </property>
+      <property name="leftMargin">
+       <number>0</number>
+      </property>
+      <property name="topMargin">
+       <number>0</number>
+      </property>
+      <property name="rightMargin">
+       <number>0</number>
+      </property>
+      <property name="bottomMargin">
+       <number>0</number>
+      </property>
       <item>
        <widget class="QToolButton" name="searchpage_toolbutton_groups">
         <property name="sizePolicy">
@@ -101,10 +151,30 @@
           <rect>
            <x>0</x>
            <y>0</y>
-           <width>319</width>
-           <height>95</height>
+           <width>337</width>
+           <height>120</height>
           </rect>
          </property>
+         <layout class="QVBoxLayout" name="searchpage_layout_scrollarea_groups">
+          <property name="spacing">
+           <number>0</number>
+          </property>
+          <property name="leftMargin">
+           <number>0</number>
+          </property>
+          <property name="topMargin">
+           <number>0</number>
+          </property>
+          <property name="rightMargin">
+           <number>0</number>
+          </property>
+          <property name="bottomMargin">
+           <number>0</number>
+          </property>
+          <item>
+           <widget class="QListView" name="page_list_groups"/>
+          </item>
+         </layout>
         </widget>
        </widget>
       </item>

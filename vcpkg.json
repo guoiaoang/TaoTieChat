@@ -1,6 +1,9 @@
 {
     "$schema": "https://raw.githubusercontent.com/microsoft/vcpkg-tool/main/docs/vcpkg.schema.json",
-    "description": "Simple chat based on the Qt GRPC client API.",
+    "builtin-baseline": "9842d45d567ba785627932cca506615b4e43ae6e",
+    "description": "Simple chat client based on the Qt GRPC API.",
+    "name": "taotiechat",
+    "version-string": "0.1.0",
     "dependencies": [
         "fmt",
         "protobuf",
@@ -8,6 +11,8 @@
         "sqlcipher",
         "nlohmann-json",
         "yaml-cpp",
+        "abseil",
+        "glog",
         "spdlog",
         "boost-uuid"
     ],
@@ -43,6 +48,14 @@
                     "name": "nlohmann-json",
                     "version>=": "3.11.3"
                 },
+	        {
+	          "name": "abseil",
+	          "version>=": "20250127.0"
+	        },
+	        {
+	          "name": "glog",
+	          "version>=": "0.7.1"
+	        },
                 {
                     "name": "yaml-cpp",
                     "version>=": "0.8.0"

@@ -1,16 +1,8 @@
 #pragma once
 
-#include <QStyledItemDelegate>
-#include <QPainter>
-#include <QPixmap>
-#include <QString>
-#include <QtDebug>
-#include <QFont>
-#include <QFontMetrics>
-#include <QColor>
-#include <QSize>
-
+#include "Headers.h"
 #include "data.h"
+#include "Utils.h"
 
 class ContactDelegate : public QStyledItemDelegate {
     Q_OBJECT

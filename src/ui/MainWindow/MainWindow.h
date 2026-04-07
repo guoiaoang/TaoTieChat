@@ -1,18 +1,8 @@
 #pragma once
 
-#include <QMainWindow>
-#include <QTimer>
-#include <QtDebug>
-#include <QMetaEnum>
-#include <QStackedWidget>
-#include <QScrollArea>
-#include <QStatusBar>
-#include <QMenuBar>
-#include <QToolButton>
-#include <QScreen>
-#include <QGuiApplication>
-#include <QStyle>
-
+#include "Headers.h"
+#include "data.h"
+#include "Utils.h"
 #include "AuthWindow.h"
 #include "ChatWindow.h"
 

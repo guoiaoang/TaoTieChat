@@ -1,6 +1,7 @@
 #pragma once
 
 #include "Headers.h"
+#include "data.h"
 #include "taotie_chat.qpb.h"
 #include "taotie_chat_client.grpc.qpb.h"
 
@@ -52,14 +53,14 @@ public:
     // 获取错误信息
     static QString to_string(::TaoTieChat::SuccessCodeGadget::SuccessCode code);
     static QString to_string(::TaoTieChat::ErrorCodeGadget::ErrorCode     code);
-    static void set(TaoTieChat::Result&result, const ::TaoTieChat::SuccessCodeGadget::SuccessCode&success_code) {
-        result.setSuccessCode(success_code);
-        result.setMessage(Utils::to_string(success_code));
-    }
-    static void set(TaoTieChat::Result&result, const ::TaoTieChat::ErrorCodeGadget::ErrorCode&error_code) {
-        result.setErrorCode(error_code);
-        result.setMessage(Utils::to_string(error_code));
-    }
+    static void set(TaoTieChat::Result&result, const ::TaoTieChat::SuccessCodeGadget::SuccessCode&success_code);
+    static void set(TaoTieChat::Result&result, const ::TaoTieChat::ErrorCodeGadget   ::ErrorCode &error_code  );
+
+    // ====================================================================== //
+    // 查找指定 id 的好友
+    static Contact get_contact(Contacts contacts, QString contact_id);
+    // 从好友列表中获取第 index 个好友
+    static Contact get_contact(Contacts contacts, int index);
 
 private:
     struct FontData{

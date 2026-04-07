@@ -2,10 +2,6 @@
 
 #include "Headers.h"
 #include "Utils.h"
-#include <QGrpcChannelOptions>
-#include <QGrpcHttp2Channel>
-#include <QtGrpc/QGrpcStatus>
-#include <QDebug>
 
 // 重载 QDebug 运算符
 QDebug operator<<(QDebug debug, const TaoTieChat::Result &result);

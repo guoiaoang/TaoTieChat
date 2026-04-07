@@ -4,23 +4,31 @@
 #   > cmake -S. -Bbuildx -DCMAKE_TOOLCHAIN_FILE="C:\app\dev\Qt\6.10.1\msvc2022_64\lib\cmake\Qt6\qt.toolchain.cmake"
 #   > cmake --build buildx
 #   > C:\app\dev\Qt\6.10.1\msvc2022_64\bin\windeployqt.exe buildx\Debug\TaoTieChat.exe
+#
+# 客户端执行 `cmake --workflow ...` 时可能需要手动执行 `install` 操作
 
-cmake_minimum_required(VERSION 3.19)
-# project(TaoTieChat LANGUAGES CXX)
+cmake_minimum_required(VERSION 3.10)
 
 # =================================   set   ================================= #
 
+# 设置项目名称
 set(PROJECT_NAME       TaoTieChat)
-set(CLIENT_NAME        ${PROJECT_NAME})
+set(PROJECT_VERSION    "0.1.0")
+set(PROJECT_DESC       "TaoTieChat")
+# set(CLIENT_NAME      ${PROJECT_NAME})
 set(LIB_PROTO_NAME     LibProtoTaoTieChat)
 set(LIB_QT_GRPC_NAME   LibQtGrpcTaoTieChat)
-set(PROTO_HEADER_DIR   "${CMAKE_CURRENT_SOURCE_DIR}/src/protos")
+set(PROTO_FILES        "${CMAKE_CURRENT_SOURCE_DIR}/src/protos/taotie_chat.proto")
+set(PROTO_HEADERS_DIR  "${CMAKE_CURRENT_SOURCE_DIR}/src/protos/include/")
 
+# QT 文件自动编译
 set(CMAKE_AUTOMOC ON)
 set(CMAKE_AUTOUIC ON)
 set(CMAKE_AUTORCC ON)
 
-set(CMAKE_CXX_STANDARD 20)
+# 设置 C++ 标准
+set(CMAKE_CXX_STANDARD          20)
+# 要求使用指定的 C++ 标准
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
 # CMAKE_BUILD_TYPE
@@ -29,12 +37,28 @@ if(NOT CMAKE_BUILD_TYPE)
     set(CMAKE_BUILD_TYPE "Release" CACHE STRING "Choose the type of build." FORCE)
 elseif(CMAKE_BUILD_TYPE STREQUAL "Debug")
     add_compile_definitions(DEBUG)
+    add_compile_definitions(_DEBUG)
 endif()
 
 # # add_definitions(-DSOURCE_ROOT="${CMAKE_CURRENT_SOURCE_DIR}/src")
 # add_compile_definitions(SOURCE_ROOT="${CMAKE_CURRENT_SOURCE_DIR}/src")
 add_compile_definitions(PROJECT_NAME=${PROJECT_NAME})
+add_compile_definitions(PROJECT_VERSION=${PROJECT_VERSION})
 add_compile_definitions(ENABLE_CLIENT=ON)
+
+# Policy CMP0087 is not set: Install CODE|SCRIPT allow the use of generator expressions.
+# Run "cmake --help-policy CMP0087" for policy details.
+if(POLICY CMP0087)
+    cmake_policy(SET CMP0087 NEW)
+endif()
+
+# MSVC 编译器特定设置
+if(MSVC)
+    # add_definitions(-D_WIN32_WINNT=0x600)
+    add_compile_definitions(_WIN32_WINNT=0x600)
+    # 强制编译器以 UTF-8 编码读取所有源文件
+    add_compile_options(/utf-8)
+endif()
 
 set(SRC_FILES
     ${CMAKE_CURRENT_SOURCE_DIR}/src/main.cpp
@@ -46,6 +70,8 @@ set(SRC_FILES
     ${CMAKE_CURRENT_SOURCE_DIR}/src/utils/Dev.cpp            # 开发时的调试代码
     ${CMAKE_CURRENT_SOURCE_DIR}/src/utils/RegistryFactory.h  # 暂未使用
     ${CMAKE_CURRENT_SOURCE_DIR}/src/data/data.h
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/data/Accounts.h
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/data/Accounts.cpp
     # 主窗口
     ${CMAKE_CURRENT_SOURCE_DIR}/src/ui/MainWindow/MainWindow.h
     ${CMAKE_CURRENT_SOURCE_DIR}/src/ui/MainWindow/MainWindow.cpp
@@ -100,17 +126,19 @@ set(QRC_FILES ${CMAKE_CURRENT_SOURCE_DIR}/src/rc/${PROJECT_NAME}.qrc)
 
 # 设置 proto 文件路径和生成的头文件目录
 set(PROTO_FILES         "${CMAKE_CURRENT_SOURCE_DIR}/src/protos/taotie_chat.proto")
-set(PROTO_HEADERS_DIR   "${CMAKE_CURRENT_BINARY_DIR}/protos")
+set(PROTO_HEADERS_DIR   "${CMAKE_CURRENT_SOURCE_DIR}/src/protos/include/")
 
-# set(PROJECT_SOURCES
-#     ${SRC_FILE}
-#     ${TS_FILE}
-#     ${QRC_FILE}
-# )
+# 定义源文件列表
+set(SOURCE_FILES
+    ${SRC_FILES}
+    ${TS_FILES}
+    ${QRC_FILES}
+)
 
+# 添加源码目录，便于 #include 引用
 include_directories(${CMAKE_CURRENT_SOURCE_DIR}/src)
-include_directories(${CMAKE_CURRENT_SOURCE_DIR}/src/utils)
 include_directories(${CMAKE_CURRENT_SOURCE_DIR}/src/data)
+include_directories(${CMAKE_CURRENT_SOURCE_DIR}/src/utils)
 include_directories(${CMAKE_CURRENT_SOURCE_DIR}/src/network)
 include_directories(${CMAKE_CURRENT_SOURCE_DIR}/src/ui/MainWindow)
 include_directories(${CMAKE_CURRENT_SOURCE_DIR}/src/ui/AuthWindow)
@@ -118,13 +146,15 @@ include_directories(${CMAKE_CURRENT_SOURCE_DIR}/src/ui/ChatWindow)
 include_directories(${CMAKE_CURRENT_SOURCE_DIR}/src/ui/PluginsWindow)
 include_directories(${CMAKE_CURRENT_SOURCE_DIR}/src/ui/SearchWindow)
 # include_directories(${CMAKE_CURRENT_SOURCE_DIR}/third/simpleQtLogger)
+# 将生成的头文件目录添加到 include 路径中，以便在代码中引用生成的 .pb.h 文件
 include_directories(${PROTO_HEADERS_DIR})
 
 # =============================     project      ============================= #
 
-# project 之后才能正常 find_package
+# 项目初始化 # vcpkg 在执行 project 之后才能正常 find_package
 project(${PROJECT_NAME}
     LANGUAGES CXX
+    VERSION   "${PROJECT_VERSION}"
 )
 
 # =============================   find_package   ============================= #
@@ -141,10 +171,6 @@ project(${PROJECT_NAME}
 # find_package(gRPC CONFIG REQUIRED)
 # target_link_libraries(main PRIVATE gRPC::gpr gRPC::grpc gRPC::grpc++ gRPC::grpc++_alts)
 
-# find_package(Qt6 6.5 REQUIRED COMPONENTS Core Widgets LinguistTools Svg SvgWidgets Network Grpc Protobuf)
-# find_package(QT NAMES Qt6 Qt5      REQUIRED COMPONENTS Core Widgets LinguistTools)
-# find_package(Qt${QT_VERSION_MAJOR} REQUIRED COMPONENTS Core Widgets LinguistTools)
-
 find_package(Qt6 6.5 REQUIRED
     COMPONENTS
         Core
@@ -160,14 +186,57 @@ find_package(Qt6 6.5 REQUIRED
         Grpc
         GrpcQuick
 )
+# `find_package(QT NAMES Qt6 Qt5 REQUIRED)` 必须，用于设置 `QT_VERSION_MAJOR`，便于部署脚本的判断，否则不会执行 `qt_generate_deploy_app_script`
+find_package(QT NAMES Qt6 Qt5      REQUIRED COMPONENTS Core Widgets LinguistTools)
+# find_package(Qt${QT_VERSION_MAJOR} REQUIRED COMPONENTS Core Widgets LinguistTools)
+# find_package(Qt6 6.5 REQUIRED COMPONENTS Core Widgets LinguistTools Svg SvgWidgets Network Grpc Protobuf)
 
+# 查找依赖的包
+find_package(fmt           CONFIG REQUIRED)
+find_package(absl          CONFIG REQUIRED)
+find_package(spdlog        CONFIG REQUIRED)
+find_package(glog          CONFIG REQUIRED)
 find_package(sqlcipher     CONFIG REQUIRED)
 find_package(nlohmann_json CONFIG REQUIRED)
-find_package(boost_uuid    CONFIG REQUIRED)
-find_package(spdlog        CONFIG REQUIRED)
-find_package(fmt           CONFIG REQUIRED)
-# find_package(protobuf      CONFIG REQUIRED)
-# find_package(gRPC          CONFIG REQUIRED)
+find_package(Boost         CONFIG REQUIRED COMPONENTS uuid)
+# find_package(protobuf      CONFIG REQUIRED) # 使用 Qt 实现的 protobuf
+# find_package(gRPC          CONFIG REQUIRED) # 使用 Qt 实现的 gRPC
+
+# ===========================    qt_add_    =========================== #
+
+# qt_standard_project_setup(REQUIRES 6.8)
+qt_standard_project_setup(
+    REQUIRES
+        6.8
+    I18N_SOURCE_LANGUAGE
+        en
+    I18N_TRANSLATED_LANGUAGES
+        zh_CN
+)
+
+# ============================= add_executable ============================= #
+
+# 主可执行程序
+qt_add_executable(${PROJECT_NAME}
+    WIN32
+    MACOSX_BUNDLE
+    ${SOURCE_FILES}
+)
+
+# ========================== target_link_libraries ========================== #
+
+# 链接依赖库
+target_link_libraries(${PROJECT_NAME}   PRIVATE   fmt::fmt)
+target_link_libraries(${PROJECT_NAME}   PRIVATE   absl::any absl::log absl::base absl::bits)  # 需要根据实际使用的 absl 模块调整
+target_link_libraries(${PROJECT_NAME}   PRIVATE   spdlog::spdlog)
+target_link_libraries(${PROJECT_NAME}   PRIVATE   glog::glog)
+target_link_libraries(${PROJECT_NAME}   PRIVATE   sqlcipher::sqlcipher)
+target_link_libraries(${PROJECT_NAME}   PRIVATE   nlohmann_json::nlohmann_json)
+target_link_libraries(${PROJECT_NAME}   PRIVATE   Boost::uuid)
+# target_link_libraries(${PROJECT_NAME} PRIVATE   protobuf::libprotoc protobuf::libprotobuf protobuf::libprotobuf-lite)
+# target_link_libraries(${PROJECT_NAME} PRIVATE   gRPC::gpr gRPC::grpc gRPC::grpc++ gRPC::grpc++_alts)
+
+# target_compile_definitions(TaoTieChat PUBLIC SOURCE_ROOT="${CMAKE_CURRENT_SOURCE_DIR}/src")
 
 # =============================     message      ============================= #
 
@@ -192,7 +261,7 @@ message(STATUS "             Qt6_DIR : ${Qt6_DIR}")
 message(STATUS " QT_QMAKE_EXECUTABLE : ${QT_QMAKE_EXECUTABLE}")
 message(STATUS " QT_MAINTENANCE_TOOL : ${QT_MAINTENANCE_TOOL}")
 message(STATUS "update to ts command : `${CMAKE_COMMAND} --build ${CMAKE_BINARY_DIR} --target update_translations`")
-message(STATUS "    installl command : `${CMAKE_COMMAND} --install ${CMAKE_BINARY_DIR}  --prefix=${CMAKE_BINARY_DIR}/installed`")
+message(STATUS "     install command : `${CMAKE_COMMAND} --install ${CMAKE_BINARY_DIR} --prefix=${CMAKE_INSTALL_PREFIX}`")
 message(STATUS "                      Qt6Protobuf_CONFIG : ${Qt6Protobuf_CONFIG}")
 message(STATUS "                          Qt6Grpc_CONFIG : ${Qt6Grpc_CONFIG}")
 message(STATUS "                            Protobuf_DIR : ${Protobuf_DIR}")
@@ -215,22 +284,12 @@ message(STATUS " Z_NATIVE_VCPKG_MANIFEST_INSTALL_LOGFILE : ${Z_NATIVE_VCPKG_MANI
 # show_env_after_project()
 # show_ext_variants()
 
-# ===========================    qt_add_    =========================== #
-
-# qt_standard_project_setup(REQUIRES 6.8)
-qt_standard_project_setup(
-    REQUIRES
-        6.8
-    I18N_SOURCE_LANGUAGE
-        en
-    I18N_TRANSLATED_LANGUAGES
-        zh_CN
-)
+# ======================= 生成 gRPC 和 Protobuf 代码 ======================= #
 
 qt_add_protobuf(${LIB_PROTO_NAME}
     # GENERATE_PACKAGE_SUBFOLDERS
     OUTPUT_DIRECTORY
-        ${CMAKE_BINARY_DIR}/protos
+        ${PROTO_HEADERS_DIR}
     PROTO_FILES
         ${PROTO_FILES}
     PROTO_INCLUDES
@@ -243,7 +302,7 @@ install(TARGETS ${LIB_PROTO_NAME})
 qt_add_grpc(${LIB_QT_GRPC_NAME}   CLIENT
     # GENERATE_PACKAGE_SUBFOLDERS
     OUTPUT_DIRECTORY
-        ${CMAKE_BINARY_DIR}/protos
+        ${PROTO_HEADERS_DIR}
     PROTO_FILES
         ${PROTO_FILES}
     PROTO_INCLUDES
@@ -251,16 +310,9 @@ qt_add_grpc(${LIB_QT_GRPC_NAME}   CLIENT
         ${PROTO_HEADER_DIR}
 )
 
-qt_add_executable(${CLIENT_NAME}
-    WIN32   MACOSX_BUNDLE
-    ${SRC_FILES}
-    ${TS_FILES}
-    ${QRC_FILES}
-)
-
 qt_add_translations(
     TARGETS
-        ${CLIENT_NAME}
+        ${PROJECT_NAME}
     TS_FILES
         ${TS_FILES}
     QM_FILES_OUTPUT_VARIABLE
@@ -270,18 +322,18 @@ qt_add_translations(
 message(STATUS "OUTPUT_QM_FILES      : ${OUTPUT_QM_FILES}")
 
 qt_add_lupdate(
-    ${CLIENT_NAME}
+    ${PROJECT_NAME}
     TS_FILES
         ${TS_FILES}
 )
 
-# qt_add_resources(${CLIENT_NAME}   "translations"
+# qt_add_resources(${PROJECT_NAME}   "translations"
 #     PREFIX   "/translations"
 #     FILES    ${OUTPUT_QM_FILES}
 #     QT_RESOURCE_ALIAS
 # )
 
-target_link_libraries(${CLIENT_NAME}
+target_link_libraries(${PROJECT_NAME}
     PRIVATE
         Qt::Core
         Qt::Gui
@@ -295,23 +347,13 @@ target_link_libraries(${CLIENT_NAME}
         ${LIB_QT_GRPC_NAME}
 )
 
-target_link_libraries(${CLIENT_NAME}   PRIVATE   sqlcipher::sqlcipher)
-target_link_libraries(${CLIENT_NAME}   PRIVATE   nlohmann_json::nlohmann_json)
-target_link_libraries(${CLIENT_NAME}   PRIVATE   Boost::uuid)
-target_link_libraries(${CLIENT_NAME}   PRIVATE   spdlog::spdlog)
-target_link_libraries(${CLIENT_NAME}   PRIVATE   fmt::fmt)
-# target_link_libraries(${CLIENT_NAME} PRIVATE   protobuf::libprotoc protobuf::libprotobuf protobuf::libprotobuf-lite)
-# target_link_libraries(${CLIENT_NAME} PRIVATE   gRPC::gpr gRPC::grpc gRPC::grpc++ gRPC::grpc++_alts)
-
-# target_compile_definitions(TaoTieChat PUBLIC SOURCE_ROOT="${CMAKE_CURRENT_SOURCE_DIR}/src")
-
-# ========================================================================= #
+# =============================== 安装打包 =============================== #
 
 include(GNUInstallDirs)
 
 install(
     TARGETS
-        ${CLIENT_NAME}
+        ${PROJECT_NAME}
     BUNDLE
         DESTINATION   .
     RUNTIME
@@ -320,11 +362,99 @@ install(
         DESTINATION   ${CMAKE_INSTALL_LIBDIR}
 )
 
-qt_generate_deploy_app_script(
-    TARGET
-        ${CLIENT_NAME}
-    OUTPUT_SCRIPT
-        deploy_script
-    NO_UNSUPPORTED_PLATFORM_ERROR
-)
-install(SCRIPT   ${deploy_script})
+# install 与 package 步骤并不相关
+
+# 复制 build 目录下生成的文件 # 复制 grpc 运行时需要的相关依赖文件
+if(WIN32)
+    # Some dependencies are copied by the IDE/toolchain into the per-config
+    # output folder (for example: out/build/.../Debug). Include them in install.
+
+    # 复制 .dll / .pdb 文件到可执行文件目录
+    install(
+        DIRECTORY   "${CMAKE_CURRENT_BINARY_DIR}/$<CONFIG>/"
+        DESTINATION "${CMAKE_INSTALL_BINDIR}"
+        FILES_MATCHING      # 过滤条件
+            PATTERN "*.dll" # 复制 .dll 文件
+            PATTERN "*.pdb" # 复制 .pdb 文件
+    )
+endif()
+
+# 复制系统运行时库到可执行文件目录
+if(WIN32)
+    set(CMAKE_INSTALL_SYSTEM_RUNTIME_LIBS_SKIP TRUE) # 跳过系统运行时库的安装 # 貌似没有区别
+    set(CMAKE_INSTALL_UCRT_LIBRARIES           TRUE) # 安装 UCP_UCRT_LIBRARIES 库
+
+    # 安装系统运行时库
+    include(InstallRequiredSystemLibraries)
+
+    # 复制系统运行时库到可执行文件目录
+    if(CMAKE_INSTALL_SYSTEM_RUNTIME_LIBS)
+        install(FILES ${CMAKE_INSTALL_SYSTEM_RUNTIME_LIBS} DESTINATION ${CMAKE_INSTALL_BINDIR})
+    endif()
+endif()
+
+# 生成部署脚本 # 执行 win_deploy_qt 功能
+if(WIN32 AND QT_VERSION_MAJOR EQUAL 6)
+    message(STATUS "execute win_deploy_qt")
+    qt_generate_deploy_app_script(
+        TARGET
+            ${PROJECT_NAME}
+        OUTPUT_SCRIPT
+            qt_deploy_script
+        NO_UNSUPPORTED_PLATFORM_ERROR
+    )
+    install(SCRIPT ${qt_deploy_script})
+else()
+    message(STATUS "not WIN32 OR QT6, will not execute qt_deploy_script!")
+endif()
+
+# 完成可执行文件的构建
+if(QT_VERSION_MAJOR EQUAL 6)
+    qt_finalize_executable(${PROJECT_NAME})
+endif()
+
+# 打包项目
+set(CPACK_PACKAGE_NAME                "${PROJECT_NAME}"          ) # 包名
+set(CPACK_PACKAGE_VERSION             "${PROJECT_VERSION}"       ) # 版本号
+set(CPACK_PACKAGE_VENDOR              "${PROJECT_NAME}"          ) # 包供应商
+set(CPACK_PACKAGE_INSTALL_DIRECTORY   "${PROJECT_NAME}"          ) # 安装目录
+set(CPACK_PACKAGE_DIRECTORY           "${CMAKE_BINARY_DIR}/setup") # 安装文件保存路径
+set(CPACK_PACKAGE_DESCRIPTION_SUMMARY "${PROJECT_DESC}"          ) # 包摘要
+
+# 包含许可证文件
+if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/LICENSE")
+    set(CPACK_RESOURCE_FILE_LICENSE "${CMAKE_CURRENT_SOURCE_DIR}/LICENSE")
+endif()
+
+# 生成压缩包
+if(WIN32)
+    set(CPACK_GENERATOR "ZIP")
+else()
+    set(CPACK_GENERATOR "TGZ")
+endif()
+# Generators
+#   7Z        = 7-Zip file format
+#   DEB       = Debian packages
+#   External  = CPack External packages
+#   IFW       = Qt Installer Framework
+#   INNOSETUP = Inno Setup packages
+#   NSIS      = Null Soft Installer
+#   NSIS64    = Null Soft Installer (64-bit)
+#   NuGet     = NuGet packages
+#   STGZ      = Self extracting Tar GZip compression
+#   TAR       = Tar no compression
+#   TBZ2      = Tar BZip2 compression
+#   TGZ       = Tar GZip compression
+#   TXZ       = Tar XZ compression
+#   TZ        = Tar Compress compression
+#   TZST      = Tar Zstandard compression
+#   WIX       = MSI file format via WiX tools
+#   ZIP       = ZIP file format
+
+# vcpkg 相关依赖
+# 如果是 Windows，通常建议包含这个以处理依赖
+if(WIN32)
+    set(X_VCPKG_APPLOCAL_DEPS_INSTALL ON)
+endif()
+
+include(CPack)

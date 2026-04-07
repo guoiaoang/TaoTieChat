@@ -1,6 +1,5 @@
 #include "MainWindow.h"
 #include "ui_MainWindow.h"
-#include "AuthWindow.h"
 
 // 由于 `QStackedWidget::addWidget()` 会修改子窗口大小，
 // 为保障子窗口大小不被意外修改，改为 QStackedWidget 最多只持有当前子窗口，

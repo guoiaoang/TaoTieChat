@@ -1,6 +1,7 @@
 #pragma once
 
-#include <QScrollArea>
+#include "Headers.h"
+#include "data.h"
 #include "Utils.h"
 #include "NetworkClient.h"
 #include "ContactModel.h"

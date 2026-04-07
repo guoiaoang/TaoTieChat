@@ -1,6 +1,6 @@
 #pragma once
 
-#include "Utils.h"
+#include "Headers.h"
 
 // ========================================================================== //
 // // 定义声明
@@ -8,7 +8,7 @@
 struct ContactData ;
 struct MessageData ;  // 仅消息内容
 struct ChatroomData;  // 消息内容及群组附加信息
-struct AccountData ;
+// struct AccountData ;
 
 // 一个联系人
 using Contact  = QSharedPointer<ContactData>;
@@ -16,8 +16,8 @@ using Contact  = QSharedPointer<ContactData>;
 using Message  = QSharedPointer<MessageData>;
 // 一个聊天室
 using Chatroom = QSharedPointer<ChatroomData>;
-// 一个登陆用户
-using Account  = QSharedPointer<AccountData>;
+// // 一个登陆用户
+// using Account  = QSharedPointer<AccountData>;
 
 // 单用户的所有联系人
 // 使用 QList 保持插入顺序，而不是 QMap 的自动排序
@@ -33,10 +33,10 @@ using Messages     = QSharedPointer<MessagesData>;
 using UserMessagesData = QMap<QString, Messages>;
 using UserMessages     = QSharedPointer<UserMessagesData>;
 
-// 所有登陆用户的所有信息 // 包含所有登陆用户信息/好友信息/聊天内容
-// QMap<QString user_id, Contact user_info>;
-using AccountsData = QMap<QString, Account>;
-using Accounts     = QSharedPointer<AccountsData>;
+// // 所有登陆用户的所有信息 // 包含所有登陆用户信息/好友信息/聊天内容
+// // QMap<QString user_id, Contact user_info>;
+// using AccountsData = QMap<QString, Account>;
+// using Accounts     = QSharedPointer<AccountsData>;
 
 // ========================================================================== //
 // // 数据内容
@@ -58,22 +58,27 @@ public:
     // messages, unread messages
     enum class Role{
         Begin = Qt::ItemDataRole::UserRole,  // 开始标记
-        Starred  ,   // 星标
-        Silent   ,   // 静音/勿扰/免提醒
         AccountID,   // 账号 ID  // 唯一，不可修改，不显示
         Userid   ,   // 唯一，可修改，用于查找、添加好友等操作
+        // 记录当前账号的登录信息
+        Password ,  // 登录后的信息记录
+        Token    ,  // 登录后的信息记录
+        // 通用属性  // 个人或好友均存在
         Avatar   ,   // 头像图片路径  // Profile photo 倾向于使用本人真实照片，强调写实；Avatar 则是网络虚拟化身
         Pixmap   ,   // 头像图片
         Nickname ,   // 昵称
-        Notes    ,   // 对该用户的备注
-        Desc     ,   // 描述
         Gender   ,   // 性别
-        Moments  ,   // 朋友圈  // ？？
         Sign     ,   // 个性签名
-        From     ,   // 添加来源
+        Moments  ,   // 朋友圈  // ？？
         Region   ,   // 地区     // 不同层级
         Phones   ,   // 电话     // 可以有多个
         Emails   ,   // 邮箱     // 可以有多个
+        // 他人信息
+        Notes    ,   // 对该用户的备注  // 好友列表短描述
+        Desc     ,   // 描述          // 个人页面长描述
+        Starred  ,   // 星标
+        Silent   ,   // 静音/勿扰/免提醒
+        From     ,   // 添加来源
         Tags     ,   // 标签     // 可以有多个
         Groups   ,   // 共同群聊 // 可以有多个 // group_ids
         // 基础数据
@@ -117,12 +122,12 @@ struct MessageData {
     QString time    ;
 };
 
-// 单个登陆账号信息  // 用户信息/好友列表/消息列表
-struct AccountData{
-    Contact      user    ;  // 当前用户
-    Contacts     contacts;  // 好友及群组列表
-    UserMessages messages;  // 消息列表 // 相同好友可能有多个群聊
-};
+// // 单个登陆账号信息  // 用户信息/好友列表/消息列表
+// struct AccountData{
+//     Contact      user    ;  // 当前用户
+//     Contacts     contacts;  // 好友及群组列表
+//     UserMessages messages;  // 消息列表 // 相同好友可能有多个群聊
+// };
 
 // ========================================================================== //
 // // 管理操作
@@ -269,38 +274,42 @@ public:
 
     QVariant &get(const ContactData::Role&role) { return contact_datas()[to_key(role)]; }
     // Calling QVariant::toString() on an unsupported variant returns an empty string.
-    bool        get_starred    () { return get(ContactData::Role::Starred  ).toBool      (); }
-    bool        get_silent     () { return get(ContactData::Role::Silent   ).toBool      (); }
     QString     get_account_id () { return get(ContactData::Role::AccountID).toString    (); }
     QString     get_user_id    () { return get(ContactData::Role::Userid   ).toString    (); }
+    QString     get_password   () { return get(ContactData::Role::Password ).toString    (); }
+    QString     get_token      () { return get(ContactData::Role::Token    ).toString    (); }
     QString     get_avatar_path() { return get(ContactData::Role::Avatar   ).toString    (); }
     QString     get_nick_name  () { return get(ContactData::Role::Nickname ).toString    (); }
-    QString     get_notes      () { return get(ContactData::Role::Notes    ).toString    (); }
-    QString     get_description() { return get(ContactData::Role::Desc     ).toString    (); }
     QString     get_gender     () { return get(ContactData::Role::Gender   ).toString    (); }
-    QString     get_moments    () { return get(ContactData::Role::Moments  ).toString    (); }
     QString     get_signature  () { return get(ContactData::Role::Sign     ).toString    (); }
-    QString     get_from       () { return get(ContactData::Role::From     ).toString    (); }
+    QString     get_moments    () { return get(ContactData::Role::Moments  ).toString    (); }
     QStringList get_region     () { return get(ContactData::Role::Region   ).toStringList(); }
     QStringList get_phones     () { return get(ContactData::Role::Phones   ).toStringList(); }
     QStringList get_emails     () { return get(ContactData::Role::Emails   ).toStringList(); }
+    QString     get_notes      () { return get(ContactData::Role::Notes    ).toString    (); }
+    QString     get_description() { return get(ContactData::Role::Desc     ).toString    (); }
+    bool        get_starred    () { return get(ContactData::Role::Starred  ).toBool      (); }
+    bool        get_silent     () { return get(ContactData::Role::Silent   ).toBool      (); }
+    QString     get_from       () { return get(ContactData::Role::From     ).toString    (); }
     QStringList get_tags       () { return get(ContactData::Role::Tags     ).toStringList(); }
     QStringList get_groups     () { return get(ContactData::Role::Groups   ).toStringList(); }
-    void set_starred    (const bool       &starred    ) { get(ContactData::Role::Starred  ) = starred     ; }
-    void set_silent     (const bool       &silent     ) { get(ContactData::Role::Silent   ) = silent      ; }
     void set_account_id (const QString    &account_id ) { get(ContactData::Role::AccountID) = account_id  ; }
     void set_user_id    (const QString    &user_id    ) { get(ContactData::Role::Userid   ) = user_id     ; }
+    void set_password   (const QString    &password   ) { get(ContactData::Role::Password ) = password    ; }
+    void set_token      (const QString    &token      ) { get(ContactData::Role::Token    ) = token       ; }
     void set_avatar_path(const QString    &avatar_path) { get(ContactData::Role::Avatar   ) = avatar_path ; }
     void set_nick_name  (const QString    &nick_name  ) { get(ContactData::Role::Nickname ) = nick_name   ; }
-    void set_notes      (const QString    &notes      ) { get(ContactData::Role::Notes    ) = notes       ; }
-    void set_description(const QString    &description) { get(ContactData::Role::Desc     ) = description ; }
     void set_gender     (const QString    &gender     ) { get(ContactData::Role::Gender   ) = gender      ; }
-    void set_moments    (const QString    &moments    ) { get(ContactData::Role::Moments  ) = moments     ; }
     void set_signature  (const QString    &signature  ) { get(ContactData::Role::Sign     ) = signature   ; }
-    void set_from       (const QString    &from       ) { get(ContactData::Role::From     ) = from        ; }
+    void set_moments    (const QString    &moments    ) { get(ContactData::Role::Moments  ) = moments     ; }
     void set_region     (const QStringList&region     ) { get(ContactData::Role::Region   ) = region      ; }
     void set_phones     (const QStringList&phones     ) { get(ContactData::Role::Phones   ) = phones      ; }
     void set_emails     (const QStringList&emails     ) { get(ContactData::Role::Emails   ) = emails      ; }
+    void set_notes      (const QString    &notes      ) { get(ContactData::Role::Notes    ) = notes       ; }
+    void set_description(const QString    &description) { get(ContactData::Role::Desc     ) = description ; }
+    void set_starred    (const bool       &starred    ) { get(ContactData::Role::Starred  ) = starred     ; }
+    void set_silent     (const bool       &silent     ) { get(ContactData::Role::Silent   ) = silent      ; }
+    void set_from       (const QString    &from       ) { get(ContactData::Role::From     ) = from        ; }
     void set_tags       (const QStringList&tags       ) { get(ContactData::Role::Tags     ) = tags        ; }
     void set_groups     (const QStringList&groups     ) { get(ContactData::Role::Groups   ) = groups      ; }
     // 指向自己
@@ -344,61 +353,6 @@ public:
 
 // ========================================================================== //
 
-class AccountsManager{
-public:
-    static Accounts create() {
-        return QSharedPointer<AccountsData>(new AccountsData);
-    }
-public:
-    AccountsManager* instance() {
-        static AccountsManager s_accounts;
-        return &s_accounts;
-    }
-private:
-    AccountsManager(){}
-    ~AccountsManager(){}
-    AccountsManager(const Accounts&) = delete;
-    AccountsManager *operator=(const Accounts&) = delete;
-public:
-    Accounts    &accounts      () { return m_accounts; }
-    Account      account       (const QString&user_id) {
-        if(!accounts()->contains(user_id)) {
-            accounts()->operator [](user_id) = Account();
-        }
-        return accounts()->operator [](user_id);
-    }
-    Contact      user_info     (const QString&user_id) { return account(user_id)->user    ; }
-    Contacts     user_contacts (const QString&user_id) { return account(user_id)->contacts; }
-    UserMessages user_messages (const QString&user_id) { return account(user_id)->messages; }
-    void         remove_account(const QString&user_id) { accounts()->remove(user_id); }
-public:
-    // 从单用户的所有信息中查找指定 id 的好友
-    static Contact contact(Account account, QString contact_id) {
-        if(account == nullptr || account->contacts == nullptr) {
-            return Contact();
-        }
-        for(const auto &contact : *account->contacts) {
-            if(contact && ContactManager(contact).get_account_id() == contact_id) {
-                return contact;
-            }
-        }
-        return Contact();
-    }
-    // 从好友列表中获取第 index 个好友
-    static Contact contact(Contacts contacts, int index) {
-        if(contacts == nullptr || index < 0 || index >= contacts->size()) {
-            return Contact();
-        }
-        return contacts->at(index);
-    }
-    // // 获取 ID  // 多此一举，没必要
-    // static QString id(Contact contact) { return ContactManager(contact).id(); }
-public:
-    Accounts m_accounts;
-};
-
-// ========================================================================== //
-
 // 本地用户数据接口
 class LocalUserData{
 public:
@@ -420,144 +374,4 @@ public:
     // 获取群组列表
     virtual void get_group(){}
     virtual void get_groups(){}
-};
-
-// ========================================================================== //
-
-// struct NetworkUserData{
-//     enum class RequestType{
-//         UserSignup,  // 注册
-//         UserSignin,  // 登陆
-//         UserLogout,  // 退出
-//         UserSearch,  // 搜索用户
-//         UserFriendAdd,    // 添加好友
-//         UserFriendRemove, // 删除好友
-//         UserGroupCreate,  // 创建群组
-//         UserGroupJoin,    // 加入群组
-//         UserGroupExit     // 退出群组
-//     };
-//     RequestType request_type;
-//     Contact contact;  // 相关用户信息
-//     QString content;  // 相关内容
-// };
-
-namespace NetworkBody{
-    struct UserSignupData  {
-        QString account_id;  // 返回的参数
-        QString user_id   ;  // 返回的参数
-        QString username  ;  // 传入的参数
-        QString password  ;  // 传入的参数
-        QString question  ;  // 传入的参数
-        QString answer    ;  // 传入的参数
-    };
-    using UserSignup = QSharedPointer<UserSignupData>;
-
-    struct UserSigninData  {
-        QString account_id;
-        QString username;
-        QString password;
-    };
-    using UserSignin = QSharedPointer<UserSigninData>;
-
-    struct UserLogoutData  {
-        QString account_id;
-    };
-    using UserLogout = QSharedPointer<UserLogoutData>;
-
-    struct UserSearchData  {
-        QString keyword;
-    };
-    using UserSearch = QSharedPointer<UserSearchData>;
-
-    struct UserFriendAddData    {
-        QString account_id;
-        QString friend_id;
-    };
-    using UserFriendAdd = QSharedPointer<UserFriendAddData>;
-
-    struct UserFriendRemoveData {
-        QString account_id;
-        QString friend_id;
-    };
-    using UserFriendRemove = QSharedPointer<UserFriendRemoveData>;
-
-    struct UserGroupCreateData  {
-        QString account_id;
-        QString group_name;
-        QStringList member_ids;
-    };
-    using UserGroupCreate = QSharedPointer<UserGroupCreateData>;
-
-    struct UserGroupDestroyData  {
-        QString account_id;
-        QString group_name;
-        QStringList member_ids;
-    };
-    using UserGroupDestroy = QSharedPointer<UserGroupDestroyData>;
-
-    struct UserGroupJoinData    {
-        QString account_id;
-        QString group_id;
-    };
-    using UserGroupJoin = QSharedPointer<UserGroupJoinData>;
-
-    struct UserGroupExitData    {
-        QString account_id;
-        QString group_id;
-    };
-    using UserGroupExit = QSharedPointer<UserGroupExitData>;
-}
-
-// ========================================================================== //
-
-// 网络收发数据接口
-// 默认创建异步收发接口
-class NetworkUserData{
-public:
-    NetworkUserData() {}
-    virtual ~NetworkUserData() {}
-public:
-    virtual bool init   () { return false; }
-    virtual bool destroy() { return false; }
-public:
-    // ============================== 用户管理 ============================== //
-    // 注册
-    virtual bool request_user_signup (const NetworkBody::UserSignup& request) { return false; }
-    virtual bool responce_user_signup(const NetworkBody::UserSignup& request) { return false; }
-    // 登陆
-    virtual bool request_user_signin (const NetworkBody::UserSignin& request) { return false; }
-    virtual bool responce_user_signin(const NetworkBody::UserSignin& request) { return false; }
-    // 退出
-    virtual bool request_user_logout (const NetworkBody::UserLogout& request) { return false; }
-    virtual bool responce_user_logout(const NetworkBody::UserLogout& request) { return false; }
-    // 搜索用户
-    virtual bool request_user_search (const NetworkBody::UserSearch& request) { return false; }
-    virtual bool responce_user_search(const NetworkBody::UserSearch& request) { return false; }
-    // 添加好友
-    virtual bool request_user_friend_add (const NetworkBody::UserFriendAdd& request) { return false; }
-    virtual bool responce_user_friend_add(const NetworkBody::UserFriendAdd& request) { return false; }
-    // 删除好友
-    virtual bool request_user_friend_remove (const NetworkBody::UserFriendRemove& request) { return false; }
-    virtual bool responce_user_friend_remove(const NetworkBody::UserFriendRemove& request) { return false; }
-    // 创建群组
-    virtual bool request_user_group_create (const NetworkBody::UserGroupCreate& request) { return false; }
-    virtual bool responce_user_group_create(const NetworkBody::UserGroupCreate& request) { return false; }
-    // 删除群组
-    virtual bool request_user_group_destroy (const NetworkBody::UserGroupDestroy& request) { return false; }
-    virtual bool responce_user_group_destroy(const NetworkBody::UserGroupDestroy& request) { return false; }
-    // 加入群组
-    virtual bool request_user_group_join (const NetworkBody::UserGroupJoin& request) { return false; }
-    virtual bool responce_user_group_join(const NetworkBody::UserGroupJoin& request) { return false; }
-    // 退出群组
-    virtual bool request_user_group_exit (const NetworkBody::UserGroupExit& request) { return false; }
-    virtual bool responce_user_group_exit(const NetworkBody::UserGroupExit& request) { return false; }
-    // ============================== 资料权限 ============================== //
-    bool request_user_info_view () { return false; }
-    bool responce_user_info_view() { return false; }
-    bool request_user_info_edit () { return false; }
-    bool responce_user_info_edit() { return false; }
-    // ============================== 消息管理 ============================== //
-    bool request_message_send () { return false; }
-    bool responce_message_send() { return false; }
-private:
 };

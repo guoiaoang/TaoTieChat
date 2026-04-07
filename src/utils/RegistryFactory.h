@@ -1,10 +1,8 @@
 #pragma once
 
-#include <QDebug>
-#include <QString>
-#include <QMap>
-#include <QSharedPointer>
-#include <functional>
+#include "Headers.h"
+#include "data.h"
+#include "Utils.h"
 
 template<class Base>
 class RegistryFactory {
@@ -107,25 +105,6 @@ static auto REG_FAC_CONCAT(gs_, BASE, KEY, __LINE__) = \
 // // Drawing Circle with args: Sirius
 // // Failed to create Circle with const char* args.
 // // >
-
-#include <QObject>
-#include <QtDebug>
-#include <QUuid>
-#include <QString>
-#include <QVector>
-#include <QMap>
-#include <QUrl>
-#include <QFile>
-#include <QDir>
-#include <QDirIterator>
-#include <QDirListing>
-#include <QFileInfo>
-#include <QIcon>
-#include <QPixmap>
-#include <QBitmap>
-#include <QImage>
-#include <QtSvg/QSvgGenerator>
-#include <QDateTime>
 
 namespace RegistryFactoryContact{
 #define RFC_ADD_MEMBER(T, NAME, VALUE) \

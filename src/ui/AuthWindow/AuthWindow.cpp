@@ -1,8 +1,5 @@
 #include "AuthWindow.h"
 #include "ui_AuthWindow.h"
-#include <QGrpcChannelOptions>
-#include <QGrpcHttp2Channel>
-#include <QCheckBox>
 
 AuthWindow::AuthWindow(QWidget *parent)
     : QDialog(parent), ui(new Ui::AuthWindow) {
@@ -120,7 +117,7 @@ bool AuthWindow::signin(signin_params params_signin, std::shared_ptr<AuthOpt> au
     auto callback = [this, auth_opt](signin_params params_signin, signin_reply reply_signin) {
         // 用户登录成功
         if(reply_signin && reply_signin->hasResult() && reply_signin->result().hasSuccessCode()) {
-            handle_signin_successd(params_signin, auth_opt);
+            handle_signin_successd(params_signin, reply_signin, auth_opt);
             return;
         }
         // 用户登录失败
@@ -137,9 +134,7 @@ bool AuthWindow::signin(signin_params params_signin, std::shared_ptr<AuthOpt> au
 bool AuthWindow::handle_signup_successd(signup_params params_signup) {
     QMessageBox::information(this, tr("tips"), tr("SignUp success. close this dialog to SignIn."));
 
-#ifndef _DEBUG
     // TODO:清除界面数据
-#endif // _DEBUG
 
     // 创建用于登陆的参数  // 注册返回的信息不包含 token，因此需要使用密码登录
     signin_params params_signin = std::make_shared<TaoTieChat::SignInRequest>();
@@ -148,12 +143,7 @@ bool AuthWindow::handle_signup_successd(signup_params params_signup) {
     return signin(params_signin);
 }
 
-bool AuthWindow::handle_signin_successd(signin_params params_signin, std::shared_ptr<AuthOpt> auth_opt) {
-#ifndef DEBUG
-    QMessageBox::information(this, tr("tips"), tr("login success. \nclose this dialog to show chat window."));
-    // TODO:清除界面数据
-#endif // _DEBUG
-
+bool AuthWindow::handle_signin_successd(signin_params params_signin, signin_reply reply_signin, std::shared_ptr<AuthOpt> auth_opt) {
     // 主界面可能需要的参数
     // QString user_id    = reply_login->request().userId();
     // QString account_id = reply_login->accountId();
@@ -163,6 +153,13 @@ bool AuthWindow::handle_signin_successd(signin_params params_signin, std::shared
     if(auth_opt && auth_opt->rember_password) {
         // 保存登录记录
     }
+
+    ContactManager cm(ContactManager::create());
+    cm.set_user_id (params_signin->userId  ());
+    cm.set_password(params_signin->password());
+    cm.set_token   (reply_signin ->token   ());
+    cm.set_contact (cm.contact             ());
+    Accounts::instance().set_current_account(cm.contact());
 
     // this, &AuthWindow::accepted
     this->accepted();

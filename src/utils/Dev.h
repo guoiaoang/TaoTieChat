@@ -1,12 +1,9 @@
 #pragma once
 
+#include "Headers.h"
+#include "data.h"
 #include "Utils.h"
-#include "data.h"
 #include "RegistryFactory.h"
-#include "data.h"
-#include <queue>
-#include <QStyle>
-#include <QApplication>
 
 #ifdef DEBUG
 class MediaWindow;

@@ -1,7 +1,8 @@
 #pragma once
 
-#include <QAbstractListModel>
+#include "Headers.h"
 #include "data.h"
+#include "Utils.h"
 
 class ContactModel : public QAbstractListModel {
     Q_OBJECT

@@ -1,16 +1,10 @@
 #pragma once
 
-#include <QWidget>
-#include <QMenu>
-#include <QAction>
-#include <QDialog>
-#include <QMessageBox>
-#include <QtDebug>
-#include <QMetaEnum>
-#include <QPushButton>
-#include <QPainter>
-#include <QPainterPath>
+#include "Headers.h"
 #include "data.h"
+#include "Utils.h"
+#include "MediaWindow.h"
+#include "Accounts.h"
 
 namespace Ui {
 class ContactWindow;

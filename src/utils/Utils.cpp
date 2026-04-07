@@ -1,4 +1,5 @@
 #include "Utils.h"
+#include "data.h"
 
 void Utils::init_debug_output_format() {
     constexpr const char* QT_MESSAGE_PATTERN =
@@ -343,4 +344,36 @@ QString Utils::to_string(::TaoTieChat::ErrorCodeGadget::ErrorCode code) {
     }
 
     return "Unknown Error Code";
+}
+
+void Utils::set(TaoTieChat::Result&result, const ::TaoTieChat::SuccessCodeGadget::SuccessCode&success_code) {
+    result.setSuccessCode(success_code);
+    result.setMessage(Utils::to_string(success_code));
+}
+
+void Utils::set(TaoTieChat::Result&result, const ::TaoTieChat::ErrorCodeGadget::ErrorCode&error_code) {
+    result.setErrorCode(error_code);
+    result.setMessage(Utils::to_string(error_code));
+}
+
+// ====================================================================== //
+
+// 查找指定 id 的好友
+Contact Utils::get_contact(Contacts contacts, QString contact_id) {
+    if(contacts) {
+        for(const auto &contact : *contacts) {
+            if(contact && ContactManager(contact).get_account_id() == contact_id) {
+                return contact;
+            }
+        }
+    }
+    return Contact();
+}
+
+// 从好友列表中获取第 index 个好友
+Contact Utils::get_contact(Contacts contacts, int index) {
+    if(contacts == nullptr || index < 0 || index >= contacts->size()) {
+        return Contact();
+    }
+    return contacts->at(index);
 }

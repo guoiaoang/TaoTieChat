@@ -81,7 +81,12 @@ CMakeLists.txt.user*
 .uic/
 
 # mine added
-.qtcreator
+/out*/
 /build*/
-/out
-/.vscode/cache
+/.cache/
+/.vscode/cache/
+/.qtcreator/
+
+# grpc 生成的文件
+/src/protos/include/
+

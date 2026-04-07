@@ -1,8 +1,9 @@
 #include "ContactWindow.h"
 #include "ui_ContactWindow.h"
-#include "MediaWindow.h"
 
-ContactWindow::ContactWindow(QWidget *parent) : ContactWindow(nullptr, parent) {}
+ContactWindow::ContactWindow(QWidget *parent)
+    : ContactWindow(nullptr, parent) {
+}
 
 ContactWindow::ContactWindow(Contact contact, QWidget *parent)
     : QWidget(parent), ui(new Ui::ContactWindow), m_contact(contact) {
@@ -40,6 +41,7 @@ ContactWindow::ContactWindow(Contact contact, QWidget *parent)
     // set
     ui->button_avatar->setFixedSize(128, 128);
     ui->button_avatar->setToolButtonStyle(Qt::ToolButtonIconOnly);
+    ui->button_avatar->setIconSize(QSize(ui->button_avatar->size()));
     m_action_remove->setText(tr("remove"));
     m_menu_manager->addAction(m_action_remove);
     // update
@@ -69,8 +71,9 @@ void ContactWindow::update(Contact contact) {
     // if(avatar_pixmap.isNull ()) { cm.set_avatar_pixmap(avatar  ); }  // 保存回去？？
     // show
     ui->edit_nickname->setText(str_name);
-    ui->button_avatar->setIconSize(QSize(ui->button_avatar->size()));
     ui->button_avatar->setIcon(QIcon(avatar.scaled(ui->button_avatar->size(), Qt::IgnoreAspectRatio, Qt::SmoothTransformation)));
+    // 判断是否是好友
+    Contact account = Accounts::instance().get_current_account();
 }
 
 Contact ContactWindow::contact() const {

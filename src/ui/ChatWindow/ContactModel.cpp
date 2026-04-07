@@ -28,7 +28,11 @@ QVariant ContactModel::data(const QModelIndex &index, int role) const {
     }
     // 获取行号与内容
     auto row = index.row();  // 获取第几条数据
-    auto contact = AccountsManager::contact(m_contacts, row);  // 获取数据内容
+    auto contact = Utils::get_contact(m_contacts, row);  // 获取数据内容
+    // Contact contact;
+    // if(m_contacts != nullptr || row >= 0 || row < m_contacts->size()) {
+    //     contact = m_contacts->at(row);
+    // }
     // role 转换为指定类型
     switch (role) {
     case Qt::DisplayRole:
@@ -92,5 +96,5 @@ Contact ContactModel::contact(const QModelIndex &index) const {
     if (!index.isValid() || index.row() < 0 || index.row() >= m_contacts->size()) {
         return nullptr;
     }
-    return AccountsManager::contact(m_contacts, index.row());
+    return Utils::get_contact(m_contacts, index.row());
 }

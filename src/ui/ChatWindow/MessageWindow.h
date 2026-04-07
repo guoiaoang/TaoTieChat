@@ -1,9 +1,8 @@
 #pragma once
 
-#include <QWidget>
-#include <QSplitter>
-
+#include "Headers.h"
 #include "data.h"
+#include "Utils.h"
 
 namespace Ui {
 class MessageWindow;

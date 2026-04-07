@@ -1,8 +1,10 @@
 #pragma once
 
 #include "Headers.h"
+#include "data.h"
 #include "Utils.h"
 #include "NetworkClient.h"
+#include "Accounts.h"
 
 namespace Ui {
 class AuthWindow;
@@ -32,7 +34,7 @@ private slots:
     bool handle_signup();
     bool handle_signin();
     bool handle_signup_successd(signup_params params_signup);
-    bool handle_signin_successd(signin_params params_signin, std::shared_ptr<AuthOpt> auth_opt = nullptr);  // nullptr 不能使用引用
+    bool handle_signin_successd(signin_params params_signin, signin_reply reply_signin, std::shared_ptr<AuthOpt> auth_opt = nullptr);  // nullptr 不能使用引用
 private:
     bool signup(signup_params params_signup);
     bool signin(signin_params params_signin, std::shared_ptr<AuthOpt> auth_opt = nullptr);

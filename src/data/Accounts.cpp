@@ -5,6 +5,11 @@ Accounts& Accounts::instance() {
     return s_accounts;
 }
 
+Accounts::Accounts()
+: m_current_account(ContactManager ::create())
+, m_contacts       (ContactsManager::create()) {
+}
+
 Accounts::~Accounts() {
 }
 
@@ -26,9 +31,25 @@ Contacts Accounts::get_contact_list() {
     return m_contacts;
 }
 
+bool Accounts::is_self(const Contact&contact) {
+    ContactManager cm_contact(contact          );
+    ContactManager cm_self   (m_current_account);
+    if(!cm_contact.get_account_id().isEmpty() && cm_contact.get_account_id() == cm_self.get_account_id()) {
+        return true;
+    }
+    return false;
+}
+
 bool Accounts::is_contact(const Contact&contact) {
-    if(contact && m_contacts) {
-        ;m_contacts;
+    ContactManager cm_contact(contact);
+    if(cm_contact.get_account_id().isEmpty()) {
+        return false;
+    }
+    for(const auto& c : *get_contact_list()) {
+        ContactManager cm(c);
+        if(!cm.get_account_id().isEmpty() && cm.get_account_id() == cm_contact.get_account_id()) {
+            return true;
+        }
     }
     return false;
 }

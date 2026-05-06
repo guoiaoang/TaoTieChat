@@ -197,14 +197,15 @@ bool AuthWindow::handle_signin_successd(signin_params params_signin, signin_repl
                                          : TaoTieChat::AuthRequest();
 
     ContactManager cm(ContactManager::create());
-    cm.set_user_id (auth.hasUserId  () ? auth.userId  () : QString());
-    cm.set_password(auth.hasPassword() ? auth.password() : QString());
-    cm.set_token   (reply_signin ->token   ());
-    cm.set_contact (cm.contact             ());
+    cm.set_user_id   (auth.hasUserId  () ? auth.userId  () : QString());
+    cm.set_password  (auth.hasPassword() ? auth.password() : QString());
+    cm.set_account_id(reply_signin->accountId());
+    cm.set_token     (reply_signin ->token   ());
+    cm.set_contact   (cm.contact             ());
     Accounts::instance().set_current_account(cm.contact());
 
-    // 实际上登陆消息瞬间完成，延迟 3 秒再显示主界面，防止用户误以为登陆窗口闪烁的错误判断
-    QTimer::singleShot(3000, this, [this]() {
+    // 实际上登陆消息瞬间完成，延迟 1 秒再显示主界面，防止用户误以为登陆窗口闪烁的错误判断
+    QTimer::singleShot(1000, this, [this]() {
         status_signin_unblock(true);
         this->accepted();
     });

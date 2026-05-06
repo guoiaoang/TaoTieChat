@@ -9,7 +9,7 @@ class Accounts : public QObject{
 public:
     static Accounts& instance();
 private:
-    explicit Accounts() = default;
+    Accounts();
     Accounts(const Accounts&) = default;
     Accounts& operator=(const Accounts&) = default;
 public:
@@ -23,6 +23,7 @@ public:
     void     set_contact_list(const Contacts&contact);
     Contacts get_contact_list();
     // 是否是联系人  // 可添加自己
+    bool     is_self   (const Contact&contact);
     bool     is_contact(const Contact&contact);
 
 signals:

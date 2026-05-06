@@ -18,9 +18,20 @@ ChatWindow::ChatWindow(QWidget *parent)
     m_contact_model    = new ContactModel;
     m_contact_delegate = new ContactDelegate;
     // search
-    m_search_window = new SearchWindow;
+    // m_search_window = new SearchWindow;
 
     // 连接消息
+    // 点击了头像按钮
+    connect(ui->navigate_button_avatar, &QToolButton::clicked  , this, [&]() {
+        if(m_contact_window) {
+            delete m_contact_window;
+            m_contact_window = nullptr;
+        }
+        if(!m_contact_window) {
+            m_contact_window = new ContactWindow(Accounts::instance().get_current_account());
+        }
+        m_contact_window->show();
+    });
     // 点击了聊天室按钮
     connect(ui->navigate_button_chat_room, &QToolButton::clicked  , this, [&](){
         ui->stacked_contact_list->setCurrentWidget(ui->stacked_page_chat_room);
@@ -47,7 +58,7 @@ ChatWindow::ChatWindow(QWidget *parent)
     // // 使用 currentChanged 信号支持键盘上下键导航和鼠标点击
     // connect(ui->page_list_contact->selectionModel(), &QItemSelectionModel::currentChanged, this, &ChatWindow::on_contact_selection_changed);
     // 用于同步显示搜索词
-    connect(m_search_window, &SearchWindow::SearchEditTextChanged, ui->edit_search, &QLineEdit::setText);
+    // connect(m_search_window, &SearchWindow::SearchEditTextChanged, ui->edit_search, &QLineEdit::setText);
 
     // 执行操作
     ui->navigate_button_chat_room->click();  // 初始化状态
@@ -88,11 +99,12 @@ ChatWindow::ChatWindow(QWidget *parent)
     button_set(ui->navigate_button_contact  , icon_contacts );
     button_set(ui->button_settings          , icon_settings );
     // tooltips
-    ui->navigate_label_avatar->setPixmap(icon_profile.pixmap(size_avatar));
-    ui->navigate_label_avatar->setFixedSize(size_avatar);
-    ui->navigate_label_avatar->setToolTip(ui->navigate_label_avatar->text());
+    ui->navigate_button_avatar->setIcon(icon_profile);
+    ui->navigate_button_avatar->setIconSize(size_avatar);
+    ui->navigate_button_avatar->setFixedSize(size_avatar);
+    ui->navigate_button_avatar->setToolTip(ui->navigate_button_avatar->text());
     // 控件居中对齐
-    ui->navigate_layout        ->setAlignment(ui->navigate_label_avatar    , Qt::AlignHCenter);
+    ui->navigate_layout        ->setAlignment(ui->navigate_button_avatar   , Qt::AlignHCenter);
     ui->navigate_layout_contact->setAlignment(ui->navigate_button_chat_room, Qt::AlignHCenter);
     ui->navigate_layout_contact->setAlignment(ui->navigate_button_contact  , Qt::AlignHCenter);
     ui->navigate_layout        ->setAlignment(ui->button_settings          , Qt::AlignHCenter);
@@ -154,46 +166,17 @@ ChatWindow::ChatWindow(QWidget *parent)
 }
 
 ChatWindow::~ChatWindow() {
-    if(m_menu_settings) {
-        delete m_menu_settings;
-        m_menu_settings = nullptr;
-    }
-    if(m_action_signout) {
-        delete m_action_signout;
-        m_action_signout = nullptr;
-    }
-    if(m_action_settings) {
-        delete m_action_settings;
-        m_action_settings = nullptr;
-    }
-    if(m_menu_add) {
-        delete m_menu_add;
-        m_menu_add = nullptr;
-    }
-    if(m_action_add) {
-        delete m_action_add;
-        m_action_add = nullptr;
-    }
-    if(m_action_create) {
-        delete m_action_create;
-        m_action_create = nullptr;
-    }
-    if(m_contact_model) {
-        delete m_contact_model;
-        m_contact_model = nullptr;
-    }
-    if(m_contact_delegate) {
-        delete m_contact_delegate;
-        m_contact_delegate = nullptr;
-    }
-    if(m_search_window) {
-        delete m_search_window;
-        m_search_window = nullptr;
-    }
-    if(ui) {
-        delete ui;
-        ui = nullptr;
-    }
+    if(m_contact_window  ) { delete m_contact_window  ; m_contact_window   = nullptr; }
+    if(m_menu_settings   ) { delete m_menu_settings   ; m_menu_settings    = nullptr; }
+    if(m_action_signout  ) { delete m_action_signout  ; m_action_signout   = nullptr; }
+    if(m_action_settings ) { delete m_action_settings ; m_action_settings  = nullptr; }
+    if(m_menu_add        ) { delete m_menu_add        ; m_menu_add         = nullptr; }
+    if(m_action_add      ) { delete m_action_add      ; m_action_add       = nullptr; }
+    if(m_action_create   ) { delete m_action_create   ; m_action_create    = nullptr; }
+    if(m_contact_model   ) { delete m_contact_model   ; m_contact_model    = nullptr; }
+    if(m_contact_delegate) { delete m_contact_delegate; m_contact_delegate = nullptr; }
+    if(m_search_window   ) { delete m_search_window   ; m_search_window    = nullptr; }
+    if(ui                ) { delete ui                ; ui                 = nullptr; }
 }
 
 void ChatWindow::on_show_settings_menu() {
@@ -272,6 +255,12 @@ void ChatWindow::handle_contact_selection_changed(const QModelIndex &current, co
 bool ChatWindow::eventFilter(QObject *obj, QEvent *event) {
     if(obj == ui->edit_search) {
         if(event->type() == QEvent::MouseButtonRelease) {
+            if(!m_search_window) {
+                m_search_window = new SearchWindow;
+                // 用于同步显示搜索词
+                connect(m_search_window, &SearchWindow::SearchEditTextChanged, ui->edit_search, &QLineEdit::setText);
+            }
+
             Utils::widget_raise(m_search_window);
             return true;
         }

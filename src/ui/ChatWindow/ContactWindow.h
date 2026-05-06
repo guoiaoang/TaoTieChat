@@ -21,13 +21,21 @@ public:
 public:
     Contact contact(               ) const;
     void    update (Contact contact)      ;
-    void    set_contact_mode(bool is_contact = true);
 
 private:
     void on_button_manager ();
     void on_button_avatar  ();
+    void on_button_modify  ();
+    void on_button_cancel  ();
+    void on_button_add     ();
     void on_button_messages();
+    void on_button_voice   ();
+    void on_button_video   ();
+    void on_action_edit    ();
     void on_action_remove  ();
+    bool show_contact_mode ();
+    bool show_stranger_mode();
+    bool show_edit_mode(bool edit = true);
 
 Q_SIGNALS:
     void remove_contact     (Contact contact);
@@ -38,5 +46,6 @@ private:
     Ui::ContactWindow *ui              = nullptr;
     Contact            m_contact       = nullptr;
     QMenu             *m_menu_manager  = nullptr;
+    QAction           *m_action_edit   = nullptr;
     QAction           *m_action_remove = nullptr;
 };

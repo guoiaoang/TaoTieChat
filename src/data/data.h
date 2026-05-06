@@ -335,7 +335,7 @@ public:
 
 // ========================================================================== //
 
-class ContactsManeger{
+class ContactsManager{
 public:
     static Contacts create() {
         return QSharedPointer<ContactsData>(new ContactsData);
@@ -344,7 +344,7 @@ public:
 
 // ========================================================================== //
 
-class MessagesManeger{
+class MessagesManager{
 public:
     static Messages create() {
         return QSharedPointer<MessagesData>(new MessagesData);

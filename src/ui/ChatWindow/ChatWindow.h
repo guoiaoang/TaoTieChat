@@ -70,6 +70,8 @@ private:
 
     SearchWindow    *m_search_window = nullptr;
 
+    ContactWindow   *m_contact_window = nullptr;  // 当前显示的联系人详情窗口
+
     // ====================================================================== //
 #ifdef DEBUG
 private:

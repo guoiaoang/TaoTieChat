@@ -180,7 +180,7 @@ public:
 class LocalUserDataTest : public LocalUserData{
 public:
     LocalUserDataTest()
-        : m_contacts(ContactsManeger::create()) {
+        : m_contacts(ContactsManager::create()) {
         // 添加测试数据
 
         // add_contact

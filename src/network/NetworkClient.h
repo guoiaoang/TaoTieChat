@@ -12,9 +12,9 @@ QDebug operator<<(QDebug debug, const TaoTieChat::SignUpReply   &rep);
 QDebug operator<<(QDebug debug, const TaoTieChat::SignInRequest    &req);
 QDebug operator<<(QDebug debug, const TaoTieChat::SignInReply      &rep);
 // search users
-QDebug operator<<(QDebug debug, const TaoTieChat::UserBaseInfo      &info);
-QDebug operator<<(QDebug debug, const TaoTieChat::SearchUsersRequest&req );
-QDebug operator<<(QDebug debug, const TaoTieChat::SearchUsersReply  &rep );
+QDebug operator<<(QDebug debug, const TaoTieChat::Contact           &contact);
+QDebug operator<<(QDebug debug, const TaoTieChat::SearchUsersRequest&req    );
+QDebug operator<<(QDebug debug, const TaoTieChat::SearchUsersReply  &rep    );
 
 // auto callback = std::function<void(int error_code, const QString&error_message, ...)>;
 // using ResultInfo             = std::shared_ptr<TaoTieChat::SignUpReply>;

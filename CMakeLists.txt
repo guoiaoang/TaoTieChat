@@ -12,14 +12,17 @@ cmake_minimum_required(VERSION 3.10)
 # =================================   set   ================================= #
 
 # 设置项目名称
-set(PROJECT_NAME       TaoTieChat)
-set(PROJECT_VERSION    "0.1.0")
-set(PROJECT_DESC       "TaoTieChat")
-# set(CLIENT_NAME      ${PROJECT_NAME})
-set(LIB_PROTO_NAME     LibProtoTaoTieChat)
-set(LIB_QT_GRPC_NAME   LibQtGrpcTaoTieChat)
-set(PROTO_FILES        "${CMAKE_CURRENT_SOURCE_DIR}/src/protos/taotie_chat.proto")
-set(PROTO_HEADERS_DIR  "${CMAKE_CURRENT_SOURCE_DIR}/src/protos/include/")
+set(ORGANIZATION_NAME     "TaoTie")
+set(ORGANIZATION_DOMAIN   "https://github.com/guoiaoang")
+set(PROJECT_NAME          "${ORGANIZATION_NAME}Chat")
+set(PROJECT_VERSION       "0.1.0")
+set(PROJECT_DESC          "TaoTieChat Client - A modern, cross-platform chat application built with Qt, gRPC, and Protobuf.")
+set(PROJECT_URL           "${ORGANIZATION_DOMAIN}/taotiechat")
+# set(CLIENT_NAME         ${PROJECT_NAME})
+set(LIB_PROTO_NAME        "LibProto${PROJECT_NAME}")
+set(LIB_QT_GRPC_NAME      "LibQtGrpc${PROJECT_NAME}")
+set(PROTO_FILES           "${CMAKE_CURRENT_SOURCE_DIR}/src/protos/taotie_chat.proto")
+set(PROTO_HEADERS_DIR     "${CMAKE_CURRENT_SOURCE_DIR}/src/protos/include/")
 
 # QT 文件自动编译
 set(CMAKE_AUTOMOC ON)
@@ -44,6 +47,8 @@ endif()
 # add_compile_definitions(SOURCE_ROOT="${CMAKE_CURRENT_SOURCE_DIR}/src")
 add_compile_definitions(PROJECT_NAME=${PROJECT_NAME})
 add_compile_definitions(PROJECT_VERSION=${PROJECT_VERSION})
+add_compile_definitions(ORGANIZATION_NAME=${ORGANIZATION_NAME})
+add_compile_definitions(ORGANIZATION_DOMAIN=${ORGANIZATION_DOMAIN})
 add_compile_definitions(ENABLE_CLIENT=ON)
 
 # Policy CMP0087 is not set: Install CODE|SCRIPT allow the use of generator expressions.
@@ -52,12 +57,22 @@ if(POLICY CMP0087)
     cmake_policy(SET CMP0087 NEW)
 endif()
 
+# Policy CMP0074: find_package 使用 <PackageName>_ROOT 变量。
+if(POLICY CMP0074)
+    cmake_policy(SET CMP0074 NEW)
+endif()
+
 # MSVC 编译器特定设置
 if(MSVC)
     # add_definitions(-D_WIN32_WINNT=0x600)
     add_compile_definitions(_WIN32_WINNT=0x600)
     # 强制编译器以 UTF-8 编码读取所有源文件
     add_compile_options(/utf-8)
+    # 启用 MSVC 多进程编译（同一目标内并行编译多个源文件）。
+    add_compile_options(/MP)
+    # 额外提示：如果使用的是 Ninja 或是较新版本的 MSVC
+    # 有时需要通过环境变量或底层参数强制输出为 UTF-8
+    set(ENV{PYTHONIOENCODING} "utf-8")
 endif()
 
 set(SRC_FILES
@@ -72,10 +87,6 @@ set(SRC_FILES
     ${CMAKE_CURRENT_SOURCE_DIR}/src/data/data.h
     ${CMAKE_CURRENT_SOURCE_DIR}/src/data/Accounts.h
     ${CMAKE_CURRENT_SOURCE_DIR}/src/data/Accounts.cpp
-    # 主窗口
-    ${CMAKE_CURRENT_SOURCE_DIR}/src/ui/MainWindow/MainWindow.h
-    ${CMAKE_CURRENT_SOURCE_DIR}/src/ui/MainWindow/MainWindow.cpp
-    ${CMAKE_CURRENT_SOURCE_DIR}/src/ui/MainWindow/MainWindow.ui
     # 登录/认证窗口
     ${CMAKE_CURRENT_SOURCE_DIR}/src/ui/AuthWindow/AuthWindow.h
     ${CMAKE_CURRENT_SOURCE_DIR}/src/ui/AuthWindow/AuthWindow.cpp
@@ -153,23 +164,13 @@ include_directories(${PROTO_HEADERS_DIR})
 
 # 项目初始化 # vcpkg 在执行 project 之后才能正常 find_package
 project(${PROJECT_NAME}
-    LANGUAGES CXX
-    VERSION   "${PROJECT_VERSION}"
+    VERSION        "${PROJECT_VERSION}"
+    DESCRIPTION    "${PROJECT_DESC}"
+    HOMEPAGE_URL   "${PROJECT_URL}"
+    LANGUAGES      CXX
 )
 
 # =============================   find_package   ============================= #
-
-# # grpc 子模块路径太长，这种方法不可用
-# include(FetchContent)
-# FetchContent_Declare(
-#     grpc
-#     GIT_REPOSITORY https://github.com/grpc/grpc.git
-#     GIT_TAG        v1.76.0
-# )
-# FetchContent_MakeAvailable(grpc)
-
-# find_package(gRPC CONFIG REQUIRED)
-# target_link_libraries(main PRIVATE gRPC::gpr gRPC::grpc gRPC::grpc++ gRPC::grpc++_alts)
 
 find_package(Qt6 6.5 REQUIRED
     COMPONENTS
@@ -185,6 +186,7 @@ find_package(Qt6 6.5 REQUIRED
         ProtobufQuick
         Grpc
         GrpcQuick
+        ProtobufWellKnownTypes  # 用于支持 `protobuf` 自带 `*.proto` 文件的自动编译
 )
 # `find_package(QT NAMES Qt6 Qt5 REQUIRED)` 必须，用于设置 `QT_VERSION_MAJOR`，便于部署脚本的判断，否则不会执行 `qt_generate_deploy_app_script`
 find_package(QT NAMES Qt6 Qt5      REQUIRED COMPONENTS Core Widgets LinguistTools)
@@ -192,15 +194,41 @@ find_package(QT NAMES Qt6 Qt5      REQUIRED COMPONENTS Core Widgets LinguistTool
 # find_package(Qt6 6.5 REQUIRED COMPONENTS Core Widgets LinguistTools Svg SvgWidgets Network Grpc Protobuf)
 
 # 查找依赖的包
-find_package(fmt           CONFIG REQUIRED)
-find_package(absl          CONFIG REQUIRED)
-find_package(spdlog        CONFIG REQUIRED)
-find_package(glog          CONFIG REQUIRED)
-find_package(sqlcipher     CONFIG REQUIRED)
-find_package(nlohmann_json CONFIG REQUIRED)
-find_package(Boost         CONFIG REQUIRED COMPONENTS uuid)
-# find_package(protobuf      CONFIG REQUIRED) # 使用 Qt 实现的 protobuf
-# find_package(gRPC          CONFIG REQUIRED) # 使用 Qt 实现的 gRPC
+set(GFLAGS_USE_TARGET_NAMESPACE ON)
+include(CTest)
+# 查找依赖的包
+# find_package(gRPC          CONFIG   REQUIRED) # 使用 Qt 实现的 gRPC
+# find_package(protobuf      CONFIG   REQUIRED) # 使用 Qt 实现的 protobuf
+find_path(PULZED_MINI_INCLUDE_DIRS    "mini/ini.h")
+find_package(absl                   CONFIG   REQUIRED)
+find_package(benchmark              CONFIG   REQUIRED)
+find_package(bitserializer          CONFIG   REQUIRED)
+find_package(Boost                  CONFIG   REQUIRED   COMPONENTS   uuid)
+find_package(fmt                    CONFIG   REQUIRED)
+find_package(gflags                 CONFIG   REQUIRED)
+find_package(glog                   CONFIG   REQUIRED)
+find_package(GTest                  CONFIG   REQUIRED)
+find_package(jsoncpp                CONFIG   REQUIRED)
+find_package(nlohmann_json          CONFIG   REQUIRED)
+find_package(RapidJSON              CONFIG   REQUIRED)
+# find_package(reflectcpp           CONFIG   REQUIRED)
+find_package(spdlog                 CONFIG   REQUIRED)
+find_package(SQLiteCpp              CONFIG   REQUIRED)
+find_package(stduuid                CONFIG   REQUIRED)
+find_package(tinyxml2               CONFIG   REQUIRED)
+find_package(yaml-cpp               CONFIG   REQUIRED)
+find_package(tomlplusplus           CONFIG   REQUIRED)
+
+# ubuntu 上的 sqlcipher 没有 cmake 组件，需要使用 pkg-config 查找
+# WSL:`sudo updatedb --prunepaths="/mnt" && locate sqlcipher | grep -v ^/home/user/workspace`
+if(WIN32)
+    find_package(sqlcipher CONFIG REQUIRED)
+    set(SQLCIPHER_TARGET sqlcipher::sqlcipher)
+else()
+    find_package(PkgConfig REQUIRED)
+    pkg_check_modules(SQLCIPHER REQUIRED IMPORTED_TARGET sqlcipher)
+    set(SQLCIPHER_TARGET PkgConfig::SQLCIPHER)
+endif()
 
 # ===========================    qt_add_    =========================== #
 
@@ -221,22 +249,42 @@ qt_add_executable(${PROJECT_NAME}
     WIN32
     MACOSX_BUNDLE
     ${SOURCE_FILES}
+    MANUAL_FINALIZATION
 )
 
 # ========================== target_link_libraries ========================== #
 
 # 链接依赖库
-target_link_libraries(${PROJECT_NAME}   PRIVATE   fmt::fmt)
-target_link_libraries(${PROJECT_NAME}   PRIVATE   absl::any absl::log absl::base absl::bits)  # 需要根据实际使用的 absl 模块调整
-target_link_libraries(${PROJECT_NAME}   PRIVATE   spdlog::spdlog)
-target_link_libraries(${PROJECT_NAME}   PRIVATE   glog::glog)
-target_link_libraries(${PROJECT_NAME}   PRIVATE   sqlcipher::sqlcipher)
-target_link_libraries(${PROJECT_NAME}   PRIVATE   nlohmann_json::nlohmann_json)
-target_link_libraries(${PROJECT_NAME}   PRIVATE   Boost::uuid)
-# target_link_libraries(${PROJECT_NAME} PRIVATE   protobuf::libprotoc protobuf::libprotobuf protobuf::libprotobuf-lite)
+target_compile_definitions(${PROJECT_NAME}   PUBLIC    SOURCE_ROOT="${CMAKE_CURRENT_SOURCE_DIR}/src")
+target_include_directories(${PROJECT_NAME}   PRIVATE   ${PULZED_MINI_INCLUDE_DIRS})
 # target_link_libraries(${PROJECT_NAME} PRIVATE   gRPC::gpr gRPC::grpc gRPC::grpc++ gRPC::grpc++_alts)
-
-# target_compile_definitions(TaoTieChat PUBLIC SOURCE_ROOT="${CMAKE_CURRENT_SOURCE_DIR}/src")
+# target_link_libraries(${PROJECT_NAME} PRIVATE   protobuf::libprotoc protobuf::libprotobuf protobuf::libprotobuf-lite)
+target_link_libraries(${PROJECT_NAME}   PRIVATE   ${SQLCIPHER_TARGET})
+target_link_libraries(${PROJECT_NAME}   PRIVATE   absl::any absl::log absl::base absl::bits)  # 需要根据实际使用的 absl 模块调整
+target_link_libraries(${PROJECT_NAME}   PRIVATE   benchmark::benchmark benchmark::benchmark_main)
+target_link_libraries(${PROJECT_NAME}   PRIVATE   Boost::uuid)
+target_link_libraries(${PROJECT_NAME}   PRIVATE   fmt::fmt)
+target_link_libraries(${PROJECT_NAME}   PRIVATE   gflags::gflags)
+target_link_libraries(${PROJECT_NAME}   PRIVATE   glog::glog)
+target_link_libraries(${PROJECT_NAME}   PRIVATE   GTest::gtest GTest::gtest_main)
+target_link_libraries(${PROJECT_NAME}   PRIVATE   JsonCpp::JsonCpp)
+target_link_libraries(${PROJECT_NAME}   PRIVATE   nlohmann_json::nlohmann_json)
+target_link_libraries(${PROJECT_NAME}   PRIVATE   RapidJSON   rapidjson)
+# target_link_libraries(${PROJECT_NAME} PRIVATE   reflectcpp::reflectcpp)
+target_link_libraries(${PROJECT_NAME}   PRIVATE   spdlog::spdlog)
+target_link_libraries(${PROJECT_NAME}   PRIVATE   SQLiteCpp)
+target_link_libraries(${PROJECT_NAME}   PRIVATE   stduuid)
+target_link_libraries(${PROJECT_NAME}   PRIVATE   tinyxml2::tinyxml2)
+target_link_libraries(${PROJECT_NAME}   PRIVATE   yaml-cpp::yaml-cpp)
+target_link_libraries(${PROJECT_NAME}   PRIVATE   tomlplusplus::tomlplusplus)
+target_link_libraries(${PROJECT_NAME}   PRIVATE
+    BitSerializer::cpprestjson-archive
+    BitSerializer::csv-archive
+    BitSerializer::msgpack-archive
+    BitSerializer::pugixml-archive
+    BitSerializer::rapidjson-archive
+    BitSerializer::rapidyaml-archive
+)
 
 # =============================     message      ============================= #
 
@@ -287,16 +335,30 @@ message(STATUS " Z_NATIVE_VCPKG_MANIFEST_INSTALL_LOGFILE : ${Z_NATIVE_VCPKG_MANI
 # ======================= 生成 gRPC 和 Protobuf 代码 ======================= #
 
 qt_add_protobuf(${LIB_PROTO_NAME}
-    # GENERATE_PACKAGE_SUBFOLDERS
+    # GENERATE_PACKAGE_SUBFOLDERS # 按包名划分子目录生成 `package a.b.c;` --> `a/b/b/xx.pb.h`
+    # COPY_COMMENTS       # 复制注释到生成的代码中
+    EXPORT_MACRO        TAOTIECHAT_PROTO  # 导出宏为 `TAOTIECHAT_PROTO_EXPORT`
+    # HEADER_GUARD pragma # `#pragma once` # filename -> `#ifdef XXX_QPB_H`
     OUTPUT_DIRECTORY
         ${PROTO_HEADERS_DIR}
     PROTO_FILES
         ${PROTO_FILES}
     PROTO_INCLUDES
         $<TARGET_PROPERTY:Qt6::ProtobufQtCoreTypes,QT_PROTO_INCLUDES>
-        ${PROTO_HEADER_DIR}
+        $<TARGET_PROPERTY:Qt6::ProtobufWellKnownTypes,QT_PROTO_INCLUDES>
+        ${PROTO_HEADERS_DIR}
 )
-
+target_link_libraries(${LIB_PROTO_NAME}
+    PUBLIC
+        Qt::Protobuf
+        Qt::ProtobufWellKnownTypes
+)
+if(TARGET Qt::ProtobufPrivate)
+    target_link_libraries(${LIB_PROTO_NAME} PUBLIC Qt::ProtobufPrivate)
+endif()
+if(TARGET Qt::ProtobufWellKnownTypesPrivate)
+    target_link_libraries(${LIB_PROTO_NAME} PUBLIC Qt::ProtobufWellKnownTypesPrivate)
+endif()
 install(TARGETS ${LIB_PROTO_NAME})
 
 qt_add_grpc(${LIB_QT_GRPC_NAME}   CLIENT
@@ -307,8 +369,22 @@ qt_add_grpc(${LIB_QT_GRPC_NAME}   CLIENT
         ${PROTO_FILES}
     PROTO_INCLUDES
         $<TARGET_PROPERTY:Qt6::ProtobufQtCoreTypes,QT_PROTO_INCLUDES>
-        ${PROTO_HEADER_DIR}
+        $<TARGET_PROPERTY:Qt6::ProtobufWellKnownTypes,QT_PROTO_INCLUDES>
+        ${PROTO_HEADERS_DIR}
 )
+target_link_libraries(${LIB_QT_GRPC_NAME}
+    PUBLIC
+        Qt::Grpc
+        Qt::Protobuf
+        Qt::ProtobufWellKnownTypes
+)
+if(TARGET Qt::ProtobufPrivate)
+    target_link_libraries(${LIB_QT_GRPC_NAME} PUBLIC Qt::ProtobufPrivate)
+endif()
+if(TARGET Qt::ProtobufWellKnownTypesPrivate)
+    target_link_libraries(${LIB_QT_GRPC_NAME} PUBLIC Qt::ProtobufWellKnownTypesPrivate)
+endif()
+install(TARGETS ${LIB_QT_GRPC_NAME})
 
 qt_add_translations(
     TARGETS
@@ -319,13 +395,40 @@ qt_add_translations(
         OUTPUT_QM_FILES
     # QM_OUTPUT_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}/src/rc/translations"
 )
+install(FILES ${OUTPUT_QM_FILES} DESTINATION "translations")
 message(STATUS "OUTPUT_QM_FILES      : ${OUTPUT_QM_FILES}")
 
 qt_add_lupdate(
     ${PROJECT_NAME}
     TS_FILES
         ${TS_FILES}
+    OPTIONS
+        -silent
 )
+
+# ============== 编译时自动更新 TS 文件并同步 QM 文件到资源目录 ============== #
+
+option(TAOTIECHAT_AUTO_UPDATE_TS "Automatically run lupdate before building app target" ON)
+option(TAOTIECHAT_SYNC_QM_TO_RC  "Copy generated qm files to src/rc/translations"       ON)
+
+if(TAOTIECHAT_SYNC_QM_TO_RC)
+    set(_translations_dst_dir         "${CMAKE_CURRENT_SOURCE_DIR}/src/rc/translations")
+    set(_translations_lrelease_target "${PROJECT_NAME}_lrelease")
+
+    add_custom_target(sync_translations_to_rc
+        COMMAND
+            ${CMAKE_COMMAND} -E make_directory "${_translations_dst_dir}"
+        COMMAND
+            ${CMAKE_COMMAND} -E copy_if_different ${OUTPUT_QM_FILES} "${_translations_dst_dir}"
+        COMMENT
+            "Syncing qm files to ${_translations_dst_dir}"
+        VERBATIM
+    )
+
+    add_dependencies(${PROJECT_NAME} sync_translations_to_rc)
+endif()
+
+# ============================================================================ #
 
 # qt_add_resources(${PROJECT_NAME}   "translations"
 #     PREFIX   "/translations"
@@ -343,9 +446,44 @@ target_link_libraries(${PROJECT_NAME}
         Qt::Network
         Qt::Grpc
         Qt::Protobuf
+        Qt::ProtobufWellKnownTypes
         ${LIB_PROTO_NAME}
         ${LIB_QT_GRPC_NAME}
 )
+
+# ================== 调试时自动复制运行依赖到可执行文件目录 ================== #
+
+# 在构建目录中自动部署 Qt 运行时，避免调试阶段依赖外部 PATH。
+if(WIN32 AND QT_VERSION_MAJOR EQUAL 6)
+    get_target_property(_qt_qmake_executable Qt6::qmake IMPORTED_LOCATION)
+    if(_qt_qmake_executable)
+        get_filename_component(_qt_bin_dir "${_qt_qmake_executable}" DIRECTORY)
+    elseif(Qt6_DIR)
+        # Qt6_DIR 通常为 <QtRoot>/lib/cmake/Qt6，向上回退到 <QtRoot>/bin。
+        get_filename_component(_qt_bin_dir "${Qt6_DIR}/../../../bin" ABSOLUTE)
+    endif()
+
+    if(_qt_bin_dir)
+        set(_qt_windeployqt "${_qt_bin_dir}/windeployqt.exe")
+
+        if(EXISTS "${_qt_windeployqt}")
+            add_custom_command(TARGET ${PROJECT_NAME}
+                POST_BUILD
+                COMMAND "${_qt_windeployqt}"
+                    --$<IF:$<CONFIG:Debug>,debug,release>
+                    # --no-compiler-runtime  # 启用该参数避免编译时的 `VCINSTALLDIR` 提示
+                    # --no-translations
+                    "$<TARGET_FILE:${PROJECT_NAME}>"
+                COMMENT "Deploying Qt runtime for $<TARGET_FILE_NAME:${PROJECT_NAME}>"
+                VERBATIM
+            )
+        else()
+            message(WARNING "windeployqt not found: ${_qt_windeployqt}")
+        endif()
+    else()
+        message(WARNING "Qt deploy tool path is unavailable; skip post-build windeployqt step")
+    endif()
+endif()
 
 # =============================== 安装打包 =============================== #
 
@@ -401,6 +539,8 @@ if(WIN32 AND QT_VERSION_MAJOR EQUAL 6)
             ${PROJECT_NAME}
         OUTPUT_SCRIPT
             qt_deploy_script
+        DEPLOY_TOOL_OPTIONS
+            --no-compiler-runtime
         NO_UNSUPPORTED_PLATFORM_ERROR
     )
     install(SCRIPT ${qt_deploy_script})
@@ -412,6 +552,34 @@ endif()
 if(QT_VERSION_MAJOR EQUAL 6)
     qt_finalize_executable(${PROJECT_NAME})
 endif()
+
+# ======== 强制先更新 ts 文件再生成 qm 文件，确保翻译文件始终是最新的 ======== #
+
+# Qt 翻译目标可能通过 cmake_language(DEFER CALL ...) 在本文件处理结束后才创建，
+# 因此用 DEFER 确保 add_dependencies 在所有延迟目标可见后再执行。
+set(_proj "${PROJECT_NAME}")
+set(_do_sync  "${TAOTIECHAT_SYNC_QM_TO_RC}")
+set(_do_lupdate "${TAOTIECHAT_AUTO_UPDATE_TS}")
+
+cmake_language(DEFER CALL cmake_language EVAL CODE "
+    # sync_translations_to_rc 依赖 lrelease（先 QM 再同步）
+    if(\"${_do_sync}\" AND TARGET ${_proj}_lrelease AND TARGET sync_translations_to_rc)
+        add_dependencies(sync_translations_to_rc ${_proj}_lrelease)
+    endif()
+
+    # lrelease 依赖 lupdate（先 TS 再 QM）
+    if(\"${_do_lupdate}\")
+        if(TARGET ${_proj}_lupdate AND TARGET ${_proj}_lrelease)
+            add_dependencies(${_proj}_lrelease ${_proj}_lupdate)
+            add_dependencies(${_proj} ${_proj}_lupdate)
+        elseif(TARGET update_translations AND TARGET ${_proj}_lrelease)
+            add_dependencies(${_proj}_lrelease update_translations)
+            add_dependencies(${_proj} update_translations)
+        endif()
+    endif()
+")
+
+# ============================================================================ #
 
 # 打包项目
 set(CPACK_PACKAGE_NAME                "${PROJECT_NAME}"          ) # 包名

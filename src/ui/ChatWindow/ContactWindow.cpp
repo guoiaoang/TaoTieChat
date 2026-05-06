@@ -73,7 +73,11 @@ void ContactWindow::update(Contact contact) {
     ui->edit_nickname->setText(str_name);
     ui->button_avatar->setIcon(QIcon(avatar.scaled(ui->button_avatar->size(), Qt::IgnoreAspectRatio, Qt::SmoothTransformation)));
     // 判断是否是好友
-    Contact account = Accounts::instance().get_current_account();
+    set_contact_mode(Accounts::instance().is_contact(m_contact));
+}
+
+void ContactWindow::set_contact_mode(bool is_contact) {
+    ui->button_manager->setVisible(is_contact);  // 陌生人隐藏管理按钮
 }
 
 Contact ContactWindow::contact() const {

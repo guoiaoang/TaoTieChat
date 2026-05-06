@@ -1,7 +1,87 @@
 #include "Utils.h"
 #include "data.h"
 
-void Utils::init_debug_output_format() {
+namespace Utils {
+
+namespace {
+struct FontData {
+    QString path;
+    QString name;
+    int id;
+    FontData(QString font_path, QString font_families_name, int font_id)
+        : path(font_path), name(font_families_name), id(font_id) {}
+};
+
+// 仅在当前编译单元维护字体缓存，避免头文件暴露内部实现细节。
+QVector<FontData> &f_member_fonts() {
+    static QVector<FontData> m_vector_fonts;
+    return m_vector_fonts;
+}
+}
+
+QString app_path() {
+    return QCoreApplication::applicationFilePath();
+}
+
+QString app_dir_path() {
+    return QCoreApplication::applicationDirPath();
+}
+
+QString app_data_path() {
+    // return QStandardPaths::writableLocation(QStandardPaths::AppDataLocation);
+    return app_dir_path() + "/data";
+}
+
+QString app_config_path() {
+    // return QStandardPaths::writableLocation(QStandardPaths::AppConfigLocation);
+    return app_data_path() + "/config.ini";
+}
+
+QString users_data_path() {
+    // return QStandardPaths::writableLocation(QStandardPaths::HomeLocation) + "/.taotiechat";
+    return app_data_path() + "/users";
+}
+
+QString get_dir(const QString& path) {
+    // 获取路径中的目录部分
+    QFileInfo file_info(path);
+    return file_info.absolutePath();
+}
+
+bool create_dirs(QString full_path) {
+    QDir dir(full_path);
+    // 判断当前输入的 fullpath 目录是否为相对路径
+    if(dir.isRelative()) {
+        dir.makeAbsolute();    // 将相对路径转成绝对路径
+        full_path = dir.path(); // dir.path() 将输出绝对路径
+    }
+
+    // 如果当前目录已经存在，不在创建
+    if (dir.exists()) {
+        return true;
+    }
+
+    return dir.mkpath(full_path); // 创建多级目录
+}
+
+bool remove_dirs(QString full_path) {
+    QDir dir(full_path);
+    // 判断当前输入的 full_path 目录是否为相对路径
+    if(dir.isRelative()) {
+        dir.makeAbsolute(); // 将相对路径转成绝对路径
+        full_path = dir.path(); // dir.path() 将输出绝对路径
+    }
+
+    // 如果当前目录已经不存在，返回
+    if (!dir.exists()) {
+        return true;
+    }
+
+    return dir.removeRecursively(); // 删除目录
+}
+
+
+void init_debug_output_format() {
     constexpr const char* QT_MESSAGE_PATTERN =
         "[%{time yyyy-MM-dd hh:mm:ss.zzz ttt}"
         " %{if-debug}D%{endif}"
@@ -14,7 +94,7 @@ void Utils::init_debug_output_format() {
     qSetMessagePattern(QT_MESSAGE_PATTERN);
 }
 
-bool Utils::load_translator(QApplication&application) {
+bool load_translator(QApplication&application) {
     // ":/rc/translations/TaoTieChat_zh_CN.qm"
     static QTranslator translator;  // QTranslator 对象必须始终存在，翻译才会生效
     const QStringList ui_languages = QLocale::system().uiLanguages();
@@ -31,7 +111,7 @@ bool Utils::load_translator(QApplication&application) {
 
 // 遍历指定路径获取所有文件和文件夹列表
 // path: 目标路径; recursive: 递归子目录
-QList<QFileInfo> Utils::dir_contents(const QString &path, bool recursive) {
+QList<QFileInfo> dir_contents(const QString &path, bool recursive) {
     QList<QFileInfo> lists;
     using ItFlag = QDirListing::IteratorFlag;
     for (const auto &dirEntry : QDirListing(path, recursive ? ItFlag::Recursive : ItFlag::Default)) {
@@ -42,7 +122,7 @@ QList<QFileInfo> Utils::dir_contents(const QString &path, bool recursive) {
 
 // 获取给定大小内指定字体最适合的最大大小
 // 字体名称，矩形大小，绘制文本，精度
-QFont Utils::get_suitable_font_size(const QString&font_name, const QSizeF&size, const QString&text, const qreal precision) {
+QFont get_suitable_font_size(const QString&font_name, const QSizeF&size, const QString&text, const qreal precision) {
     if(font_name.isEmpty()) {
         return QFont();
     }
@@ -51,7 +131,7 @@ QFont Utils::get_suitable_font_size(const QString&font_name, const QSizeF&size, 
 }
 
 // 字体，矩形大小，绘制文本，精度
-QFont Utils::get_suitable_font_size(QFont&font, const QSizeF&size, const QString&text, const qreal precision) {
+QFont get_suitable_font_size(QFont&font, const QSizeF&size, const QString&text, const qreal precision) {
     QRectF rect;
     rect.setSize(size);
     if(!rect.isValid() || text.isEmpty()) {
@@ -109,7 +189,7 @@ QFont Utils::get_suitable_font_size(QFont&font, const QSizeF&size, const QString
 }
 
 // 注册指定路径的字体文件
-bool Utils::load_font(const QString&font_path) {
+bool load_font(const QString&font_path) {
     int font_id = QFontDatabase::addApplicationFont(font_path);
     // int font_id = QFontDatabase::addApplicationEmojiFontFamily(font_path);
     // int font_id = QFontDatabase::addApplicationFallbackFontFamily(font_path);
@@ -130,8 +210,8 @@ bool Utils::load_font(const QString&font_path) {
 }
 
 // 用于按钮
-QIcon Utils::to_icon(const QString&text, const QPen&pen, const QSize size) {
-    QFont icon_font = Utils::get_suitable_font_size("Inconsolata Nerd Font Mono", size, text);
+QIcon to_icon(const QString&text, const QPen&pen, const QSize size) {
+    QFont icon_font = get_suitable_font_size("Inconsolata Nerd Font Mono", size, text);
     if(icon_font == QFont()) {
         return QIcon();
     }
@@ -168,7 +248,7 @@ QIcon Utils::to_icon(const QString&text, const QPen&pen, const QSize size) {
 }
 
 // 用于头像
-QPixmap Utils::to_pixamp(const QString&text, const QSize size) {
+QPixmap to_pixamp(const QString&text, const QSize size) {
     QPixmap pixmap(size);
     pixmap.fill(Qt::transparent); // 设置透明背景
     QPainter painter(&pixmap); // 将画笔绑定到 pixmap
@@ -193,7 +273,7 @@ QPixmap Utils::to_pixamp(const QString&text, const QSize size) {
 }
 
 // 添加圆角遮罩
-QPixmap Utils::to_round_pixmap(const QPixmap& src, int radius) {
+QPixmap to_round_pixmap(const QPixmap& src, int radius) {
     QPixmap dest(src.size());
     dest.fill(Qt::transparent); // 1. 先准备一张全透明底图
 
@@ -213,7 +293,7 @@ QPixmap Utils::to_round_pixmap(const QPixmap& src, int radius) {
 }
 
 // 添加图形遮罩
-QPixmap Utils::apply_mask(const QPixmap& source, const QPixmap& mask) {
+QPixmap apply_mask(const QPixmap& source, const QPixmap& mask) {
     // 1. 准备一个结果图，大小与原图一致，初始全透明
     QPixmap result(source.size());
     result.fill(Qt::transparent);
@@ -239,33 +319,17 @@ QPixmap Utils::apply_mask(const QPixmap& source, const QPixmap& mask) {
 // 获取随机字符串作为全局唯一的 ID
 // QUuid::WithBraces 形如：{00000000-0000-0000-0000-000000000000}  // 8-4-4-4-12=32 位
 // QUuid::Id128 : 不使用间隔符
-QString Utils::get_new_uuid_string() {
+QString get_new_uuid_string() {
     return QUuid::createUuid().toString(QUuid::Id128);
 }
 
-// struct FontData{
-//     QString path;
-//     QString name;
-//     int     id;
-//     FontData(QString font_path, QString font_families_name, int font_id)
-//         : path(font_path), name(font_families_name), id(font_id) {}
-// };
-// static QVector<FontData> m_vector_fonts;
-// 实际为类内静态成员，但暂不使用类外初始化等方式
-QVector<Utils::FontData> &Utils::f_member_fonts() {
-    static QVector<Utils::FontData> m_vector_fonts;
-    return m_vector_fonts;
-}
-
 // 获取错误信息
-QString Utils::to_string(::TaoTieChat::SuccessCodeGadget::SuccessCode code) {
-    using sc = ::TaoTieChat::SuccessCodeGadget::SuccessCode;
-
-    static const QMap<sc, QString> map_codes = {
-        {sc::SUCCESS       , "Success"},
-        {sc::STATUS_SUCCESS, "Success"},
-        {sc::STATUS_RUNNING, "Running"},
-        {sc::STATUS_ONLINE , "Online"},
+QString to_string(SuccessCode code) {
+    static const QMap<SuccessCode, QString> map_codes = {
+        {SuccessCode::SUCCESS       , "Success"},
+        {SuccessCode::STATUS_SUCCESS, "Success"},
+        {SuccessCode::STATUS_RUNNING, "Running"},
+        {SuccessCode::STATUS_ONLINE , "Online"},
     };
 
     if (map_codes.contains(code)) {
@@ -276,7 +340,7 @@ QString Utils::to_string(::TaoTieChat::SuccessCodeGadget::SuccessCode code) {
 }
 
 // 窗口前置显示
-void Utils::widget_raise(QWidget*widget) {
+void widget_raise(QWidget*widget) {
     if(!widget) { return; }
 
     // 1. 获取当前窗口标志位
@@ -296,47 +360,45 @@ void Utils::widget_raise(QWidget*widget) {
 }
 
 // 获取错误信息
-QString Utils::to_string(::TaoTieChat::ErrorCodeGadget::ErrorCode code) {
-    using ec = ::TaoTieChat::ErrorCodeGadget::ErrorCode;
-
-    static const QMap<ec, QString> map_codes = {
-        {ec::UNSET                         , "Unset Error Code"       },
-        {ec::UNKNOWN                       , "Unknown Error Code"     },
-        {ec::ERROR_INIT                    , "Error on Init"          },
-        {ec::ERROR_CONN                    , "Error on connect"       },
-        {ec::ERROR_RECV                    , "Error on Recv or Parse" },
-        {ec::ERROR_SEND                    , "Error on Send"          },
-        // 数据库相关错误码
-        {ec::DB_QUERY                       , "DB Query Failed"  },
-        {ec::DB_QUERY_EMPTY                 , "DB Query Empty"   },
-        {ec::DB_EXECUTE                     , "DB Execute Failed"},
-        {ec::DB_EXECUTE_EMPTY               , "DB Execute Empty" },
-        {ec::DB_CHECK                       , "DB Check Failed"  },
-        {ec::DB_CHECK_EMPTY                 , "DB Check Empty"   },
-        // error
-        {ec::STATUS_TARGET_ID_EMPTY         , "Target ID is empty"            },
-        {ec::STATUS_REQUEST_USER_ID_EMPTY   , "Request User ID is empty"      },
-        {ec::STATUS_REQUEST_USER_TOKEN_EMPTY, "Request User Token is empty"   },
-        {ec::STATUS_TARGET_ID_NOT_FOUND     , "Target ID not found"           },
-        {ec::STATUS_USER_ID_INVALID         , "Invalid Request User ID"       },
-        {ec::STATUS_USER_TOKEN_INVALID      , "Invalid Request User Token"    },
-        {ec::SIGN_UP_USER_ID_EMPTY          , "User ID is empty"              },
-        {ec::SIGN_UP_PASSWORD_EMPTY         , "Password is empty"             },
-        {ec::SIGN_UP_CONFIRM_PASSWORD_EMPTY , "Confirm Password is empty"     },
-        {ec::SIGN_UP_SECURITY_QUESTION_EMPTY, "Security Question is empty"    },
-        {ec::SIGN_UP_SECURITY_ANSWER_EMPTY  , "Security Answer is empty"      },
-        {ec::SIGN_UP_DIFF_CONFIRM_PASSWORD  , "Confirm Password is not equal" },
-        {ec::SIGN_UP_USER_ID_EXISTS         , "User ID already exists"        },
-        {ec::SIGN_IN_USER_ID_EMPTY          , "User ID is empty"              },
-        {ec::SIGN_IN_PASSWORD_EMPTY         , "Password is empty"             },
-        {ec::SIGN_IN_TOKEN_EMPTY            , "Token is empty"                },
-        {ec::SIGN_IN_INVALID_LOGIN_METHOD   , "Invalid login method"          },
-        {ec::SIGN_IN_USER_ID_NOT_FOUND      , "User ID not found"             },
-        {ec::SIGN_IN_PASSWORD_INCORRECT     , "Password is incorrect"         },
-        {ec::SIGN_IN_TOKEN_INCORRECT        , "Token is incorrect"            },
-        {ec::SIGN_IN_AUTH_FAILED            , "User ID or Password or Token error" },
-        {ec::SEARCH_USERS_KEYWORD_EMPTY     , "Search Users is empty"         },
-        {ec::SEARCH_USERS_KEYWORD_NOT_FOUND , "Search Users not found"        },
+QString to_string(ErrorCode code) {
+    static const QMap<ErrorCode, QString> map_codes = {
+        {ErrorCode::UNSET                      , "Unset Error Code"                },
+        {ErrorCode::UNKNOWN                    , "Unknown Error Code"              },
+        {ErrorCode::DEFAULT                    , "Default Error"                   },
+        {ErrorCode::ERROR_INIT                 , "Error on Init"                   },
+        {ErrorCode::ERROR_CONN                 , "Error on connect"                },
+        {ErrorCode::ERROR_RECV                 , "Error on Recv or Parse"          },
+        {ErrorCode::ERROR_SEND                 , "Error on Send"                   },
+        {ErrorCode::DB_QUERY                   , "DB Query Failed"                 },
+        {ErrorCode::DB_QUERY_EMPTY             , "DB Query Empty"                  },
+        {ErrorCode::DB_EXECUTE                 , "DB Execute Failed"               },
+        {ErrorCode::DB_EXECUTE_EMPTY           , "DB Execute Empty"                },
+        {ErrorCode::DB_CHECK                   , "DB Check Failed"                 },
+        {ErrorCode::DB_CHECK_EMPTY             , "DB Check Empty"                  },
+        {ErrorCode::DB_RECORD_NOT_FOUND        , "DB Record Not Found"             },
+        {ErrorCode::USER_ID_EMPTY              , "User ID is empty"                },
+        {ErrorCode::USER_ID_NOT_FOUND          , "User ID not found"               },
+        {ErrorCode::USER_ID_EXISTS             , "User ID already exists"          },
+        {ErrorCode::ACCOUNT_ID_EMPTY           , "Account ID is empty"             },
+        {ErrorCode::ACCOUNT_ID_NOT_FOUND       , "Account ID not found"            },
+        {ErrorCode::PASSWORD_EMPTY             , "Password is empty"               },
+        {ErrorCode::PASSWORD_NOT_FOUND         , "Password not found"              },
+        {ErrorCode::TOKEN_EMPTY                , "Token is empty"                  },
+        {ErrorCode::TOKEN_NOT_FOUND            , "Token not found"                 },
+        {ErrorCode::CONFIRM_PASSWORD_EMPTY     , "Confirm Password is empty"       },
+        {ErrorCode::SECURITY_QUESTION_EMPTY    , "Security Question is empty"      },
+        {ErrorCode::SECURITY_ANSWER_EMPTY      , "Security Answer is empty"        },
+        {ErrorCode::TARGET_USER_ID_EMPTY       , "Target User ID is empty"         },
+        {ErrorCode::TARGET_USER_ID_NOT_FOUND   , "Target User ID not found"        },
+        {ErrorCode::AUTH_ID_EMPTY              , "Auth ID is empty"                },
+        {ErrorCode::AUTH_METHOD_EMPTY          , "Auth method is empty"            },
+        {ErrorCode::AUTH_FAILED                , "Authentication failed"           },
+        {ErrorCode::DIFF_PASSWORD_WITH_CONFIRM , "Confirm Password is not equal"   },
+        {ErrorCode::TARGET_ID_REQUESTED        , "Target already requested"        },
+        {ErrorCode::CONTEXT_REQUIRED           , "Context is required"             },
+        {ErrorCode::CLIENT_MESSAGE_ID_REQUIRED , "Client message ID is required"   },
+        {ErrorCode::DUPLICATE_MESSAGE_ID       , "Duplicate message ID"            },
+        {ErrorCode::FRIEND_REQUEST_NOT_FOUND   , "Friend request not found"        },
     };
 
     if (map_codes.contains(code)) {
@@ -346,20 +408,20 @@ QString Utils::to_string(::TaoTieChat::ErrorCodeGadget::ErrorCode code) {
     return "Unknown Error Code";
 }
 
-void Utils::set(TaoTieChat::Result&result, const ::TaoTieChat::SuccessCodeGadget::SuccessCode&success_code) {
+void set(TaoTieChat::Result&result, const ::TaoTieChat::SuccessCodeGadget::SuccessCode&success_code) {
     result.setSuccessCode(success_code);
-    result.setMessage(Utils::to_string(success_code));
+    result.setMessage(to_string(success_code));
 }
 
-void Utils::set(TaoTieChat::Result&result, const ::TaoTieChat::ErrorCodeGadget::ErrorCode&error_code) {
+void set(TaoTieChat::Result&result, const ::TaoTieChat::ErrorCodeGadget::ErrorCode&error_code) {
     result.setErrorCode(error_code);
-    result.setMessage(Utils::to_string(error_code));
+    result.setMessage(to_string(error_code));
 }
 
 // ====================================================================== //
 
 // 查找指定 id 的好友
-Contact Utils::get_contact(Contacts contacts, QString contact_id) {
+Contact get_contact(Contacts contacts, QString contact_id) {
     if(contacts) {
         for(const auto &contact : *contacts) {
             if(contact && ContactManager(contact).get_account_id() == contact_id) {
@@ -371,9 +433,11 @@ Contact Utils::get_contact(Contacts contacts, QString contact_id) {
 }
 
 // 从好友列表中获取第 index 个好友
-Contact Utils::get_contact(Contacts contacts, int index) {
+Contact get_contact(Contacts contacts, int index) {
     if(contacts == nullptr || index < 0 || index >= contacts->size()) {
         return Contact();
     }
     return contacts->at(index);
+}
+
 }

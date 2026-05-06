@@ -100,11 +100,13 @@ bool SearchWindow::search_users(const QString&keyword) {
     // 本地搜索 + 网络搜索
     // local_search_users();
     search_users_params params_search_users = std::make_shared<TaoTieChat::SearchUsersRequest>();
-    params_search_users->setUsersKeyword(str_search_keyword);
+    params_search_users->setUserId(str_search_keyword);
+    params_search_users->setUserFilter(QString());
     auto network_search_users_callback = [this](const search_users_params&param_search_users, const search_users_reply&reply_search_users) {
         using ec = TaoTieChat::ErrorCodeGadget::ErrorCode;
         using TaoTieChat::Result;
-        using TaoTieChat::UserBaseInfo;
+        using TaoTieChat::Contact;
+        using TaoTieChat::Contacts;
 
         //
         ec      error_code    = ec::UNSET;
@@ -135,7 +137,7 @@ bool SearchWindow::search_users(const QString&keyword) {
 
         // 暂不校验搜索词，直接刷新显示结果
         this->m_users_model->clean();  // 显示结果前必须首先清空
-        QList<UserBaseInfo> reply_users_info = reply_search_users->userInfo();
+        QList<Contact> reply_users_info = reply_search_users->contacts().contact();
         if(reply_users_info.empty()) {
             qDebug().noquote().nospace() << "network search users results is empty.";
             return;

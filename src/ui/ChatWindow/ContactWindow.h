@@ -21,6 +21,7 @@ public:
 public:
     Contact contact(               ) const;
     void    update (Contact contact)      ;
+    void    set_contact_mode(bool is_contact = true);
 
 private:
     void on_button_manager ();

@@ -2,10 +2,15 @@
 
 // ================ 设置 ================ //
 
+#define SHORT_MESSAGE_MAX_LENGTH 8192  // 短文本最大长度，单位为字节
+
 #define ENABLE_SQLCIPHER
 #define ENABLE_NLOHMANN_JSON
 #define ENABLE_BOOST_UUID
 #define ENABLE_FMT
+#define ENABLE_STDUUID
+// #define ENABLE_CONJURE_ENUM
+// #define ENABLE_MAGIC_ENUM
 // #define ENABLE_CLIENT
 
 #ifdef ENABLE_CLIENT
@@ -27,31 +32,92 @@
 // #define ENABLE_HEADERS_STD
 #ifdef ENABLE_HEADERS_STD
 #include <algorithm>
+#include <array>
+#include <atomic>
+#include <bitset>
+#include <cassert>
+// #include <ccomplex> // 已废弃，使用 <complex> 替代
+#include <cctype>
+#include <cerrno>
+#include <cfenv>
+#include <cfloat>
 #include <chrono>
+#include <cinttypes>
+// #include <ciso646> // 已废弃，使用 <version> 来检测实现特定的宏
+#include <climits>
+#include <clocale>
+#include <cmath>
+#include <codecvt>
+#include <complex>
+#include <condition_variable>
+#include <csetjmp>
+#include <csignal>
+#include <cstdarg>
+// #include <cstdbool> // 已废弃，使用 <stdbool.h> 替代
+#include <cstddef>
+#include <cstdint>
+#include <cstdio>
+#include <cstdlib>
+#include <cstring>
+// #include <ctgmath> // 已废弃，使用 <complex> 或 <cmath> 替代
+#include <ctime>
+#include <cwchar>
+#include <cwctype>
+#include <deque>
+#include <exception>
 #include <filesystem>
 #include <format>
+#include <forward_list>
+#include <fstream>
 #include <functional>
+#include <future>
+#include <initializer_list>
+#include <iomanip>
+#include <ios>
+#include <iosfwd>
 #include <iostream>
+#include <istream>
+#include <iterator>
+#include <limits>
 #include <list>
+#include <locale>
 #include <map>
 #include <memory>
 #include <mutex>
+#include <new>
+#include <numeric>
+#include <ostream>
 #include <queue>
+#include <random>
+#include <ratio>
+#include <regex>
+#include <scoped_allocator>
 #include <set>
+#include <shared_mutex>
 #include <source_location>
 #include <sstream>
+#include <stack>
+#include <stdexcept>
+#include <streambuf>
 #include <string_view>
 #include <string>
+#include <system_error>
 #include <thread>
+#include <tuple>
+#include <type_traits>
+#include <typeindex>
+#include <typeinfo>
 #include <unordered_map>
 #include <unordered_set>
+#include <utility>
+#include <valarray>
+#include <variant>
 #include <vector>
 #endif // ENABLE_HEADERS_STD
 
 // qt
 // #define ENABLE_HEADERS_QT
 #ifdef ENABLE_HEADERS_QT
-#include <functional>
 #include <QAbstractListModel>
 #include <QAction>
 #include <QActionGroup>
@@ -194,8 +260,16 @@
 // #define SQLITE_ENABLE_MEMORY_MANAGEMENT
 // #define SQLITE_ENABLE_STAT4
 // #define SQLITE_ENABLE_UNLOCK_NOTIFY
+#ifndef SQLITE_HAS_CODEC
 #define SQLITE_HAS_CODEC  // 允许加密
+#endif // SQLITE_HAS_CODEC
+#if __has_include(<sqlcipher/sqlite3.h>)
 #include <sqlcipher/sqlite3.h>
+#elif __has_include(<sqlite3.h>)
+#include <sqlite3.h> // ubuntu homebrew `pkg-config --cflags sqlcipher` 输出的目录要去掉一层
+#else
+#error "SQLCipher header not found: expected <sqlcipher/sqlite3.h> or <sqlite3.h>"
+#endif
 #endif // ENABLE_SQLCIPHER
 
 // #define ENABLE_NLOHMANN_JSON
@@ -210,10 +284,33 @@
 #include <boost/uuid.hpp>
 #endif // ENABLE_BOOST_UUID
 
+#ifdef ENABLE_STDUUID
+#include <stduuid/uuid.h>
+#endif // ENABLE_STDUUID
+
 // #define ENABLE_FMT
 #ifdef ENABLE_FMT
 #include <fmt/format.h>
 #endif // ENABLE_FMT
+
+// #define ENABLE_CONJURE_ENUM
+#ifdef ENABLE_CONJURE_ENUM
+// 约束条件：enum 从 0 开始且连续
+// template<typename T>
+// concept valid_bitset_enum = valid_enum<T> and requires(T)
+// {
+//   requires conjure_enum<T>::is_continuous();
+//   requires conjure_enum<T>::get_actual_enum_min_value() == 0;
+//   requires conjure_enum<T>::get_actual_enum_max_value() < conjure_enum<T>::count();
+// };
+#include <fix8/conjure_enum.hpp>
+#include <fix8/conjure_enum_bitset.hpp>
+#endif // ENABLE_CONJURE_ENUM
+
+// #define ENABLE_MAGIC_ENUM
+#ifdef ENABLE_MAGIC_ENUM
+#include <magic_enum/magic_enum.hpp>
+#endif // ENABLE_MAGIC_ENUM
 
 // #define ENABLE_GOOGLE_GRPC
 #ifdef ENABLE_GOOGLE_GRPC
@@ -221,12 +318,18 @@
 #include <grpcpp/grpcpp.h>
 #include <grpcpp/ext/proto_server_reflection_plugin.h>
 #include <grpcpp/health_check_service_interface.h>
-using grpc::Status;
-using grpc::Server;
-using grpc::ServerBuilder;
-using grpc::ServerContext;
-using grpc::ServerUnaryReactor;
-using grpc::CallbackServerContext;
+#include <google/protobuf/util/time_util.h>  // google::protobuf::util::TimeUtil::GetCurrentTime();
+using ::grpc::CallbackServerContext;
+using ::grpc::Channel;
+using ::grpc::ClientContext;
+using ::grpc::Server;
+using ::grpc::ServerBuilder;
+using ::grpc::ServerContext;
+using ::grpc::ServerUnaryReactor;
+using ::grpc::Status;
+using ::grpc::StatusCode;
+using ::grpc::ServerContext;
+// using google::protobuf::Timestamp;
 #endif // ENABLE_GOOGLE_GRPC
 
 #ifdef ENABLE_ABSL_LIB
@@ -245,26 +348,74 @@ using grpc::CallbackServerContext;
 #include "taotie_chat.qpb.h"
 #include "taotie_chat_client.grpc.qpb.h"
 using TaoTieChat::StatusService::Client;
-using TaoTieChat::StatusRequest;
-using TaoTieChat::StatusReply;
 // using TaoTieChat::AccountService::Client;
-using TaoTieChat::SignUpRequest;
-using TaoTieChat::SignUpReply;
-using TaoTieChat::SignInRequest;
-using TaoTieChat::SignInReply;
+using SuccessCode = ::TaoTieChat::SuccessCodeGadget::SuccessCode;
+using ErrorCode = ::TaoTieChat::ErrorCodeGadget::ErrorCode;
+using ContactReplyCode = ::TaoTieChat::ContactReplyCodeGadget::ContactReplyCode;
 #elif defined(ENABLE_SERVER)  // ENABLE_SERVER
 // server
 #include "taotie_chat.grpc.pb.h"
 using grpc::ServerReaderWriter;
-using TaoTieChat::StatusService;
-using TaoTieChat::StatusRequest;
-using TaoTieChat::StatusReply;
-using TaoTieChat::AccountService;
-using TaoTieChat::SignUpRequest;
-using TaoTieChat::SignUpReply;
-using TaoTieChat::SignInRequest;
-using TaoTieChat::SignInReply;
+// enums
+using ::TaoTieChat::SuccessCode;
+using ::TaoTieChat::ErrorCode;
+using ::TaoTieChat::ContactReplyCode;
+// service
+using ::TaoTieChat::AccountService;
+using ::TaoTieChat::SearchService;
+using ::TaoTieChat::StatusService;
+using ::TaoTieChat::FileService;
+// stubs
+using AccountStub = ::TaoTieChat::AccountService::Stub;
+using SearchStub  = ::TaoTieChat::SearchService::Stub;
+using StatusStub  = ::TaoTieChat::StatusService::Stub;
+using MessageStub = ::TaoTieChat::MessageService::Stub;
+using FileStub    = ::TaoTieChat::FileService::Stub;
+// 其他
+using ::TaoTieChat::Contact;   // 与客户端的 Contact 冲突，暂时不引入
+using ::TaoTieChat::Contacts;  // 与客户端的 Contacts 冲突，暂时不引入
 #endif // ENABLE_CLIENT
+
+using ::TaoTieChat::AuthReply;
+using ::TaoTieChat::AuthRequest;
+using ::TaoTieChat::Result;
+using ::TaoTieChat::SearchGroupsReply;
+using ::TaoTieChat::SearchGroupsRequest;
+using ::TaoTieChat::SearchUsersReply;
+using ::TaoTieChat::SearchUsersRequest;
+using ::TaoTieChat::SignInReply;
+using ::TaoTieChat::SignInRequest;
+using ::TaoTieChat::SignUpReply;
+using ::TaoTieChat::SignUpRequest;
+using ::TaoTieChat::StatusReply;
+using ::TaoTieChat::StatusRequest;
+using ::TaoTieChat::MessageContext;
+using ::TaoTieChat::MessageReply;
+using ::TaoTieChat::MessageRequest;
+using ::TaoTieChat::ContactRequestRequest;
+using ::TaoTieChat::ContactRequestReply;
+using ::TaoTieChat::ContactReplyRequest;
+using ::TaoTieChat::ContactReplyReply;
+using ::TaoTieChat::GetContactRequestsReply;
+using ::TaoTieChat::UpdateProfileRequest;
+using ::TaoTieChat::UpdateProfileReply;
+using ::TaoTieChat::GetSecurityQuestionReply;
+using ::TaoTieChat::UpdateSecurityInfoRequest;
+using ::TaoTieChat::UpdateSecurityInfoReply;
+using ::TaoTieChat::UpdateSecurityInfoOldSecurityInfo;
+using ::TaoTieChat::UpdateSecurityInfoOldPasswordInfo;
+using ::TaoTieChat::UpdateSecurityInfoNewPasswordInfo;
+using ::TaoTieChat::UpdateSecurityInfoNewSecurityInfo;
+using ::TaoTieChat::FileMetadata;
+using ::TaoTieChat::FileChunkData;
+using ::TaoTieChat::FileUploadHeader;
+using ::TaoTieChat::FileDownloadHeader;
+using ::TaoTieChat::GetFileIDRequest;
+using ::TaoTieChat::GetFileIDReply;
+using ::TaoTieChat::FileUploadRequest;
+using ::TaoTieChat::FileUploadReply;
+using ::TaoTieChat::FileDownloadRequest;
+using ::TaoTieChat::FileDownloadReply;
 
 // logs
 // VERBOSE / NOTICE / EMERGENCY / PANIC / AUDIT / ALERT

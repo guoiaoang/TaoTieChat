@@ -39,10 +39,31 @@ AuthWindow::AuthWindow(QWidget *parent)
     }
 
     // 暂时禁用/隐藏未完整实现的功能
-    ui->signin_check_rember->setEnabled(false);
-    ui->signin_check_auto  ->setEnabled(false);
-    ui->signin_check_rember->hide();
-    ui->signin_check_auto  ->hide();
+    // ui->signin_check_rember->setEnabled(false);
+    // ui->signin_check_auto  ->setEnabled(false);
+    // ui->signin_check_rember->hide();
+    // ui->signin_check_auto  ->hide();
+
+    // 加载登录记录
+    auto auth_opts = AuthOptRW::load();
+    if(!auth_opts.empty()) {
+        // 默认选择第一条记录
+        auto auth_opt = auth_opts.front();
+        ui->signin_edit_username->setText(auth_opt->user_id);
+        ui->signin_edit_password->setText(auth_opt->password);
+        ui->signin_check_rember->setChecked(auth_opt->rember_password);
+        ui->signin_check_auto  ->setChecked(auth_opt->auto_login     );
+        if(auth_opt->auto_login) {
+            // 自动登录
+            signin_params params_signin = std::make_shared<TaoTieChat::SignInRequest>();
+            TaoTieChat::AuthRequest auth;
+            auth.setUserId  (auth_opt->user_id);
+            auth.setPassword(auth_opt->password);
+            // auth.setToken   (auth_opt->token  );
+            params_signin->setRequestUserAuth(std::move(auth));
+            signin(params_signin, auth_opt);
+        }
+    }
 }
 
 AuthWindow::~AuthWindow() {
@@ -86,17 +107,22 @@ bool AuthWindow::handle_signup() {
 
 bool AuthWindow::handle_signin() {
     signin_params params_signin = std::make_shared<TaoTieChat::SignInRequest>();
-    params_signin->setUserId  (ui->signin_edit_username->text());
-    params_signin->setPassword(ui->signin_edit_password->text());
+    TaoTieChat::AuthRequest auth;
+    auth.setUserId  (ui->signin_edit_username->text());
+    auth.setPassword(ui->signin_edit_password->text());
+    params_signin->setRequestUserAuth(std::move(auth));
     // 传递登录选项，用于保存登录信息
     std::shared_ptr<AuthOpt> auth_opt = std::make_shared<AuthOpt>();
-    auth_opt->rember_password = ui->signin_check_rember->isChecked();
-    auth_opt->auto_login      = ui->signin_check_auto  ->isChecked();
+    auth_opt->user_id         = ui->signin_edit_username->text     ();
+    auth_opt->rember_password = ui->signin_check_rember ->isChecked();
+    auth_opt->auto_login      = ui->signin_check_auto   ->isChecked();
     return signin(params_signin, auth_opt);
 }
 
 bool AuthWindow::signup(signup_params params_signup) {
+    status_signup_unblock();
     auto callback = [this](signup_params params_signup, signup_reply reply_signup){
+        status_signup_unblock();
         // 账号注册成功
         if(reply_signup && reply_signup->hasResult() && reply_signup->result().hasSuccessCode()) {
             handle_signup_successd(params_signup);
@@ -114,7 +140,9 @@ bool AuthWindow::signup(signup_params params_signup) {
 }
 
 bool AuthWindow::signin(signin_params params_signin, std::shared_ptr<AuthOpt> auth_opt) {
+    status_signin_block();
     auto callback = [this, auth_opt](signin_params params_signin, signin_reply reply_signin) {
+        status_signin_unblock();
         // 用户登录成功
         if(reply_signin && reply_signin->hasResult() && reply_signin->result().hasSuccessCode()) {
             handle_signin_successd(params_signin, reply_signin, auth_opt);
@@ -138,8 +166,10 @@ bool AuthWindow::handle_signup_successd(signup_params params_signup) {
 
     // 创建用于登陆的参数  // 注册返回的信息不包含 token，因此需要使用密码登录
     signin_params params_signin = std::make_shared<TaoTieChat::SignInRequest>();
-    params_signin->setUserId  (params_signup->userId  ());
-    params_signin->setPassword(params_signup->password());
+    TaoTieChat::AuthRequest auth;
+    auth.setUserId  (params_signup->userId  ());
+    auth.setPassword(params_signup->password());
+    params_signin->setRequestUserAuth(std::move(auth));
     return signin(params_signin);
 }
 
@@ -150,13 +180,21 @@ bool AuthWindow::handle_signin_successd(signin_params params_signin, signin_repl
     // QString token      = reply_login->token    ();
     // qDebug().nospace().noquote() << "login success. reply:" << reply_login;
 
-    if(auth_opt && auth_opt->rember_password) {
+    if(auth_opt) {
+        // auth_opt->user_id = params_signin->requestUserAuth().userId();
+        auth_opt->token      = auth_opt->rember_password ? reply_signin->token() : QString();
+        auth_opt->password   = auth_opt->rember_password ? params_signin->requestUserAuth().password() : QString();
         // 保存登录记录
+        AuthOptRW::save(auth_opt);
     }
 
+    const TaoTieChat::AuthRequest auth = (params_signin && params_signin->hasRequestUserAuth())
+                                         ? params_signin->requestUserAuth()
+                                         : TaoTieChat::AuthRequest();
+
     ContactManager cm(ContactManager::create());
-    cm.set_user_id (params_signin->userId  ());
-    cm.set_password(params_signin->password());
+    cm.set_user_id (auth.hasUserId  () ? auth.userId  () : QString());
+    cm.set_password(auth.hasPassword() ? auth.password() : QString());
     cm.set_token   (reply_signin ->token   ());
     cm.set_contact (cm.contact             ());
     Accounts::instance().set_current_account(cm.contact());
@@ -164,4 +202,38 @@ bool AuthWindow::handle_signin_successd(signin_params params_signin, signin_repl
     // this, &AuthWindow::accepted
     this->accepted();
     return true;
+}
+
+void AuthWindow::status_signin_block() {
+    ui->signin_edit_username->setEnabled(false);
+    ui->signin_edit_password->setEnabled(false);
+    ui->signin_button_signin->setEnabled(false);
+    handle_page_signin_tips_error(tr("logining..."));
+}
+
+void AuthWindow::status_signin_unblock() {
+    ui->signin_edit_username->setEnabled(true);
+    ui->signin_edit_password->setEnabled(true);
+    ui->signin_button_signin->setEnabled(true);
+    handle_page_signin_tips_clean();
+}
+
+void AuthWindow::status_signup_block() {
+    ui->signup_edit_username->setEnabled(false);
+    ui->signup_edit_password->setEnabled(false);
+    ui->signup_edit_confirm ->setEnabled(false);
+    ui->signup_edit_question->setEnabled(false);
+    ui->signup_edit_answer  ->setEnabled(false);
+    ui->signup_button_signup->setEnabled(false);
+    handle_page_signup_tips_error(tr("signing up..."));
+}
+
+void AuthWindow::status_signup_unblock() {
+    ui->signup_edit_username->setEnabled(true);
+    ui->signup_edit_password->setEnabled(true);
+    ui->signup_edit_confirm ->setEnabled(true);
+    ui->signup_edit_question->setEnabled(true);
+    ui->signup_edit_answer  ->setEnabled(true);
+    ui->signup_button_signup->setEnabled(true);
+    handle_page_signup_tips_clean();
 }

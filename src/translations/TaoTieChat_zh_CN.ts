@@ -90,35 +90,29 @@
     </message>
     <message>
         <location filename="../ui/AuthWindow/AuthWindow.cpp" line="132"/>
-        <location filename="../ui/AuthWindow/AuthWindow.cpp" line="152"/>
+        <location filename="../ui/AuthWindow/AuthWindow.cpp" line="156"/>
         <source>login failed!</source>
         <translation>登录失败！</translation>
     </message>
     <message>
-        <location filename="../ui/AuthWindow/AuthWindow.cpp" line="163"/>
+        <location filename="../ui/AuthWindow/AuthWindow.cpp" line="167"/>
         <source>tips</source>
         <translation>提示</translation>
     </message>
     <message>
-        <location filename="../ui/AuthWindow/AuthWindow.cpp" line="163"/>
+        <location filename="../ui/AuthWindow/AuthWindow.cpp" line="167"/>
         <source>SignUp success. close this dialog to SignIn.</source>
         <translation>注册成功。关闭当前弹窗以便登录。</translation>
     </message>
     <message>
-        <location filename="../ui/AuthWindow/AuthWindow.cpp" line="211"/>
+        <location filename="../ui/AuthWindow/AuthWindow.cpp" line="224"/>
         <source>logining...</source>
-        <translation type="unfinished"></translation>
+        <translation>正在登陆...</translation>
     </message>
     <message>
-        <location filename="../ui/AuthWindow/AuthWindow.cpp" line="228"/>
+        <location filename="../ui/AuthWindow/AuthWindow.cpp" line="239"/>
         <source>signing up...</source>
-        <translation type="unfinished"></translation>
-    </message>
-    <message>
-        <source>login success. 
-close this dialog to show chat window.</source>
-        <translation type="vanished">登录成功。
-关闭当前窗口以便显示聊天窗口。</translation>
+        <translation>正在注册...</translation>
     </message>
 </context>
 <context>
@@ -136,7 +130,7 @@ close this dialog to show chat window.</source>
     <message>
         <location filename="../ui/ChatWindow/ChatWindow.ui" line="93"/>
         <source>Contact</source>
-        <translation>联系人</translation>
+        <translation type="unfinished"></translation>
     </message>
     <message>
         <location filename="../ui/ChatWindow/ChatWindow.ui" line="121"/>
@@ -176,10 +170,6 @@ close this dialog to show chat window.</source>
 </context>
 <context>
     <name>ContactWindow</name>
-    <message>
-        <source>Contact</source>
-        <translation type="obsolete">联系人</translation>
-    </message>
     <message>
         <location filename="../ui/ChatWindow/ContactWindow.ui" line="14"/>
         <source>ContactWindow</source>
@@ -221,13 +211,6 @@ close this dialog to show chat window.</source>
         <location filename="../ui/ChatWindow/ContactWindow.cpp" line="109"/>
         <source>cancel</source>
         <translation>取消</translation>
-    </message>
-</context>
-<context>
-    <name>MainWindow</name>
-    <message>
-        <source>MainWindow</source>
-        <translation type="vanished">主窗口</translation>
     </message>
 </context>
 <context>
@@ -422,7 +405,7 @@ close this dialog to show chat window.</source>
     <message>
         <location filename="../ui/SearchWindow/SearchWindow.cpp" line="113"/>
         <source>network_search_users recv faied.</source>
-        <translation type="unfinished"></translation>
+        <translation>数据接收错误。</translation>
     </message>
 </context>
 </TS>

@@ -93,10 +93,8 @@ private:
     bool signup(signup_params params_signup);
     bool signin(signin_params params_signin, std::shared_ptr<AuthOpt> auth_opt = nullptr);
 
-    void status_signin_block();
-    void status_signin_unblock();
-    void status_signup_block();
-    void status_signup_unblock();
+    void status_signin_unblock(bool unblock = true);
+    void status_signup_unblock(bool unblock = true);
 
 private:
     Ui::AuthWindow *ui = nullptr;

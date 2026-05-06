@@ -120,9 +120,9 @@ bool AuthWindow::handle_signin() {
 }
 
 bool AuthWindow::signup(signup_params params_signup) {
-    status_signup_unblock();
+    status_signup_unblock(false);
     auto callback = [this](signup_params params_signup, signup_reply reply_signup){
-        status_signup_unblock();
+        status_signup_unblock(true);
         // 账号注册成功
         if(reply_signup && reply_signup->hasResult() && reply_signup->result().hasSuccessCode()) {
             handle_signup_successd(params_signup);
@@ -140,15 +140,19 @@ bool AuthWindow::signup(signup_params params_signup) {
 }
 
 bool AuthWindow::signin(signin_params params_signin, std::shared_ptr<AuthOpt> auth_opt) {
-    status_signin_block();
+    // 1. 执行操作前禁用按钮
+    // 2. 执行失败后立即解除禁用状态
+    // 3. 执行成功时不在这里进行状态解除，防止登陆过程过快导致用户误以为窗口闪烁的问题，便于用户看到登陆过程
+    status_signin_unblock(false);
     auto callback = [this, auth_opt](signin_params params_signin, signin_reply reply_signin) {
-        status_signin_unblock();
         // 用户登录成功
         if(reply_signin && reply_signin->hasResult() && reply_signin->result().hasSuccessCode()) {
             handle_signin_successd(params_signin, reply_signin, auth_opt);
             return;
         }
+
         // 用户登录失败
+        status_signin_unblock(true);
         QString error_info = tr("login failed!");
         if(reply_signin && reply_signin->hasResult() && reply_signin->result().hasErrorCode()) {
             auto code = reply_signin->result().errorCode();
@@ -199,41 +203,39 @@ bool AuthWindow::handle_signin_successd(signin_params params_signin, signin_repl
     cm.set_contact (cm.contact             ());
     Accounts::instance().set_current_account(cm.contact());
 
-    // this, &AuthWindow::accepted
-    this->accepted();
+    // 实际上登陆消息瞬间完成，延迟 3 秒再显示主界面，防止用户误以为登陆窗口闪烁的错误判断
+    QTimer::singleShot(3000, this, [this]() {
+        status_signin_unblock(true);
+        this->accepted();
+    });
     return true;
 }
 
-void AuthWindow::status_signin_block() {
-    ui->signin_edit_username->setEnabled(false);
-    ui->signin_edit_password->setEnabled(false);
-    ui->signin_button_signin->setEnabled(false);
-    handle_page_signin_tips_error(tr("logining..."));
+void AuthWindow::status_signin_unblock(bool unblock) {
+    ui->signin_edit_username->setEnabled(unblock);
+    ui->signin_edit_password->setEnabled(unblock);
+    ui->signin_check_rember ->setEnabled(unblock);
+    ui->signin_check_auto   ->setEnabled(unblock);
+    ui->signin_button_signin->setEnabled(unblock);
+    if(unblock) {
+        handle_page_signin_tips_clean();
+    }
+    else {
+        handle_page_signin_tips_error(tr("logining..."));
+    }
 }
 
-void AuthWindow::status_signin_unblock() {
-    ui->signin_edit_username->setEnabled(true);
-    ui->signin_edit_password->setEnabled(true);
-    ui->signin_button_signin->setEnabled(true);
-    handle_page_signin_tips_clean();
-}
-
-void AuthWindow::status_signup_block() {
-    ui->signup_edit_username->setEnabled(false);
-    ui->signup_edit_password->setEnabled(false);
-    ui->signup_edit_confirm ->setEnabled(false);
-    ui->signup_edit_question->setEnabled(false);
-    ui->signup_edit_answer  ->setEnabled(false);
-    ui->signup_button_signup->setEnabled(false);
-    handle_page_signup_tips_error(tr("signing up..."));
-}
-
-void AuthWindow::status_signup_unblock() {
-    ui->signup_edit_username->setEnabled(true);
-    ui->signup_edit_password->setEnabled(true);
-    ui->signup_edit_confirm ->setEnabled(true);
-    ui->signup_edit_question->setEnabled(true);
-    ui->signup_edit_answer  ->setEnabled(true);
-    ui->signup_button_signup->setEnabled(true);
-    handle_page_signup_tips_clean();
+void AuthWindow::status_signup_unblock(bool unblock) {
+    ui->signup_edit_username->setEnabled(unblock);
+    ui->signup_edit_password->setEnabled(unblock);
+    ui->signup_edit_confirm ->setEnabled(unblock);
+    ui->signup_edit_question->setEnabled(unblock);
+    ui->signup_edit_answer  ->setEnabled(unblock);
+    ui->signup_button_signup->setEnabled(unblock);
+    if(unblock) {
+        handle_page_signup_tips_clean();
+    }
+    else {
+        handle_page_signup_tips_error(tr("signing up..."));
+    }
 }

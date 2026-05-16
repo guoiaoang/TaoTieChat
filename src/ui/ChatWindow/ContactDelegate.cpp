@@ -63,56 +63,48 @@ void ContactDelegate::paint(QPainter *painter, const QStyleOptionViewItem &optio
     QRect notesRect = contactRect;
     notesRect.setTop(nicknameRect.bottom() + 5);
 
-    Contact contact = index.data(int(ContactData::Role::Contact)).value<Contact>();
-    // 获取显示内容
-    ContactManager cm(contact);
-    QString nickname      = cm.get_nick_name    ();  // 昵称
-    QString user_id       = cm.get_user_id      ();  // 用户 ID
-    QString notes         = cm.get_notes        ();  // 备注
-    QPixmap avatar_pixmap = cm.get_avatar_pixmap();  // 头像图像
-    QString avatar_path   = cm.get_avatar_path  ();  // 头像路径
-    QString str_name = !nickname.isEmpty() ? nickname : user_id;
-    QPixmap avatar   = !avatar_pixmap.isNull() ? avatar_pixmap : QPixmap(avatar_path);
-    avatar = !avatar.isNull() ? avatar : Utils::to_pixamp(str_name);
+    const std::shared_ptr<ContactInfo>&contact_info = index.data(Qt::UserRole).value<std::shared_ptr<ContactInfo>>();
+    if(contact_info) {
+        // 获取显示内容
+        QString nickname      = contact_info->baseInfo().nickname();  // 昵称
+        QString user_id       = contact_info->baseInfo().userId  ();  // 用户 ID
+        QString notes         = contact_info->hasFriendInfo() ? contact_info->friendInfo().notes() : QString();  // 备注
+        QPixmap avatar_pixmap;  // = contact_info->avatarPixmap();  // 头像图像
+        QString avatar_path  ;  // = contact_info->avatarPath();  // 头像路径
+        QString str_name = !nickname.isEmpty() ? nickname : user_id;
+        QPixmap avatar   = !avatar_pixmap.isNull() ? avatar_pixmap : QPixmap(avatar_path);
+        avatar = !avatar.isNull() ? avatar : Utils::to_pixmap(str_name);
 
-    // 绘制头像
-    painter->drawPixmap(avatarRect, avatar);
-    // painter->drawPixmap(avatarRect, Utils::to_round_pixmap(avatar, avatar.size().width() / 2));  // 圆角头像
+        // 绘制头像
+        painter->drawPixmap(avatarRect, Utils::to_round_pixmap(avatar, avatar.size().width() / 2));  // 圆角头像
 
-    // Warning: Only a QPainter operating on a QImage fully supports all composition modes. The RasterOp modes are supported for X11 as described in compositionMode().
+        // 绘制昵称
+        {
+            QFont nicknameFont = painter->font();
+            nicknameFont.setBold(true);
+            nicknameFont.setPointSize(10);
+            painter->setFont(nicknameFont);
+            painter->setPen(option.state & QStyle::State_Selected ? option.palette.highlightedText().color() : option.palette.text().color());
 
-    // 绘制昵称
-    {
-        QFont nicknameFont = painter->font();
-        nicknameFont.setBold(true);
-        nicknameFont.setPointSize(10);
-        painter->setFont(nicknameFont);
-        painter->setPen(option.state & QStyle::State_Selected ? option.palette.highlightedText().color() : option.palette.text().color());
+            // 使用 QFontMetrics 计算省略后的文本，绘制处理后的文本
+            QFontMetrics nicknameMetrics(nicknameFont);
+            QString nicknameElided = nicknameMetrics.elidedText(str_name, Qt::ElideRight, nicknameRect.width());
+            painter->drawText(nicknameRect, Qt::AlignLeft | Qt::AlignVCenter, nicknameElided);
+        }
 
-        // QRect nicknameRect = contactRect;
-        // nicknameRect.setHeight(20);
-        // painter->drawText(nicknameRect, Qt::AlignLeft | Qt::AlignVCenter | Qt::TextSingleLine, nickname);
-        QFontMetrics nicknameMetrics(nicknameFont);
-        QString nicknameElided = nicknameMetrics.elidedText(str_name, Qt::ElideRight, nicknameRect.width());
-        painter->drawText(nicknameRect, Qt::AlignLeft | Qt::AlignVCenter, nicknameElided);
-    }
+        // 绘制备注内容  // 单行不换行，显示不了的用省略号结尾
+        {
+            QFont notesFont = painter->font();
+            notesFont.setBold(false);
+            notesFont.setPointSize(9);
+            painter->setFont(notesFont);
+            painter->setPen(option.state & QStyle::State_Selected ? option.palette.highlightedText().color() : QColor(100, 100, 100));
 
-    // 绘制备注内容  // 单行不换行，显示不了的用省略号结尾
-    {
-        QFont notesFont = painter->font();
-        notesFont.setBold(false);
-        notesFont.setPointSize(9);
-        painter->setFont(notesFont);
-        painter->setPen(option.state & QStyle::State_Selected ? option.palette.highlightedText().color() : QColor(100, 100, 100));
-
-        // QRect notesRect = contactRect;
-        // notesRect.setTop(nicknameRect.bottom() + 5);
-        // painter->drawText(notesRect, Qt::AlignLeft | Qt::AlignTop | Qt::TextWordWrap, notes);  // 换行导致显示不全
-        // painter->drawText(notesRect, Qt::AlignLeft | Qt::AlignVCenter | Qt::TextSingleLine, notes); // 被覆盖，无提示
-        // 使用 QFontMetrics 计算省略后的文本，绘制处理后的文本
-        QFontMetrics notesMetrics(notesFont);
-        QString notesElided = notesMetrics.elidedText(notes, Qt::ElideRight, notesRect.width());
-        painter->drawText(notesRect, Qt::AlignLeft | Qt::AlignVCenter, notesElided);
+            // 使用 QFontMetrics 计算省略后的文本，绘制处理后的文本
+            QFontMetrics notesMetrics(notesFont);
+            QString notesElided = notesMetrics.elidedText(notes, Qt::ElideRight, notesRect.width());
+            painter->drawText(notesRect, Qt::AlignLeft | Qt::AlignVCenter, notesElided);
+        }
     }
 
     painter->restore();

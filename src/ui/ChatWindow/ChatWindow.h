@@ -7,15 +7,11 @@
 #include "ContactWindow.h"
 #include "SearchWindow.h"
 
-#ifdef DEBUG
-#include "Dev.h"
-#endif // DEBUG
-
 namespace Ui {
 class ChatWindow;
 }
 
-class ChatWindow : public QDialog {
+class ChatWindow : public QMainWindow {
     Q_OBJECT
 
 public:
@@ -37,13 +33,13 @@ private:
 public Q_SLOTS:
     // // 聊天室管理
     // 添加到聊天室列表
-    void add_chat_room(Contact contact);
+    void add_chat_room(const std::shared_ptr<ContactInfo>&contact_info);
     // 显示指定聊天室的对话
-    void show_chat_room_messages(Contact contact);
+    void show_chat_room_messages(const std::shared_ptr<ContactInfo>&contact_info);
 
     // // 联系人管理
     // 添加到联系人列表
-    void add_contact(Contact contact);
+    void add_contact(const std::shared_ptr<ContactInfo>&contact_info);
     // model/view 模式下的选择
     void handle_contact_selection_changed(const QModelIndex &current, const QModelIndex &previous);
 
@@ -54,28 +50,16 @@ protected:
     bool eventFilter(QObject *obj, QEvent *event) override;
 
 private:
-    Ui::ChatWindow *ui                = nullptr;
-    QMenu          *m_menu_settings   = nullptr;
-    QAction        *m_action_signout  = nullptr;
-    QAction        *m_action_settings = nullptr;
-    QMenu          *m_menu_add        = nullptr;
-    QAction        *m_action_add      = nullptr;
-    QAction        *m_action_create   = nullptr;
-
-    // QMap<Contact, MessageWindow*> m_message_windows;  // 聊天室 ID 与对应窗口的绑定
-
+    std::shared_ptr<Ui::ChatWindow > m_ui              ;
+    std::shared_ptr<QMenu          > m_menu_settings   ;
+    std::shared_ptr<QAction        > m_action_signout  ;
+    std::shared_ptr<QAction        > m_action_settings ;
+    std::shared_ptr<QMenu          > m_menu_add        ;
+    std::shared_ptr<QAction        > m_action_add      ;
+    std::shared_ptr<QAction        > m_action_create   ;
     // model/view/delegate
-    ContactModel    *m_contact_model    = nullptr;
-    ContactDelegate *m_contact_delegate = nullptr;
-
-    SearchWindow    *m_search_window = nullptr;
-
-    ContactWindow   *m_contact_window = nullptr;  // 当前显示的联系人详情窗口
-
-    // ====================================================================== //
-#ifdef DEBUG
-private:
-    // LocalUserData
-    QSharedPointer<LocalUserData> m_local_user_data = RegistryFactory<LocalUserData>::create("test_local");
-#endif // DEBUG
+    std::shared_ptr<ContactModel   > m_contact_model   ;
+    std::shared_ptr<ContactDelegate> m_contact_delegate;
+    std::shared_ptr<SearchWindow   > m_search_window   ;
+    std::shared_ptr<ContactWindow  > m_contact_window  ;  // 当前显示的联系人详情窗口
 };

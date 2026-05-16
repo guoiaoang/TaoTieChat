@@ -1,7 +1,6 @@
 #pragma once
 
 #include "Headers.h"
-#include "data.h"
 #include "Utils.h"
 
 class ContactDelegate : public QStyledItemDelegate {

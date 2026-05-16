@@ -42,22 +42,22 @@ public:
     bool eventFilter(QObject *watched, QEvent *event) override;
 
 private:
-    Ui::MediaWindow *ui             = nullptr;
-    QToolBar        *m_toolbar      = nullptr;
-    QMenu           *m_menu_save    = nullptr;  // 另存为
-    QActionGroup    *m_action_group = nullptr;
+    std::shared_ptr<Ui::MediaWindow> m_ui          ;
+    std::shared_ptr<QToolBar       > m_toolbar     ;
+    std::shared_ptr<QMenu          > m_menu_save   ;  // 另存为
+    std::shared_ptr<QActionGroup   > m_action_group;
 
-    QAction  *m_action_open        = nullptr;  // 打开
-    QAction  *m_action_save        = nullptr;  // 保存
-    QAction  *m_action_save_as     = nullptr;  // 另存为
-    QAction  *m_action_prev        = nullptr;  // 上一个
-    QAction  *m_action_next        = nullptr;  // 下一个
-    QAction  *m_action_fit         = nullptr;  // 适应窗口
-    QAction  *m_action_zoom_in     = nullptr;  // 放大
-    QAction  *m_action_zoom_out    = nullptr;  // 缩小
-    QAction  *m_action_normal_size = nullptr;  // 原始大小
-    QAction  *m_action_full_screen = nullptr;  // 全屏显示
-    QAction  *m_action_pin         = nullptr;  // 窗口置顶
+    std::shared_ptr<QAction> m_action_open       ;  // 打开
+    std::shared_ptr<QAction> m_action_save       ;  // 保存
+    std::shared_ptr<QAction> m_action_save_as    ;  // 另存为
+    std::shared_ptr<QAction> m_action_prev       ;  // 上一个
+    std::shared_ptr<QAction> m_action_next       ;  // 下一个
+    std::shared_ptr<QAction> m_action_fit        ;  // 适应窗口
+    std::shared_ptr<QAction> m_action_zoom_in    ;  // 放大
+    std::shared_ptr<QAction> m_action_zoom_out   ;  // 缩小
+    std::shared_ptr<QAction> m_action_normal_size;  // 原始大小
+    std::shared_ptr<QAction> m_action_full_screen;  // 全屏显示
+    std::shared_ptr<QAction> m_action_pin        ;  // 窗口置顶
 
     QString  m_media_path  ;
     QPixmap  m_media_pixmap;

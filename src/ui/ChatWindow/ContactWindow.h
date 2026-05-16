@@ -1,7 +1,6 @@
 #pragma once
 
 #include "Headers.h"
-#include "data.h"
 #include "Utils.h"
 #include "MediaWindow.h"
 #include "Accounts.h"
@@ -14,13 +13,13 @@ class ContactWindow : public QWidget {
     Q_OBJECT
 
 public:
-    explicit ContactWindow(                 QWidget *parent = nullptr);
-    explicit ContactWindow(Contact contact, QWidget *parent = nullptr);
+    // explicit ContactWindow(QWidget *parent = nullptr);
+    explicit ContactWindow(const std::shared_ptr<ContactInfo>&contact_info = std::make_shared<ContactInfo>(), QWidget *parent = nullptr);
     ~ContactWindow();
 
 public:
-    Contact contact(               ) const;
-    void    update (Contact contact)      ;
+    const std::shared_ptr<ContactInfo>& get_contact() const;
+    void update(const std::shared_ptr<ContactInfo>&contact_info);
 
 private:
     void on_button_manager ();
@@ -38,14 +37,14 @@ private:
     bool show_edit_mode(bool edit = true);
 
 Q_SIGNALS:
-    void remove_contact     (Contact contact);
-    void show_message_window(Contact contact);
-    void show_avatar        (Contact contact);
+    void remove_contact     (const std::shared_ptr<ContactInfo>&contact_info);
+    void show_message_window(const std::shared_ptr<ContactInfo>&contact_info);
+    void show_avatar        (const std::shared_ptr<ContactInfo>&contact_info);
 
 private:
-    Ui::ContactWindow *ui              = nullptr;
-    Contact            m_contact       = nullptr;
-    QMenu             *m_menu_manager  = nullptr;
-    QAction           *m_action_edit   = nullptr;
-    QAction           *m_action_remove = nullptr;
+    std::shared_ptr<Ui::ContactWindow> m_ui           ;
+    std::shared_ptr<ContactInfo      > m_contact_info ;
+    std::shared_ptr<QMenu            > m_menu_manager ;
+    std::shared_ptr<QAction          > m_action_edit  ;
+    std::shared_ptr<QAction          > m_action_remove;
 };

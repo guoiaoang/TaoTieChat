@@ -89,28 +89,28 @@
         <translation>登录</translation>
     </message>
     <message>
-        <location filename="../ui/AuthWindow/AuthWindow.cpp" line="132"/>
-        <location filename="../ui/AuthWindow/AuthWindow.cpp" line="156"/>
+        <location filename="../ui/AuthWindow/AuthWindow.cpp" line="124"/>
+        <location filename="../ui/AuthWindow/AuthWindow.cpp" line="148"/>
         <source>login failed!</source>
         <translation>登录失败！</translation>
     </message>
     <message>
-        <location filename="../ui/AuthWindow/AuthWindow.cpp" line="167"/>
+        <location filename="../ui/AuthWindow/AuthWindow.cpp" line="159"/>
         <source>tips</source>
         <translation>提示</translation>
     </message>
     <message>
-        <location filename="../ui/AuthWindow/AuthWindow.cpp" line="167"/>
+        <location filename="../ui/AuthWindow/AuthWindow.cpp" line="159"/>
         <source>SignUp success. close this dialog to SignIn.</source>
         <translation>注册成功。关闭当前弹窗以便登录。</translation>
     </message>
     <message>
-        <location filename="../ui/AuthWindow/AuthWindow.cpp" line="225"/>
+        <location filename="../ui/AuthWindow/AuthWindow.cpp" line="220"/>
         <source>logining...</source>
         <translation>正在登陆...</translation>
     </message>
     <message>
-        <location filename="../ui/AuthWindow/AuthWindow.cpp" line="240"/>
+        <location filename="../ui/AuthWindow/AuthWindow.cpp" line="235"/>
         <source>signing up...</source>
         <translation>正在注册...</translation>
     </message>
@@ -123,47 +123,52 @@
         <translation>聊天</translation>
     </message>
     <message>
-        <location filename="../ui/ChatWindow/ChatWindow.ui" line="97"/>
+        <location filename="../ui/ChatWindow/ChatWindow.ui" line="72"/>
+        <source>view and updata</source>
+        <translation>查看及更新</translation>
+    </message>
+    <message>
+        <location filename="../ui/ChatWindow/ChatWindow.ui" line="101"/>
         <source>Chat</source>
         <translation>会话</translation>
     </message>
     <message>
-        <location filename="../ui/ChatWindow/ChatWindow.ui" line="110"/>
+        <location filename="../ui/ChatWindow/ChatWindow.ui" line="114"/>
         <source>Contact</source>
         <translation>联系人</translation>
     </message>
     <message>
-        <location filename="../ui/ChatWindow/ChatWindow.ui" line="138"/>
+        <location filename="../ui/ChatWindow/ChatWindow.ui" line="142"/>
         <source>Settings</source>
         <translation>设置</translation>
     </message>
     <message>
-        <location filename="../ui/ChatWindow/ChatWindow.ui" line="190"/>
+        <location filename="../ui/ChatWindow/ChatWindow.ui" line="194"/>
         <source>Search</source>
         <translation>搜索</translation>
     </message>
     <message>
-        <location filename="../ui/ChatWindow/ChatWindow.ui" line="197"/>
+        <location filename="../ui/ChatWindow/ChatWindow.ui" line="201"/>
         <source>+</source>
         <translation></translation>
     </message>
     <message>
-        <location filename="../ui/ChatWindow/ChatWindow.cpp" line="121"/>
+        <location filename="../ui/ChatWindow/ChatWindow.cpp" line="110"/>
         <source>settings</source>
         <translation>设置</translation>
     </message>
     <message>
-        <location filename="../ui/ChatWindow/ChatWindow.cpp" line="123"/>
+        <location filename="../ui/ChatWindow/ChatWindow.cpp" line="112"/>
         <source>Signout</source>
         <translation>退出登陆</translation>
     </message>
     <message>
-        <location filename="../ui/ChatWindow/ChatWindow.cpp" line="128"/>
+        <location filename="../ui/ChatWindow/ChatWindow.cpp" line="117"/>
         <source>Add as a friend or join a group</source>
         <translation>添加好友或群组</translation>
     </message>
     <message>
-        <location filename="../ui/ChatWindow/ChatWindow.cpp" line="129"/>
+        <location filename="../ui/ChatWindow/ChatWindow.cpp" line="118"/>
         <source>Create a group</source>
         <translation>创建群</translation>
     </message>
@@ -211,32 +216,32 @@
         <translation>地区：</translation>
     </message>
     <message>
-        <location filename="../ui/ChatWindow/ContactWindow.ui" line="324"/>
+        <location filename="../ui/ChatWindow/ContactWindow.ui" line="371"/>
         <source>phones:</source>
         <translation>电话：</translation>
     </message>
     <message>
-        <location filename="../ui/ChatWindow/ContactWindow.ui" line="364"/>
+        <location filename="../ui/ChatWindow/ContactWindow.ui" line="314"/>
         <source>tags:</source>
         <translation>标签：</translation>
     </message>
     <message>
-        <location filename="../ui/ChatWindow/ContactWindow.ui" line="261"/>
+        <location filename="../ui/ChatWindow/ContactWindow.ui" line="334"/>
         <source>notes:</source>
         <translation>备注：</translation>
     </message>
     <message>
-        <location filename="../ui/ChatWindow/ContactWindow.ui" line="271"/>
+        <location filename="../ui/ChatWindow/ContactWindow.ui" line="274"/>
         <source>desc:</source>
         <translation>描述：</translation>
     </message>
     <message>
-        <location filename="../ui/ChatWindow/ContactWindow.ui" line="354"/>
+        <location filename="../ui/ChatWindow/ContactWindow.ui" line="324"/>
         <source>sign:</source>
         <translation>签名：</translation>
     </message>
     <message>
-        <location filename="../ui/ChatWindow/ContactWindow.ui" line="374"/>
+        <location filename="../ui/ChatWindow/ContactWindow.ui" line="284"/>
         <source>emails:</source>
         <translation>邮箱：</translation>
     </message>
@@ -271,49 +276,65 @@
         <translation>视频</translation>
     </message>
     <message>
-        <location filename="../ui/ChatWindow/ContactWindow.cpp" line="52"/>
+        <location filename="../ui/ChatWindow/ContactWindow.cpp" line="51"/>
         <source>edit</source>
         <translation>编辑资料</translation>
     </message>
     <message>
-        <location filename="../ui/ChatWindow/ContactWindow.cpp" line="53"/>
-        <location filename="../ui/ChatWindow/ContactWindow.cpp" line="207"/>
+        <location filename="../ui/ChatWindow/ContactWindow.cpp" line="52"/>
+        <location filename="../ui/ChatWindow/ContactWindow.cpp" line="287"/>
         <source>remove</source>
         <translation>删除</translation>
     </message>
     <message>
-        <location filename="../ui/ChatWindow/ContactWindow.cpp" line="152"/>
+        <location filename="../ui/ChatWindow/ContactWindow.cpp" line="151"/>
         <source>Image Files (*.png;*.jpg;*.bmp)</source>
         <translation>图片格式 (*.png;*.jpg;*.bmp)</translation>
     </message>
     <message>
-        <location filename="../ui/ChatWindow/ContactWindow.cpp" line="155"/>
+        <location filename="../ui/ChatWindow/ContactWindow.cpp" line="154"/>
         <source>Select Avatar</source>
         <translation>选择头像</translation>
     </message>
     <message>
-        <location filename="../ui/ChatWindow/ContactWindow.cpp" line="161"/>
+        <location filename="../ui/ChatWindow/ContactWindow.cpp" line="160"/>
         <source>Invalid Image</source>
         <translation>图片不可用</translation>
     </message>
     <message>
-        <location filename="../ui/ChatWindow/ContactWindow.cpp" line="161"/>
+        <location filename="../ui/ChatWindow/ContactWindow.cpp" line="160"/>
         <source>The selected file is not a valid image.</source>
         <translation>所选文件无法解析为图片。</translation>
     </message>
     <message>
-        <location filename="../ui/ChatWindow/ContactWindow.cpp" line="204"/>
-        <location filename="../ui/ChatWindow/ContactWindow.cpp" line="205"/>
+        <location filename="../ui/ChatWindow/ContactWindow.cpp" line="242"/>
+        <location filename="../ui/ChatWindow/ContactWindow.cpp" line="253"/>
+        <source>Error</source>
+        <translation>错误</translation>
+    </message>
+    <message>
+        <location filename="../ui/ChatWindow/ContactWindow.cpp" line="242"/>
+        <source>Failed to update profile.</source>
+        <translation>更新信息失败。</translation>
+    </message>
+    <message>
+        <location filename="../ui/ChatWindow/ContactWindow.cpp" line="253"/>
+        <source>Failed to get updated profile.</source>
+        <translation>获取更新信息失败。</translation>
+    </message>
+    <message>
+        <location filename="../ui/ChatWindow/ContactWindow.cpp" line="284"/>
+        <location filename="../ui/ChatWindow/ContactWindow.cpp" line="285"/>
         <source>Remove Contact</source>
         <translation>删除好友</translation>
     </message>
     <message>
-        <location filename="../ui/ChatWindow/ContactWindow.cpp" line="206"/>
+        <location filename="../ui/ChatWindow/ContactWindow.cpp" line="286"/>
         <source>Are you sure?</source>
         <translation>确定删除？</translation>
     </message>
     <message>
-        <location filename="../ui/ChatWindow/ContactWindow.cpp" line="208"/>
+        <location filename="../ui/ChatWindow/ContactWindow.cpp" line="288"/>
         <source>cancel</source>
         <translation>取消</translation>
     </message>
@@ -381,43 +402,43 @@
         <translation>工具栏</translation>
     </message>
     <message>
-        <location filename="../ui/PluginsWindow/MediaWindow.cpp" line="304"/>
-        <location filename="../ui/PluginsWindow/MediaWindow.cpp" line="307"/>
+        <location filename="../ui/PluginsWindow/MediaWindow.cpp" line="303"/>
+        <location filename="../ui/PluginsWindow/MediaWindow.cpp" line="306"/>
         <source>%1 : Load failed!</source>
         <translation>%1 : 加载失败！</translation>
     </message>
     <message>
-        <location filename="../ui/PluginsWindow/MediaWindow.cpp" line="310"/>
+        <location filename="../ui/PluginsWindow/MediaWindow.cpp" line="309"/>
         <source>Pixmap</source>
         <translation>图片</translation>
     </message>
     <message>
-        <location filename="../ui/PluginsWindow/MediaWindow.cpp" line="332"/>
+        <location filename="../ui/PluginsWindow/MediaWindow.cpp" line="331"/>
         <source>Open File</source>
         <translation>打开文件</translation>
     </message>
     <message>
-        <location filename="../ui/PluginsWindow/MediaWindow.cpp" line="353"/>
+        <location filename="../ui/PluginsWindow/MediaWindow.cpp" line="352"/>
         <source>Cannot load %1</source>
         <translation>无法加载 %1</translation>
     </message>
     <message>
-        <location filename="../ui/PluginsWindow/MediaWindow.cpp" line="361"/>
+        <location filename="../ui/PluginsWindow/MediaWindow.cpp" line="360"/>
         <source>Opened &quot;%1&quot;, %2x%3, Depth: %4</source>
         <translation>已打开 &quot;%1&quot;, %2x%3，深度： %4</translation>
     </message>
     <message>
-        <location filename="../ui/PluginsWindow/MediaWindow.cpp" line="374"/>
+        <location filename="../ui/PluginsWindow/MediaWindow.cpp" line="373"/>
         <source>Save File As</source>
         <translation>文件另存为</translation>
     </message>
     <message>
-        <location filename="../ui/PluginsWindow/MediaWindow.cpp" line="394"/>
+        <location filename="../ui/PluginsWindow/MediaWindow.cpp" line="393"/>
         <source>Cannot write %1</source>
         <translation>无法保存文件 %1</translation>
     </message>
     <message>
-        <location filename="../ui/PluginsWindow/MediaWindow.cpp" line="397"/>
+        <location filename="../ui/PluginsWindow/MediaWindow.cpp" line="396"/>
         <source>Wrote &quot;%1&quot;</source>
         <translation>保存文件 &quot;%1&quot;</translation>
     </message>
@@ -508,8 +529,8 @@
         <translation>群组</translation>
     </message>
     <message>
-        <location filename="../ui/SearchWindow/SearchWindow.cpp" line="113"/>
-        <source>network_search_users recv faied.</source>
+        <location filename="../ui/SearchWindow/SearchWindow.cpp" line="91"/>
+        <source>network_search_user recv failed.</source>
         <translation>数据接收错误。</translation>
     </message>
 </context>

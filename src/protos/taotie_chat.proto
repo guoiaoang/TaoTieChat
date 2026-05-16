@@ -85,6 +85,12 @@ enum ErrorCode {
   BLOCKED                         = 0x00003006;  // 被拉黑    // 如：被对方拉黑
   UNASSOCIATED                    = 0x00003101;  // 未关联    // 如：还不是好友
   ASSOCIATED                      = 0x00003102;  // 已关联    // 如：已经是好友
+  PERMISSION_DENIED               = 0x00003103;  // 权限不足  // 如：没有权限访问文件
+  // 文件上传相关错误码  // 0x00004001 - 0x00004FFF
+  FILE_WRITE                      = 0x00004001;  // 文件写入失败
+  FILE_MD5_MISMATCH               = 0x00004002;  // 文件 MD5 校验失败
+  FILE_READER_ERROR               = 0x00004003;  // 文件读取错误
+  FILE_NOT_FOUND                  = 0x00004004;  // 文件未找到
   // 单参数  // 0x00011011 - 0x00011FFF
   USER_ID_ERROR                   = 0x00011011;  //
   USER_ID_EMPTY                   = 0x00011012;  // 用户 ID 为空
@@ -156,7 +162,40 @@ enum ErrorCode {
   CLIENT_MESSAGE_ID_REQUIRED      = 0x10011011;  // 需要客户端消息 ID，但未提供
   DUPLICATE_MESSAGE_ID            = 0x10011012;  // 重复的客户端消息 ID
   FRIEND_REQUEST_NOT_FOUND        = 0x10011013;  // 好友请求未找到
+  FILE_HEADER_REQUIRED            = 0x10011014;  // 需要 header，但未提供
+  FILE_ID_REQUIRED                = 0x10011015;  // 需要 file_id，但未提供
 }
+
+// 直接使用 `IGNORE`会导致宏定义冲突
+enum ContactReplyCode {
+  CONTACT_REPLY_ACCEPT = 0;  // 同意
+  CONTACT_REPLY_REJECT = 1;  // 拒绝
+  CONTACT_REPLY_IGNORE = 2;  // 忽略
+}
+
+// 文件状态码
+enum FileStatusCode {
+  FILE_STATUS_NONE      = 0;  // 未设置
+  FILE_STATUS_UPLOADED  = 1;  // 文件已上传完成
+  FILE_STATUS_PENDING   = 2;  // 文件正在上传中
+  FILE_STATUS_NOT_FOUND = 3;  // 文件不存在
+}
+
+enum PermissionCode {
+  PERMISSION_NONE    =  0;  // 0000 0000 // 无权限
+  PERMISSION_CREATE  =  1;  // 0000 0001 //
+  PERMISSION_READ    =  2;  // 0000 0010 //
+  PERMISSION_WRITE   =  4;  // 0000 0100 //
+  PERMISSION_MODIFY  =  8;  // 0000 1000 //
+  PERMISSION_DELETE  = 16;  // 0001 0000 //
+  PERMISSION_SHARE   = 32;  // 0010 0000 //
+  PERMISSION_EXECUTE = 64;  // 0100 0000 //
+}
+
+// enum PermissionValue {
+//   PERMISSION_DENY    = 0;  // 禁止
+//   PERMISSION_ALLOW   = 1;  // 允许
+// }
 
 // Result 结果消息
 message Result {
@@ -166,6 +205,75 @@ message Result {
   }
   string        message      = 3;  // 可选的错误消息字段
 }
+
+// 用户信息列表
+message ContactInfos {
+    repeated ContactInfo contact_infos = 1;
+}
+
+// 自己相关的信息。
+// 目前仅用于标志及存储，不用于信息的修改，仅作为账号登陆记录
+message ContactInfoSelf {
+  bool   modify_self_info  = 1;  // 是否是修改个人信息
+  string user_id           = 2;  // 用户 ID
+  string password          = 3;  // 密码
+  string token             = 4;  // 认证令牌
+  string security_question = 5;  // 安全问题
+  string security_answer   = 6;  // 安全答案
+}
+
+// 好友相关的信息
+message ContactInfoFriend {
+            string account_id   = 1;  // 账号 ID  // 获取好友信息时由服务器填充该字段
+            string user_id      = 2;  // 用户 ID  // 修改好友信息时使用该字段查找好友账号 ID
+            int32  status       = 3;  // 是否被拉黑
+            bool   starred      = 4;  // 是否标星
+            bool   silent       = 5;  // 是否免打扰
+            string notes        = 6;  // 备注
+            string added_source = 7;  // 添加来源
+            string added_time   = 8;  // 添加时间
+  repeated  string tags         = 9;  // 标签，逗号分隔
+}
+
+// 用户的基本信息  // 公共信息
+message ContactInfoBase {
+            string account_id   = 1;  // 账号 ID
+            string user_id      = 2;  // 用户 ID  // 修改个人用户 ID 时使用该字段作为目标用户 ID，修改好友 ID 时不使用该字段（不作为校验及目标 ID）
+            string avatar_id    = 3;  // 头像
+            string nickname     = 4;  // 昵称
+            int32  gender       = 5;  // 性别  // 0: 未知 1: 男 2: 女
+            string birthday     = 6;  // 生日
+            string sign         = 7;  // 签名
+            string region       = 8;  // 地区
+            string desc         = 9;  // 个人简介
+  repeated  string phones       = 10;  // 手机号
+  repeated  string emails       = 11;  // 邮箱
+  repeated  string social_links = 12;  // 社交链接，逗号分隔
+  repeated  string moments_id   = 13;  // 朋友圈 ID 列表
+  repeated  string groups_id    = 14;  // 群组 ID 列表
+}
+
+// 用户信息
+message ContactInfo {
+  ContactInfoBase      base_info   = 1;  // 基本信息
+  oneof                extra_info {
+    ContactInfoSelf    self_info   = 2;  // 自己相关的信息
+    ContactInfoFriend  friend_info = 3;  // 好友相关的信息
+  }
+}
+
+// 鉴权参数
+message AuthRequest {
+  oneof auth_id {
+    string account_id = 1;
+    string user_id    = 2;
+  }
+  oneof auth_method {
+    string password = 3;  // 密码;  // 有 token 时就不要使用密码
+    string token    = 4;  // 认证令牌
+  }
+}
+
 // ============================  AccountService  ============================ //
 
 // 用户注册服务
@@ -184,7 +292,7 @@ service AccountService {
   rpc GetContactRequests(AuthRequest) returns (GetContactRequestsReply) {}
   // // 添加联系人
   // rpc AddContact(AddContactRequest) returns (AddContactReply) {}
-  // 更新个人资料
+  // 更新个人资料  // 获取用户信息使用 `SearchService::SearchUser`
   rpc UpdateProfile(UpdateProfileRequest) returns (UpdateProfileReply) {}
   // 获取安全问题 // 专用接口
   // 1.1. 通过密码修改密码时不需要获取安全问题
@@ -214,18 +322,6 @@ message SignUpReply {
   optional  SignUpRequest request    = 1;  // 可选的原始请求信息字段
             Result        result     = 2;  // 状态信息字段
             string        account_id = 3;  // 注册成功后返回的账号 ID
-}
-
-// 鉴权参数
-message AuthRequest {
-  oneof auth_id {
-    string account_id = 1;
-    string user_id    = 2;
-  }
-  oneof auth_method {
-    string password = 3;  // 密码;  // 有 token 时就不要使用密码
-    string token    = 4;  // 认证令牌
-  }
 }
 
 // 鉴权结果
@@ -262,13 +358,6 @@ message ContactRequestReply {
   optional  string                message = 3;  // 附带的消息
 }
 
-// 直接使用 `IGNORE`会导致宏定义冲突
-enum ContactReplyCode {
-  CONTACT_REPLY_ACCEPT = 0;  // 同意
-  CONTACT_REPLY_REJECT = 1;  // 拒绝
-  CONTACT_REPLY_IGNORE = 2;  // 忽略
-}
-
 // 被添加联系人的回复
 message ContactReplyRequest {
   optional  AuthRequest      request_user_auth = 1;  // 鉴权
@@ -282,13 +371,13 @@ message ContactReplyReply {
             Result              result  = 2;  // 状态信息字段
   optional  string              message = 3;  // 附带的消息
 }
-
+// 获取添加联系人申请的列表
 message GetContactRequestsReply {
   optional  AuthRequest  request_user_auth = 1;  // 鉴权
             Result       result            = 2;  // 状态信息字段
   repeated  ContactRequestInfo contact_request_info = 3;  // 联系人申请信息
 }
-
+// 联系人申请信息
 message ContactRequestInfo {
   string    user_id   = 1;  // 申请人的用户 ID
   string    message   = 2;  // 附带的消息
@@ -312,7 +401,7 @@ message ContactRequestInfo {
 // 更新个人资料
 message UpdateProfileRequest {
   AuthRequest request_user_auth = 1;  // 认证信息  // 必须
-  Contact     contact           = 2;  // 需要更新的个人资料信息
+  ContactInfo contact_info      = 2;  // 需要更新的个人资料信息
 }
 
 // 更新个人资料的结果
@@ -379,55 +468,36 @@ message UpdateSecurityInfoReply {
 
 // 搜索服务
 service SearchService {
-  // 搜索用户  // 公共信息，与好友列表不同
-  rpc SearchUsers(SearchUsersRequest) returns (SearchUsersReply) {}
+  // 搜索并获取陌生用户/好友信息
+  rpc SearchUser(SearchUserRequest) returns (SearchUserReply) {}
   // 搜索群组
-  rpc SearchGroups(SearchGroupsRequest) returns (SearchGroupsReply) {}
+  rpc SearchGroup(SearchGroupRequest) returns (SearchGroupReply) {}
 }
 
 // 搜索用户需要的参数
-message SearchUsersRequest{
+message SearchUserRequest{
   optional  AuthRequest request_user_auth = 1;  // 鉴权
             string      user_id           = 2;  // user_id/nickname/phone/email，其一即可
-            string      user_filter       = 3;  // gender/region/birthday, 过滤条件
 }
 
 // 返回搜索用户的结果
-message SearchUsersReply{
-  optional  SearchUsersRequest request   = 1;  // 可选的原始请求信息字段
-            Result             result    = 2;  // 状态信息字段
-            Contacts           contacts  = 3;  // 用户/账号信息
-}
-
-message Contacts {
-    repeated Contact contact = 1;
-}
-
-// 用户的基本信息  // 暂时设为都必须有
-message Contact{
-            string user_id  = 1;  // 用户 ID
-            string nickname = 2;  // 昵称
-            string avatar   = 3;  // 头像
-            string sign     = 4;  // 签名
-            int32  gender   = 5;  // 性别
-            string region   = 6;  // 地区
-            string birthday = 7;  // 生日
-  repeated  string phones   = 8;  // 手机号
-  repeated  string emails   = 9;  // 邮箱
+message SearchUserReply{
+  optional  SearchUserRequest request      = 1;  // 可选的原始请求信息字段  // “真”可选
+            Result            result       = 2;  // 状态信息字段
+            ContactInfo       contact_info = 3;  // 用户/账号信息
 }
 
 // 搜索群组需要的参数
-message SearchGroupsRequest{
+message SearchGroupRequest{
   optional  AuthRequest request_user_auth = 1;  // 鉴权
-            string      groups_keyword    = 2;  // user_id/nickname/phone/email，其一即可
-            string      groups_filter     = 3;  // gender/region/birthday, 过滤条件
+            string      group_keyword     = 2;  // user_id/nickname/phone/email，其一即可
 }
 
 // 返回搜索群组的结果
-message SearchGroupsReply{
-  optional  SearchGroupsRequest request = 1;  // 鉴权
-            Result              result  = 2;  // 状态信息字段
-            Groups              groups  = 3;  // 群组信息  // 默认最多只返回 10 条信息 // 暂不设置可过滤或分页
+message SearchGroupReply{
+  optional  SearchGroupRequest request = 1;  // 鉴权
+            Result             result  = 2;  // 状态信息字段
+            Group              group   = 3;  // 群组信息  // 默认最多只返回 10 条信息 // 暂不设置可过滤或分页
 }
 
 //
@@ -437,11 +507,11 @@ message Groups {
 
 // 群组的基本信息
 message Group{
-  string id     = 1;  // 群组 ID
-  string name   = 2;  // 群组名称
-  string avatar = 3;  // 头像
-  string sign   = 4;  // 简介
-  string region = 5;  // 地区
+  string id        = 1;  // 群组 ID
+  string name      = 2;  // 群组名称
+  string avatar_id = 3;  // 头像 ID
+  string sign      = 4;  // 简介
+  string region    = 5;  // 地区
 }
 
 // ============================== StatusService ============================== //
@@ -580,18 +650,46 @@ message SyncReplyHeader {
             Result        result      = 2;  // 状态信息字段
 }
 
+// 单条消息增量事件
+message MessageEvent {
+  string server_message_id   = 1;  // 服务端消息 ID
+  string client_message_id   = 2;  // 客户端消息 ID
+  string sender_account_id   = 3;  // 发送方账号 ID
+  string receiver_account_id = 4;  // 接收方账号 ID
+  string short_text          = 5;  // 文本消息内容
+  string timestamp           = 6;  // 服务端落库时间（UTC 字符串）
+  string event_sub_type      = 7;  // 事件子类型（如 MESSAGE_TEXT）
+}
+
+// 消息增量列表
+message Messages {
+  repeated MessageEvent messages = 1;
+}
+
+// 单条文件增量事件
+message FileEvent {
+  string         file_id      = 1;  // 文件 ID
+  FileMetadata   file_metadata= 2;  // 文件元数据
+  FileStatusCode file_status  = 3;  // 文件状态
+  string         event_sub_type = 4;  // 事件子类型（如 FILE_UPLOAD）
+}
+
+// 文件增量列表
+message FileEvents {
+  repeated FileEvent file_events = 1;
+}
+
 // 认证成功后返回的主要内容
 message SyncReplyBody {
   // 大分类，比如好友申请与删除均在 CONTACTS 分类下，具体的操作类型需要再解析消息内容来区分。
   SyncRequestTag tag      = 1;  // 同步标签，包含要获取更新的消息类型和最后一条消息的 ID
   int64          count    = 2;  // 更新的消息数量
 
-  // 具体的更新消息，需要再进行解析。
-  oneof          content {
-    Contacts     contacts = 3;  // 联系人列表更新内容
-    Groups       groups   = 4;  // 群组列表更新内容
-    // Messages  messages = 5;  // 消息列表更新内容
-  }
+  // 具体的更新消息，不同类型的字段由服务端按 tag.type 填充。
+  ContactInfos contact_infos = 3;  // 联系人列表更新内容
+  Groups       groups        = 4;  // 群组列表更新内容
+  Messages     messages      = 5;  // 消息列表更新内容
+  FileEvents   file_events   = 6;  // 文件事件列表更新内容
 }
 
 // 返回内容
@@ -605,19 +703,22 @@ message SyncReply{
 // ==============================  FileService  ============================== //
 
 // 文件上传接口
-// metadata 与文件内容分开存储，防止相同文件不同 metadata 导致显示相同的异常问题。
-// 上传时校验 metadata 及 md5 是否已存在，md5 存在但 metadata 不同时则只需上传新的 metadata，并生成新的文件 ID。
-// 存储时与用户关联，防止非法访问其他用户的文件。
-// 相同 metadata 可能是不同的文件内容，相同的 md5 可能是不同的 metadata。
-// md5 暂且认为不会冲突。
+// 1. metadata 与文件内容分开存储，防止相同文件不同 metadata 导致显示相同的异常问题。
+// 2. 上传时校验 metadata 及 md5 是否已存在，md5 存在但 metadata 不同时则只需上传新的 metadata，并生成新的文件 ID。
+// 3. 存储时与用户关联，防止非法访问其他用户的文件。
+// 4. 相同 metadata 可能是不同的文件内容，相同的 md5 可能是不同的 metadata。
+// 5. md5 暂且认为不会冲突。
+// 6. 实现秒传需要使用双向流，并合理设置超时时间防止服务器卡死，服务端要定时发送数据防止客户端超时断开连接。
 service FileService {
   // GetFileID 获取文件 ID
   // 只校验，不更新
+  // 文件内容存在时直接保存元数据
   rpc GetFileID(GetFileIDRequest) returns (GetFileIDReply) {}
   // FileUpload 上传文件
   // 客户端流式上传
   // 上传完成后获取文件的 ID，文件 ID 中主要关联了文件的 metadata
-  rpc FileUpload(stream FileUploadRequest) returns (FileUploadReply);
+  // 使用双向流式上传时，服务端获取到文件信息返回一次是否需要上传的状态，上传完成后再返回一次上传完成的状态
+  rpc FileUpload(stream FileUploadRequest) returns (stream FileUploadReply);
   // FileDownload 下载文件
   // 通过文件 ID 获取不同的 metadata 和文件内容
   rpc FileDownload(FileDownloadRequest) returns (stream FileDownloadReply);
@@ -641,7 +742,8 @@ message GetFileIDReply {
   optional  GetFileIDRequest request         = 1;
             Result           result          = 2;  // 状态信息字段
             string           file_id         = 3;  // 文件 ID
-            string           message         = 4;  // 可选的错误消息字段
+            FileStatusCode   file_status     = 4;  // 文件状态
+            string           message         = 5;  // 可选的错误消息字段
 }
 
 // 是谁因为什么原因要上传什么文件，以便后续关联消息等信息，防止垃圾文件的产生。
@@ -656,9 +758,10 @@ message FileUploadRequest {
 // 1. 鉴权信息：可用于防止非法访问
 // 2. 文件元数据：用于关联文件 ID
 // 3. 上传原因：用于记录文件上传的目的，便于垃圾清理。
+// 上传时要求账号 ID 和文件 ID 均一致
 message FileUploadHeader {
-  optional  AuthRequest  request_user_auth = 1;  // 鉴权
-            FileMetadata file_metadata     = 2;  // 文件元数据
+  optional  AuthRequest  request_user_auth = 1;  // 鉴权  // 实际不需要
+            string       file_id           = 2;  // 文件 ID
             string       reason            = 3;  // 上传原因
 }
 
@@ -676,18 +779,21 @@ message FileChunkData {
   // }
 }
 
+// 文件上传结果
 message FileUploadReply {
-  optional  FileUploadRequest request = 1;  // 可选的原始请求信息字段
-            Result            result  = 2;  // 状态信息字段
-            string            file_id = 3;  // 上传完成后返回的文件 ID
-            string            message = 4;  // 可选的错误消息字段
+  optional  FileUploadRequest request     = 1;  // 可选的原始请求信息字段
+            Result            result      = 2;  // 状态信息字段
+            FileStatusCode    file_status = 3;  // 文件状态
+            string            message     = 4;  // 可选的错误消息字段
 }
 
+// 文件下载请求
 message FileDownloadRequest {
   optional  AuthRequest  request_user_auth = 1;  // 鉴权
             string       file_id           = 2;  // 文件 ID
 }
 
+// 文件下载响应
 message FileDownloadReply {
   oneof data {
     FileDownloadHeader header = 1;  // 第一条消息发送文件元数据（文件名、哈希等）
@@ -695,9 +801,12 @@ message FileDownloadReply {
   }
 }
 
+// 文件下载头信息
 message FileDownloadHeader {
   optional  FileDownloadRequest  request       = 1;  // 鉴权
-            FileMetadata         file_metadata = 2;  // 文件元数据
+            Result               result        = 2;  // 状态信息字段
+            FileMetadata         file_metadata = 3;  // 文件元数据
+            string               message       = 4;  // 可选的错误消息字段
 }
 
 // =========================================================================== //

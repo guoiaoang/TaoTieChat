@@ -1,16 +1,11 @@
 #pragma once
 
 #include "Headers.h"
-#include "data.h"
 #include "Utils.h"
 #include "NetworkClient.h"
 #include "Accounts.h"
 
 #include <mini/ini.h>   // cpp
-
-namespace Ui {
-class AuthWindow;
-}
 
 // 附加选项
 struct AuthOpt{
@@ -70,6 +65,10 @@ public:
     }
 };
 
+namespace Ui {
+class AuthWindow;
+}
+
 class AuthWindow : public QDialog{
     Q_OBJECT
 
@@ -87,17 +86,17 @@ private slots:
     //
     bool handle_signup();
     bool handle_signin();
-    bool handle_signup_successd(signup_params params_signup);
-    bool handle_signin_successd(signin_params params_signin, signin_reply reply_signin, std::shared_ptr<AuthOpt> auth_opt = nullptr);  // nullptr 不能使用引用
+    bool handle_signup_successd(const signup_params&params_signup);
+    bool handle_signin_successd(const signin_params& params_signin, const signin_reply& reply_signin, const std::shared_ptr<AuthOpt>& auth_opt);
 private:
-    bool signup(signup_params params_signup);
-    bool signin(signin_params params_signin, std::shared_ptr<AuthOpt> auth_opt = nullptr);
+    bool signup(const signup_params& params_signup);
+    bool signin(const signin_params& params_signin, const std::shared_ptr<AuthOpt>& auth_opt);
 
     void status_signin_unblock(bool unblock = true);
     void status_signup_unblock(bool unblock = true);
 
 private:
-    Ui::AuthWindow *ui = nullptr;
-    std::unique_ptr<Client> m_client;
+    std::shared_ptr<Ui::AuthWindow   > m_ui     ;
+    std::unique_ptr<Client           > m_client ;
     std::shared_ptr<QGrpcHttp2Channel> m_channel;
 };

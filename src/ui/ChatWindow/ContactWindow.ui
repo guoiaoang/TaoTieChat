@@ -6,7 +6,7 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>367</width>
+    <width>384</width>
     <height>405</height>
    </rect>
   </property>
@@ -235,7 +235,7 @@
        <rect>
         <x>0</x>
         <y>0</y>
-        <width>349</width>
+        <width>366</width>
         <height>253</height>
        </rect>
       </property>
@@ -255,57 +255,7 @@
        <property name="horizontalSpacing">
         <number>0</number>
        </property>
-       <item row="0" column="0">
-        <widget class="QLabel" name="label_notes">
-         <property name="text">
-          <string>notes:</string>
-         </property>
-         <property name="alignment">
-          <set>Qt::AlignmentFlag::AlignRight|Qt::AlignmentFlag::AlignTrailing|Qt::AlignmentFlag::AlignVCenter</set>
-         </property>
-        </widget>
-       </item>
-       <item row="4" column="0">
-        <widget class="QLabel" name="label_desc">
-         <property name="text">
-          <string>desc:</string>
-         </property>
-         <property name="alignment">
-          <set>Qt::AlignmentFlag::AlignRight|Qt::AlignmentFlag::AlignTrailing|Qt::AlignmentFlag::AlignVCenter</set>
-         </property>
-        </widget>
-       </item>
-       <item row="5" column="1">
-        <widget class="QLineEdit" name="edit_sign">
-         <property name="styleSheet">
-          <string notr="true">background: transparent;border: none;</string>
-         </property>
-         <property name="readOnly">
-          <bool>true</bool>
-         </property>
-        </widget>
-       </item>
-       <item row="3" column="1">
-        <widget class="QLineEdit" name="edit_tags">
-         <property name="styleSheet">
-          <string notr="true">background: transparent;border: none;</string>
-         </property>
-         <property name="readOnly">
-          <bool>true</bool>
-         </property>
-        </widget>
-       </item>
-       <item row="1" column="1">
-        <widget class="QLineEdit" name="edit_phones">
-         <property name="styleSheet">
-          <string notr="true">background: transparent;border: none;</string>
-         </property>
-         <property name="readOnly">
-          <bool>true</bool>
-         </property>
-        </widget>
-       </item>
-       <item row="6" column="0" colspan="2">
+       <item row="7" column="0" colspan="3">
         <spacer name="verticalSpacer_scrollarea_bottom">
          <property name="orientation">
           <enum>Qt::Orientation::Vertical</enum>
@@ -318,40 +268,10 @@
          </property>
         </spacer>
        </item>
-       <item row="1" column="0">
-        <widget class="QLabel" name="label_phones">
-         <property name="text">
-          <string>phones:</string>
-         </property>
-         <property name="alignment">
-          <set>Qt::AlignmentFlag::AlignRight|Qt::AlignmentFlag::AlignTrailing|Qt::AlignmentFlag::AlignVCenter</set>
-         </property>
-        </widget>
-       </item>
-       <item row="4" column="1">
-        <widget class="QLineEdit" name="edit_desc">
-         <property name="styleSheet">
-          <string notr="true">background: transparent;border: none;</string>
-         </property>
-         <property name="readOnly">
-          <bool>true</bool>
-         </property>
-        </widget>
-       </item>
-       <item row="0" column="1">
-        <widget class="QLineEdit" name="edit_notes">
-         <property name="styleSheet">
-          <string notr="true">background: transparent;border: none;</string>
-         </property>
-         <property name="readOnly">
-          <bool>true</bool>
-         </property>
-        </widget>
-       </item>
        <item row="5" column="0">
-        <widget class="QLabel" name="label_sign">
+        <widget class="QLabel" name="label_desc">
          <property name="text">
-          <string>sign:</string>
+          <string>desc:</string>
          </property>
          <property name="alignment">
           <set>Qt::AlignmentFlag::AlignRight|Qt::AlignmentFlag::AlignTrailing|Qt::AlignmentFlag::AlignVCenter</set>
@@ -359,16 +279,6 @@
         </widget>
        </item>
        <item row="3" column="0">
-        <widget class="QLabel" name="label_tags">
-         <property name="text">
-          <string>tags:</string>
-         </property>
-         <property name="alignment">
-          <set>Qt::AlignmentFlag::AlignRight|Qt::AlignmentFlag::AlignTrailing|Qt::AlignmentFlag::AlignVCenter</set>
-         </property>
-        </widget>
-       </item>
-       <item row="2" column="0">
         <widget class="QLabel" name="label_emails">
          <property name="text">
           <string>emails:</string>
@@ -378,10 +288,100 @@
          </property>
         </widget>
        </item>
-       <item row="2" column="1">
+       <item row="0" column="2">
+        <widget class="QLineEdit" name="edit_notes">
+         <property name="styleSheet">
+          <string notr="true">background: transparent;border: none;</string>
+         </property>
+         <property name="readOnly">
+          <bool>true</bool>
+         </property>
+        </widget>
+       </item>
+       <item row="5" column="2">
+        <widget class="QLineEdit" name="edit_desc">
+         <property name="styleSheet">
+          <string notr="true">background: transparent;border: none;</string>
+         </property>
+         <property name="readOnly">
+          <bool>true</bool>
+         </property>
+        </widget>
+       </item>
+       <item row="1" column="0">
+        <widget class="QLabel" name="label_tags">
+         <property name="text">
+          <string>tags:</string>
+         </property>
+         <property name="alignment">
+          <set>Qt::AlignmentFlag::AlignRight|Qt::AlignmentFlag::AlignTrailing|Qt::AlignmentFlag::AlignVCenter</set>
+         </property>
+        </widget>
+       </item>
+       <item row="6" column="0">
+        <widget class="QLabel" name="label_sign">
+         <property name="text">
+          <string>sign:</string>
+         </property>
+         <property name="alignment">
+          <set>Qt::AlignmentFlag::AlignRight|Qt::AlignmentFlag::AlignTrailing|Qt::AlignmentFlag::AlignVCenter</set>
+         </property>
+        </widget>
+       </item>
+       <item row="0" column="0">
+        <widget class="QLabel" name="label_notes">
+         <property name="text">
+          <string>notes:</string>
+         </property>
+         <property name="alignment">
+          <set>Qt::AlignmentFlag::AlignRight|Qt::AlignmentFlag::AlignTrailing|Qt::AlignmentFlag::AlignVCenter</set>
+         </property>
+        </widget>
+       </item>
+       <item row="6" column="2">
+        <widget class="QLineEdit" name="edit_sign">
+         <property name="styleSheet">
+          <string notr="true">background: transparent;border: none;</string>
+         </property>
+         <property name="readOnly">
+          <bool>true</bool>
+         </property>
+        </widget>
+       </item>
+       <item row="2" column="2">
+        <widget class="QLineEdit" name="edit_phones">
+         <property name="styleSheet">
+          <string notr="true">background: transparent;border: none;</string>
+         </property>
+         <property name="readOnly">
+          <bool>true</bool>
+         </property>
+        </widget>
+       </item>
+       <item row="3" column="2">
         <widget class="QLineEdit" name="edit_emails">
          <property name="styleSheet">
           <string notr="true">background: transparent;border: none;</string>
+         </property>
+        </widget>
+       </item>
+       <item row="2" column="0">
+        <widget class="QLabel" name="label_phones">
+         <property name="text">
+          <string>phones:</string>
+         </property>
+         <property name="alignment">
+          <set>Qt::AlignmentFlag::AlignRight|Qt::AlignmentFlag::AlignTrailing|Qt::AlignmentFlag::AlignVCenter</set>
+         </property>
+        </widget>
+       </item>
+       <item row="1" column="2">
+        <widget class="QLineEdit" name="edit_tags">
+         <property name="styleSheet">
+          <string notr="true">background: transparent;border: none;</string>
+         </property>
+         <property name="readOnly">
+          <bool>true</bool>
          </property>
         </widget>
        </item>
@@ -478,21 +478,21 @@
   </layout>
  </widget>
  <tabstops>
-  <tabstop>button_avatar</tabstop>
-  <tabstop>edit_nickname_big</tabstop>
-  <tabstop>button_gender</tabstop>
-  <tabstop>button_starred</tabstop>
-  <tabstop>button_manager</tabstop>
   <tabstop>edit_nickname</tabstop>
   <tabstop>edit_userid</tabstop>
   <tabstop>edit_region</tabstop>
-  <tabstop>scrollArea</tabstop>
   <tabstop>edit_notes</tabstop>
+  <tabstop>edit_tags</tabstop>
   <tabstop>edit_phones</tabstop>
   <tabstop>edit_emails</tabstop>
-  <tabstop>edit_tags</tabstop>
   <tabstop>edit_desc</tabstop>
   <tabstop>edit_sign</tabstop>
+  <tabstop>edit_nickname_big</tabstop>
+  <tabstop>button_avatar</tabstop>
+  <tabstop>button_gender</tabstop>
+  <tabstop>button_starred</tabstop>
+  <tabstop>button_manager</tabstop>
+  <tabstop>scrollArea</tabstop>
   <tabstop>button_add</tabstop>
   <tabstop>button_modify</tabstop>
   <tabstop>button_cancel</tabstop>

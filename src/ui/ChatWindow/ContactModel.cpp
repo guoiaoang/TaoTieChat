@@ -1,15 +1,11 @@
 #include "ContactModel.h"
 
 ContactModel::ContactModel(QObject *parent)
-    : ContactModel(nullptr, parent) {
+    : ContactModel(std::make_shared<ContactInfos>(), parent) {
 }
 
-ContactModel::ContactModel(Contacts contacts, QObject *parent)
-    : QAbstractListModel(parent), m_contacts(contacts) {
-    // 防止未初始化
-    if(m_contacts == nullptr) {
-        m_contacts = QSharedPointer<ContactsData>(new ContactsData);
-    }
+ContactModel::ContactModel(const std::shared_ptr<ContactInfos>&contact_infos, QObject *parent)
+    : QAbstractListModel(parent), m_contact_infos(contact_infos ? contact_infos : std::make_shared<ContactInfos>()) {
 }
 
 int ContactModel::rowCount(const QModelIndex &parent) const {
@@ -18,83 +14,89 @@ int ContactModel::rowCount(const QModelIndex &parent) const {
     if (parent.isValid()) {
         return 0;
     }
-    return m_contacts->size();
+    return m_contact_infos ? m_contact_infos->contactInfos().size() : 0;
 }
 
 QVariant ContactModel::data(const QModelIndex &index, int role) const {
-    // 先校验范围是否合法
-    if (!index.isValid() || index.row() < 0 || index.row() >= m_contacts->size()) {
+    if(!m_contact_infos) {
         return QVariant();
     }
-    // 获取行号与内容
-    auto row = index.row();  // 获取第几条数据
-    auto contact = Utils::get_contact(m_contacts, row);  // 获取数据内容
-    // Contact contact;
-    // if(m_contacts != nullptr || row >= 0 || row < m_contacts->size()) {
-    //     contact = m_contacts->at(row);
-    // }
-    // role 转换为指定类型
-    switch (role) {
-    case Qt::DisplayRole:
-        role = int(ContactData::Role::Nickname);
-        break;
-    // 联系人页面不启用对联系人信息的修改，需要在弹窗中修改
-    // case Qt::EditRole:
-    //     role = int(ContactData::Role::Message);
-    //     break;
+
+    const QList<ContactInfo> &contact_infos = m_contact_infos->contactInfos();
+    if(!index.isValid() || index.row() < 0 || index.row() >= contact_infos.size()) {
+        return QVariant();
     }
-    // 返回有效的内容
-    if(    role > int(ContactData::Role::Begin)
-        && role < int(ContactData::Role::End  )) {
-        return ContactManager(contact).value(ContactData::Role(role));
+
+    if(role == Qt::UserRole) {
+        return QVariant::fromValue(contact_infos.at(index.row()));
     }
+
     return QVariant();
 }
 
 void ContactModel::clean() {
     beginResetModel();
-    // m_contacts.clear();  // 清除的是智能指针，而不是指针指向的对象，会导致 `m_contacts == nullptr`
-    m_contacts->clear();
+    if(!m_contact_infos) {
+        m_contact_infos = std::make_shared<ContactInfos>();
+    }
+    m_contact_infos->setContactInfos(QList<ContactInfo>());
     endResetModel();
 }
 
-void ContactModel::add_contact(Contact contact) {
-    int row = m_contacts->size();
-    // 变更必须被包裹才会触发界面的更新
+void ContactModel::add_contact(const std::shared_ptr<ContactInfo>&contact_info) {
+    if(!contact_info) {
+        return;
+    }
+    if(!m_contact_infos) {
+        m_contact_infos = std::make_shared<ContactInfos>();
+    }
+
+    QList<ContactInfo> contact_infos = m_contact_infos->contactInfos();
+    if(contact_infos.contains(*contact_info)) {
+        return;
+    }
+    int row = contact_infos.size();
     beginInsertRows(QModelIndex(), row, row);
-    m_contacts->append(contact);
-    endInsertRows(); // 插入数据后通知 View 更新
+    contact_infos.push_back(*contact_info);
+    m_contact_infos->setContactInfos(std::move(contact_infos));
+    endInsertRows();
 }
 
-void ContactModel::remove_contact(Contact contact) {
-    if (m_contacts->isEmpty()) {
+void ContactModel::remove_contact(const std::shared_ptr<ContactInfo>&contact_info) {
+    if(!contact_info || !m_contact_infos) {
         return;
     }
 
-    QString account_id = ContactManager(contact).get_account_id();
-    int row = -1;
-    for(int i = 0; i < m_contacts->size(); ++i) {
-        if(ContactManager(m_contacts->at(i)).get_account_id() == account_id) {
-            row = i;
-            break;
+    QList<ContactInfo> contact_infos = m_contact_infos->contactInfos();
+    for(int i = 0; i < contact_infos.size(); ++i) {
+        if(contact_infos.at(i) == *contact_info) {
+            beginRemoveRows(QModelIndex(), i, i);
+            contact_infos.removeAt(i);
+            m_contact_infos->setContactInfos(std::move(contact_infos));
+            endRemoveRows();
+            return;
         }
     }
+}
 
-    if(row >= 0) {
-        // 变更必须被包裹才会触发界面的更新
-        beginRemoveRows(QModelIndex(), row, row);
-        m_contacts->removeAt(row);
-        endRemoveRows();
-    }
+void ContactModel::set_contacts(const std::shared_ptr<ContactInfos>&contact_infos) {
+    beginResetModel();
+    m_contact_infos = contact_infos ? contact_infos : std::make_shared<ContactInfos>();
+    endResetModel();
 }
 
 int ContactModel::contacts_size() const {
-    return m_contacts->size();
+    return m_contact_infos ? m_contact_infos->contactInfos().size() : 0;
 }
 
-Contact ContactModel::contact(const QModelIndex &index) const {
-    if (!index.isValid() || index.row() < 0 || index.row() >= m_contacts->size()) {
+std::shared_ptr<ContactInfo> ContactModel::get_contact(const QModelIndex &index) const {
+    if(!m_contact_infos) {
         return nullptr;
     }
-    return Utils::get_contact(m_contacts, index.row());
+
+    const QList<ContactInfo> &contact_infos = m_contact_infos->contactInfos();
+    if(!index.isValid() || index.row() < 0 || index.row() >= contact_infos.size()) {
+        return nullptr;
+    }
+    return std::make_shared<ContactInfo>(contact_infos.at(index.row()));
 }

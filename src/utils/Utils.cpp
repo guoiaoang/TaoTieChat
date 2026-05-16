@@ -1,5 +1,4 @@
 #include "Utils.h"
-#include "data.h"
 
 namespace Utils {
 
@@ -248,7 +247,7 @@ QIcon to_icon(const QString&text, const QPen&pen, const QSize size) {
 }
 
 // 用于头像
-QPixmap to_pixamp(const QString&text, const QSize size) {
+QPixmap to_pixmap(const QString&text, const QSize size) {
     QPixmap pixmap(size);
     pixmap.fill(Qt::transparent); // 设置透明背景
     QPainter painter(&pixmap); // 将画笔绑定到 pixmap
@@ -421,23 +420,144 @@ void set(TaoTieChat::Result&result, const ::TaoTieChat::ErrorCodeGadget::ErrorCo
 // ====================================================================== //
 
 // 查找指定 id 的好友
-Contact get_contact(Contacts contacts, QString contact_id) {
-    if(contacts) {
-        for(const auto &contact : *contacts) {
-            if(contact && ContactManager(contact).get_account_id() == contact_id) {
-                return contact;
+std::shared_ptr<ContactInfo> get_contact_info(const std::shared_ptr<ContactInfos>&contact_infos, const QString& contact_account_id) {
+    if(contact_infos) {
+        for(const auto &contact_info : contact_infos->contactInfos()) {
+            if(contact_info.baseInfo().accountId() == contact_account_id) {
+                return std::make_shared<ContactInfo>(contact_info);
             }
         }
     }
-    return Contact();
+    return std::make_shared<ContactInfo>();
 }
 
 // 从好友列表中获取第 index 个好友
-Contact get_contact(Contacts contacts, int index) {
-    if(contacts == nullptr || index < 0 || index >= contacts->size()) {
-        return Contact();
+std::shared_ptr<ContactInfo> get_contact_info(const std::shared_ptr<ContactInfos>&contact_infos, int index) {
+    if(contact_infos && index >= 0 && index < contact_infos->contactInfos().size()) {
+        return std::make_shared<ContactInfo>(contact_infos->contactInfos().at(index));
     }
-    return contacts->at(index);
+    return std::make_shared<ContactInfo>();
 }
 
+}
+
+namespace Utils::Transform {
+QString to_string(const QProtobufMessage * msg) {
+    if(msg == nullptr) {
+        qDebug() << "Utils::to_string: msg is nullptr";
+        return QString();
+    }
+
+    // 1. 实例化 JSON 序列化器
+    QProtobufJsonSerializer serializer;
+
+    // 2. 将消息序列化为 QByteArray
+    QByteArray jsonData = serializer.serialize(msg);
+
+    // 3. 使用 QString::fromUtf8 保证中文不乱码
+    return QString::fromUtf8(jsonData);
+}
+
+}
+
+// 重载 QDebug 运算符
+QDebug operator<<(QDebug debug, const Result &result) {
+    QDebugStateSaver saver(debug); // 保持输出格式一致性
+    if(result.hasSuccessCode()) {
+        debug.nospace() << "Result("
+                        << "success code:" << result.successCode() << ", "
+                        << "message:"      << result.message    ()
+                        << ")";
+    }
+    else if(result.hasErrorCode()) {
+        debug.nospace() << "Result("
+                        << "error code:" << result.errorCode() << ", "
+                        << "message:"    << result.message  ()
+                        << ")";
+    }
+    else {
+        debug.nospace() << "Result(...)";
+    }
+    return debug;
+}
+
+// register
+QDebug operator<<(QDebug debug, const SignUpRequest &req) {
+    QDebugStateSaver saver(debug); // 保持输出格式一致性
+    debug.nospace() << "SignUpRequest("
+                    << "userId:"           << req.userId()           << ", "
+                    << "password:"         << req.password()         << ", "
+                    << "confirm:"          << req.confirm()          << ", "
+                    << "securityQuestion:" << req.securityQuestion() << ", "
+                    << "securityAnswer:"   << req.securityAnswer()
+                    << ")";
+    return debug;
+}
+QDebug operator<<(QDebug debug, const SignUpReply &rep) {
+    QDebugStateSaver saver(debug); // 保持输出格式一致性
+    debug.nospace() << "SignUpReply("
+                    << "Request:"   << rep.request  () << ", "
+                    << "result:"    << rep.result   () << ", "
+                    << "accountId:" << rep.accountId()
+                    << ")";
+    return debug;
+}
+
+// login
+QDebug operator<<(QDebug debug, const SignInRequest &req) {
+    QDebugStateSaver saver(debug); // 保持输出格式一致性
+    const TaoTieChat::AuthRequest auth = req.hasRequestUserAuth()
+                                         ? req.requestUserAuth()
+                                         : TaoTieChat::AuthRequest();
+    debug.nospace() << "SignInRequest("
+                    << "userId:"   << (auth.hasUserId  () ? auth.userId  () : QString()) << ", "
+                    << "password:" << (auth.hasPassword() ? auth.password() : QString()) << ", "
+                    << "token:"    << (auth.hasToken   () ? auth.token   () : QString())
+                    << ")";
+    return debug;
+}
+QDebug operator<<(QDebug debug, const SignInReply &rep) {
+    QDebugStateSaver saver(debug); // 保持输出格式一致性
+    debug.nospace() << "SignInReply("
+                    << "Request:"   << rep.request  () << ", "
+                    << "result:"    << rep.result   () << ", "
+                    << "accountId:" << rep.accountId() << ", "
+                    << "token:"     << rep.token    ()
+                    << ")";
+    return debug;
+}
+
+// search users
+QDebug operator<<(QDebug debug, const ContactInfo& contact_info) {
+    QDebugStateSaver saver(debug); // 保持输出格式一致性
+    Utils::ContactInfoWrapper ciw(std::make_shared<ContactInfo>(contact_info));
+    debug.nospace() << "ContactInfo("
+                    << "userId:"   << ciw.user_id  << ", "
+                    << "nickname:" << ciw.nickname << ", "
+                    // << "avatar:"   << ciw.avatar   << ", "
+                    << "sign:"     << ciw.sign     << ", "
+                    << "gender:"   << ciw.gender   << ", "
+                    << "region:"   << ciw.region   << ", "
+                    << "birthday:" << ciw.birthday << ", "
+                    << "phones:"   << ciw.phones   << ", "
+                    << "emails:"   << ciw.emails   << ", "
+                    << "..."
+                    << ")";
+    return debug;
+}
+QDebug operator<<(QDebug debug, const SearchUserRequest& req) {
+    QDebugStateSaver saver(debug); // 保持输出格式一致性
+    debug.nospace() << "SearchUserRequest("
+                    << "userId:"     << req.userId()
+                    << ")";
+    return debug;
+}
+QDebug operator<<(QDebug debug, const SearchUserReply& rep) {
+    QDebugStateSaver saver(debug); // 保持输出格式一致性
+    debug.nospace() << "SearchUserReply("
+                    << "Request:"  << rep.request () << ", "
+                    << "result:"   << rep.result  () << ", "
+                    << "contacts.size:" << rep.contactInfo()
+                    << ")";
+    return debug;
 }

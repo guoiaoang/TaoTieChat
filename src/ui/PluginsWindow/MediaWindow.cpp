@@ -2,25 +2,25 @@
 #include "ui_MediaWindow.h"
 
 MediaWindow::MediaWindow(QWidget *parent)
-    : QMainWindow(parent), ui(new Ui::MediaWindow) {
-    ui->setupUi(this);
+    : QMainWindow(parent), m_ui(std::make_shared<Ui::MediaWindow>()) {
+    m_ui->setupUi(this);
 
     // new
-    m_toolbar            = new QToolBar;
-    m_menu_save          = new QMenu;
-    m_action_group       = new QActionGroup(this);
+    m_toolbar            = std::make_shared<QToolBar>();
+    m_menu_save          = std::make_shared<QMenu>();
+    m_action_group       = std::make_shared<QActionGroup>(this);
     // new action
-    m_action_open        = new QAction;  // 打开
-    m_action_save        = new QAction;  // 保存
-    m_action_save_as     = new QAction;  // 另存为
-    m_action_prev        = new QAction;  // 上一个
-    m_action_next        = new QAction;  // 下一个
-    m_action_fit         = new QAction;  // 适应窗口
-    m_action_zoom_in     = new QAction;  // 放大
-    m_action_zoom_out    = new QAction;  // 缩小
-    m_action_normal_size = new QAction;  // 原始大小
-    m_action_full_screen = new QAction;  // 全屏显示
-    m_action_pin         = new QAction;  // 窗口置顶
+    m_action_open        = std::make_shared<QAction>();  // 打开
+    m_action_save        = std::make_shared<QAction>();  // 保存
+    m_action_save_as     = std::make_shared<QAction>();  // 另存为
+    m_action_prev        = std::make_shared<QAction>();  // 上一个
+    m_action_next        = std::make_shared<QAction>();  // 下一个
+    m_action_fit         = std::make_shared<QAction>();  // 适应窗口
+    m_action_zoom_in     = std::make_shared<QAction>();  // 放大
+    m_action_zoom_out    = std::make_shared<QAction>();  // 缩小
+    m_action_normal_size = std::make_shared<QAction>();  // 原始大小
+    m_action_full_screen = std::make_shared<QAction>();  // 全屏显示
+    m_action_pin         = std::make_shared<QAction>();  // 窗口置顶
 
     // // icon
     m_action_open        ->setIcon(QIcon::fromTheme(QIcon::ThemeIcon::DocumentOpen  ));
@@ -58,19 +58,19 @@ MediaWindow::MediaWindow(QWidget *parent)
     static QIcon icon_nf_md_restore                   = Utils::to_icon("󰦛", icon_color);
 
     // icon
-    m_action_open        ->setIcon(icon_nf_md_folder_open_outline);
-    m_action_save        ->setIcon(icon_nf_md_content_save_outline);
+    m_action_open        ->setIcon(icon_nf_md_folder_open_outline      );
+    m_action_save        ->setIcon(icon_nf_md_content_save_outline     );
     m_action_save_as     ->setIcon(icon_nf_md_content_save_edit_outline);
-    m_action_prev        ->setIcon(icon_nf_fa_arrow_left);
-    m_action_next        ->setIcon(icon_nf_fa_arrow_right);
-    m_action_fit         ->setIcon(icon_nf_md_fit_to_screen_outline);
-    m_action_zoom_in     ->setIcon(icon_nf_oct_zoom_in);
-    m_action_zoom_out    ->setIcon(icon_nf_oct_zoom_out);
-    m_action_normal_size ->setIcon(icon_nf_md_restore);
-    m_action_full_screen ->setIcon(icon_nf_md_fullscreen);
-    m_action_pin         ->setIcon(icon_nf_md_pin_outline);
+    m_action_prev        ->setIcon(icon_nf_fa_arrow_left               );
+    m_action_next        ->setIcon(icon_nf_fa_arrow_right              );
+    m_action_fit         ->setIcon(icon_nf_md_fit_to_screen_outline    );
+    m_action_zoom_in     ->setIcon(icon_nf_oct_zoom_in                 );
+    m_action_zoom_out    ->setIcon(icon_nf_oct_zoom_out                );
+    m_action_normal_size ->setIcon(icon_nf_md_restore                  );
+    m_action_full_screen ->setIcon(icon_nf_md_fullscreen               );
+    m_action_pin         ->setIcon(icon_nf_md_pin_outline              );
 
-    connect(m_action_full_screen, &QAction::triggered, this, [this]() {
+    connect(m_action_full_screen.get(), &QAction::triggered, this, [this]() {
         // 用于恢复之前的窗口大小状态
         static auto window_state_old = this->windowState();
         if(m_action_full_screen->isChecked()) {
@@ -99,7 +99,7 @@ MediaWindow::MediaWindow(QWidget *parent)
             m_action_full_screen ->setIcon(icon_nf_md_fullscreen);
         }
     });
-    connect(m_action_pin, &QAction::triggered, this, [this]() {
+    connect(m_action_pin.get(), &QAction::triggered, this, [this]() {
         if(m_action_pin->isChecked()) {
             this->setWindowFlags(windowFlags() | Qt::WindowStaysOnTopHint);
             // m_action_pin ->setIcon(QIcon::fromTheme(QIcon::ThemeIcon::GoDown));
@@ -111,12 +111,12 @@ MediaWindow::MediaWindow(QWidget *parent)
         }
         show(); // 必须调用 show() 重新刷新窗口状态
     });
-    connect(m_action_fit        , &QAction::triggered, this, [this](){ m_fit_to_window = true ; update_media(); });
-    connect(m_action_normal_size, &QAction::triggered, this, [this](){ m_fit_to_window = false; update_media(); });
+    connect(m_action_fit.get()        , &QAction::triggered, this, [this](){ m_fit_to_window = true ; update_media(); });
+    connect(m_action_normal_size.get(), &QAction::triggered, this, [this](){ m_fit_to_window = false; update_media(); });
 
-    connect(m_action_open   , &QAction::triggered, this, &MediaWindow::on_media_open   );
-    connect(m_action_save   , &QAction::triggered, this, &MediaWindow::on_media_save   );
-    connect(m_action_save_as, &QAction::triggered, this, &MediaWindow::on_media_save_as);
+    connect(m_action_open.get()   , &QAction::triggered, this, &MediaWindow::on_media_open   );
+    connect(m_action_save.get()   , &QAction::triggered, this, &MediaWindow::on_media_save   );
+    connect(m_action_save_as.get(), &QAction::triggered, this, &MediaWindow::on_media_save_as);
 
     // text
     m_action_open        ->setText(tr("Open"         ));
@@ -167,66 +167,65 @@ MediaWindow::MediaWindow(QWidget *parent)
     m_action_fit->setChecked(true);
 
     // add to group
-    m_action_group->addAction(m_action_fit        );
-    m_action_group->addAction(m_action_zoom_in    );
-    m_action_group->addAction(m_action_zoom_out   );
-    m_action_group->addAction(m_action_normal_size);
+    m_action_group->addAction(m_action_fit        .get());
+    m_action_group->addAction(m_action_zoom_in    .get());
+    m_action_group->addAction(m_action_zoom_out   .get());
+    m_action_group->addAction(m_action_normal_size.get());
 
     // action saveas  // 另存为按钮作为扩展按钮 - 保存按钮的菜单
-    m_menu_save->addAction(m_action_save_as);
-    m_action_save->setMenu(m_menu_save);
+    m_menu_save->addAction(m_action_save_as.get());
+    m_action_save->setMenu(m_menu_save.get());
     // m_menu_save->setStyle();
     m_action_open       ->setMenuRole(QAction::ApplicationSpecificRole);
     m_action_full_screen->setMenuRole(QAction::TextHeuristicRole);
 
     // add to toolbar
-    m_toolbar->addAction (m_action_open            );
-    // m_toolbar->addAction (m_action_save            ); m_toolbar->addSeparator();
-    m_toolbar->addAction (m_action_save_as         ); m_toolbar->addSeparator(); // 不添加保存按钮，只添加另存为按钮
-    m_toolbar->addAction (m_action_prev            );
-    m_toolbar->addAction (m_action_next            ); m_toolbar->addSeparator();
+    m_toolbar->addAction (m_action_open.get()            );
+    // m_toolbar->addAction (m_action_save.get()            ); m_toolbar->addSeparator();
+    m_toolbar->addAction (m_action_save_as.get()         ); m_toolbar->addSeparator(); // 不添加保存按钮，只添加另存为按钮
+    m_toolbar->addAction (m_action_prev.get()            );
+    m_toolbar->addAction (m_action_next.get()            ); m_toolbar->addSeparator();
     m_toolbar->addActions(m_action_group->actions()); m_toolbar->addSeparator();
-    m_toolbar->addAction (m_action_full_screen     );
-    m_toolbar->addAction (m_action_pin             );
+    m_toolbar->addAction (m_action_full_screen.get()     );
+    m_toolbar->addAction (m_action_pin.get()             );
     // toolbar options
     m_toolbar->setWindowTitle(tr("Toolbar"));
     m_toolbar->setMovable(false);
     m_toolbar->setIconSize(QSize(32, 32)); // 这里设置显示的图标大小
     m_toolbar->setContextMenuPolicy(Qt::PreventContextMenu);  // 不显示右键菜单
     // add toolbar to window
-    this->addToolBar(m_toolbar);
+    this->addToolBar(m_toolbar.get());
 
-    connect(this, &MediaWindow::media_changed, ui->label, &QLabel::setPixmap);
-    ui->label->setAlignment(Qt::AlignCenter);
+    connect(this, &MediaWindow::media_changed, m_ui->label, &QLabel::setPixmap);
+    m_ui->label->setAlignment(Qt::AlignCenter);
     // 设置 label 的尺寸策略，使其能够收缩以避免出现滚动条
-    ui->label->setSizePolicy(QSizePolicy::Ignored, QSizePolicy::Ignored);
+    m_ui->label->setSizePolicy(QSizePolicy::Ignored, QSizePolicy::Ignored);
     // 不自动缩放内容
-    ui->label->setScaledContents(false);
-    // ui->label->installEventFilter(this);
-    // ui->layout_central->installEventFilter(this);
-    ui->scrollArea->viewport()->installEventFilter(this);
-    // ui->scrollArea->setWidgetResizable(true);
+    m_ui->label->setScaledContents(false);
+    // m_ui->label->installEventFilter(this);
+    // m_ui->layout_central->installEventFilter(this);
+    m_ui->scrollArea->viewport()->installEventFilter(this);
+    // m_ui->scrollArea->setWidgetResizable(true);
 
     // 窗口最大化、还原时触发图片自动拉伸
     this->installEventFilter(this);
 }
 
 MediaWindow::~MediaWindow() {
-    if (ui                   != nullptr) { delete ui                  ; ui                   = nullptr; }
-    if (m_toolbar            != nullptr) { delete m_toolbar           ; m_toolbar            = nullptr; }
-    if (m_menu_save          != nullptr) { delete m_menu_save         ; m_menu_save          = nullptr; }
-    if (m_action_group       != nullptr) { delete m_action_group      ; m_action_group       = nullptr; }
-
-    if (m_action_open        != nullptr) { delete m_action_open       ; m_action_open        = nullptr; }
-    if (m_action_save        != nullptr) { delete m_action_save       ; m_action_save        = nullptr; }
-    if (m_action_save_as     != nullptr) { delete m_action_save_as    ; m_action_save_as     = nullptr; }
-    if (m_action_prev        != nullptr) { delete m_action_prev       ; m_action_prev        = nullptr; }
-    if (m_action_next        != nullptr) { delete m_action_next       ; m_action_next        = nullptr; }
-    if (m_action_fit         != nullptr) { delete m_action_fit        ; m_action_fit         = nullptr; }
-    if (m_action_zoom_in     != nullptr) { delete m_action_zoom_in    ; m_action_zoom_in     = nullptr; }
-    if (m_action_zoom_out    != nullptr) { delete m_action_zoom_out   ; m_action_zoom_out    = nullptr; }
-    if (m_action_normal_size != nullptr) { delete m_action_normal_size; m_action_normal_size = nullptr; }
-    if (m_action_pin         != nullptr) { delete m_action_pin        ; m_action_pin         = nullptr; }
+    if (m_toolbar           ) { m_toolbar           .reset(); }
+    if (m_menu_save         ) { m_menu_save         .reset(); }
+    if (m_action_group      ) { m_action_group      .reset(); }
+    if (m_action_open       ) { m_action_open       .reset(); }
+    if (m_action_save       ) { m_action_save       .reset(); }
+    if (m_action_save_as    ) { m_action_save_as    .reset(); }
+    if (m_action_prev       ) { m_action_prev       .reset(); }
+    if (m_action_next       ) { m_action_next       .reset(); }
+    if (m_action_fit        ) { m_action_fit        .reset(); }
+    if (m_action_zoom_in    ) { m_action_zoom_in    .reset(); }
+    if (m_action_zoom_out   ) { m_action_zoom_out   .reset(); }
+    if (m_action_normal_size) { m_action_normal_size.reset(); }
+    if (m_action_pin        ) { m_action_pin        .reset(); }
+    if (m_ui                ) { m_ui                .reset(); }
 }
 
 void MediaWindow::clean() {
@@ -268,20 +267,20 @@ bool MediaWindow::update_media() {
         // 更新缩放图片：使其适应 Label 大小，并保持纵横比
         // Qt::KeepAspectRatio 保证图片不变形
         // Qt::SmoothTransformation 保证缩放后的图片清晰（消除锯齿）
-        QPixmap pixmap_scaled = m_media_pixmap.scaled(ui->label->size(), Qt::KeepAspectRatio, Qt::SmoothTransformation);
-        ui->label->setPixmap(pixmap_scaled);
+        QPixmap pixmap_scaled = m_media_pixmap.scaled(m_ui->label->size(), Qt::KeepAspectRatio, Qt::SmoothTransformation);
+        m_ui->label->setPixmap(pixmap_scaled);
     }
     else {
         // 检测精度
         const double ff = 0.001;
         if(m_scale_factory > 1.0 - ff && m_scale_factory < 1.0 + ff) {
             // 如果缩放倍数为 1 附近的值，那么直接显示原图，避免不必要的缩放计算和可能的模糊
-            ui->label->setPixmap(m_media_pixmap);
+            m_ui->label->setPixmap(m_media_pixmap);
         }
         else {
             // 缩放倍数不为 1 时需要进行处理
             QPixmap pixmap_scaled = m_media_pixmap.scaled(m_media_pixmap.size() * m_scale_factory, Qt::KeepAspectRatio, Qt::SmoothTransformation);
-            ui->label->setPixmap(pixmap_scaled);
+            m_ui->label->setPixmap(pixmap_scaled);
         }
     }
     return true;
@@ -299,7 +298,7 @@ bool MediaWindow::update_media() {
 }
 
 bool MediaWindow::update_title() {
-    QPixmap label_pixmap = ui->label->pixmap();
+    QPixmap label_pixmap = m_ui->label->pixmap();
     if(!m_media_name.isEmpty()) {
         this->setWindowTitle(label_pixmap.isNull() ? tr("%1 : Load failed!").arg(m_media_name) : m_media_name);
     }
@@ -314,10 +313,10 @@ bool MediaWindow::update_title() {
 
 bool MediaWindow::eventFilter(QObject *watched, QEvent *event) {
     if(event->type() == QEvent::Resize) {
-        if(watched == ui->label) {
+        if(watched == m_ui->label) {
             update_media();
         }
-        else if(watched == ui->scrollArea->viewport()) {
+        else if(watched == m_ui->scrollArea->viewport()) {
             update_media();
         }
     }

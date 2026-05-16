@@ -6,105 +6,65 @@
     "version-string": "0.1.0",
     "dependencies": [
         "benchmark",
+        "boost-dll",
+        "boost-program-options",
         "boost-uuid",
         "fmt",
         "gflags",
+        "hash-library",
         "jsoncpp",
         "pkgconf",
         "pulzed-mini",
         "rapidjson",
-        "spdlog",
         "tinyxml2",
         "tomlplusplus",
         "yaml-cpp",
         { "name": "abseil"       , "features": ["cxx17"] },
+        { "name": "bitserializer", "features": [ "cpprestjson-archive", "csv-archive", "msgpack-archive", "pugixml-archive", "rapidjson-archive", "rapidyaml-archive" ] },
+        { "name": "glog"         , "platform": "linux"  , "features": [ "customprefix", "unwind" ] },
+        { "name": "glog"         , "platform": "windows", "features": [ "customprefix" ] },
         { "name": "grpc"         , "features": ["codegen"] },
         { "name": "gtest"        , "features": ["cxx17"] },
         { "name": "nlohmann-json", "features": ["diagnostics"] },
         { "name": "protobuf"     , "features": ["zlib"] },
+        { "name": "reflectcpp"   , "features": [ "bson", "capnproto", "cbor", "flexbuffers", "msgpack", "toml", "ubjson", "xml", "yaml" ] },
         { "name": "spdlog"       , "features": ["benchmark", "wchar"] },
+        { "name": "sqlcipher"    , "platform": "windows & !uwp & !static", "features": [ "fts5", "geopoly", "json1", "tool" ] },
         { "name": "sqlitecpp"    , "features": ["sqlcipher", "sqlite"] },
-        { "name": "stduuid"      , "features": ["gsl-span" , "system-gen"] },
-        {
-            "name": "glog",
-            "platform": "windows",
-            "features": [
-                "customprefix"
-            ]
-        },
-        {
-            "name": "glog",
-            "platform": "linux",
-            "features": [
-                "customprefix",
-                "unwind"
-            ]
-        },
-        {
-            "name": "sqlcipher",
-            "platform": "windows & !uwp & !static",
-            "features": [
-                "fts5",
-                "geopoly",
-                "json1",
-                "tool"
-            ]
-        },
-        {
-            "name": "reflectcpp",
-            "features": [
-                "bson",
-                "capnproto",
-                "cbor",
-                "flexbuffers",
-                "msgpack",
-                "toml",
-                "ubjson",
-                "xml",
-                "yaml"
-            ]
-        },
-        {
-            "name": "bitserializer",
-            "features": [
-                "cpprestjson-archive",
-                "csv-archive",
-                "msgpack-archive",
-                "pugixml-archive",
-                "rapidjson-archive",
-                "rapidyaml-archive"
-            ]
-        }
+        { "name": "stduuid"      , "features": ["gsl-span" , "system-gen"] }
     ],
     "features": {
         "vcpkg-qt": {
             "description": "Use Qt libraries from vcpkg",
             "dependencies": [
-                { "name": "abseil"       , "version>=": "20250127.0"},
-                { "name": "benchmark"    , "version>=": "1.9.2"     },
-                { "name": "bitserializer", "version>=": "0.75"      },
-                { "name": "boost-uuid"   , "version>=": "1.87.0"    },
-                { "name": "fmt"          , "version>=": "11.0.2"    },
-                { "name": "gflags"       , "version>=": "2.2.2"     },
-                { "name": "glog"         , "version>=": "0.7.1"     },
-                { "name": "grpc"         , "version>=": "1.71.0"    },
-                { "name": "gtest"        , "version>=": "1.16.0"    },
-                { "name": "jsoncpp"      , "version>=": "1.9.6"     },
-                { "name": "nlohmann-json", "version>=": "3.11.3"    },
-                { "name": "pkgconf"      , "version>=": "2.4.3"     },
-                { "name": "protobuf"     , "version>=": "5.29.3"    },
-                { "name": "pulzed-mini"  , "version>=": "0.9.18"    },
-                { "name": "qtdeclarative", "version>=": "6.8.3"     },
-                { "name": "qtgrpc"       , "version>=": "6.8.3"     },
-                { "name": "rapidjson"    , "version>=": "2025-02-26"},
-                { "name": "reflectcpp"   , "version>=": "0.18.0"    },
-                { "name": "spdlog"       , "version>=": "1.15.2"    },
-                { "name": "sqlitecpp"    , "version>=": "3.3.2"     },
-                { "name": "stduuid"      , "version>=": "1.2.3"     },
-                { "name": "tinyxml2"     , "version>=": "11.0.0"    },
-                { "name": "tomlplusplus" , "version>=": "3.4.0"     },
-                { "name": "yaml-cpp"     , "version>=": "0.8.0"     },
-                { "name": "sqlcipher"    , "version>=": "4.6.1", "platform": "windows & !uwp & !static" }
+                { "name": "abseil"               , "version>=": "20250127.0"},
+                { "name": "benchmark"            , "version>=": "1.9.2"     },
+                { "name": "bitserializer"        , "version>=": "0.75"      },
+                { "name": "boost-dll"            , "version>=": "1.87.0"    },
+                { "name": "boost-program-options", "version>=": "1.87.0"    },
+                { "name": "boost-uuid"           , "version>=": "1.87.0"    },
+                { "name": "fmt"                  , "version>=": "11.0.2"    },
+                { "name": "gflags"               , "version>=": "2.2.2"     },
+                { "name": "glog"                 , "version>=": "0.7.1"     },
+                { "name": "grpc"                 , "version>=": "1.71.0"    },
+                { "name": "gtest"                , "version>=": "1.16.0"    },
+                { "name": "hash-library"         , "version>=": "8"         },
+                { "name": "jsoncpp"              , "version>=": "1.9.6"     },
+                { "name": "nlohmann-json"        , "version>=": "3.11.3"    },
+                { "name": "pkgconf"              , "version>=": "2.4.3"     },
+                { "name": "protobuf"             , "version>=": "5.29.3"    },
+                { "name": "pulzed-mini"          , "version>=": "0.9.18"    },
+                { "name": "qtdeclarative"        , "version>=": "6.8.3"     },
+                { "name": "qtgrpc"               , "version>=": "6.8.3"     },
+                { "name": "rapidjson"            , "version>=": "2025-02-26"},
+                { "name": "reflectcpp"           , "version>=": "0.18.0"    },
+                { "name": "spdlog"               , "version>=": "1.15.2"    },
+                { "name": "sqlcipher"            , "version>=": "4.6.1", "platform": "windows & !uwp & !static" },
+                { "name": "sqlitecpp"            , "version>=": "3.3.2"     },
+                { "name": "stduuid"              , "version>=": "1.2.3"     },
+                { "name": "tinyxml2"             , "version>=": "11.0.0"    },
+                { "name": "tomlplusplus"         , "version>=": "3.4.0"     },
+                { "name": "yaml-cpp"             , "version>=": "0.8.0"     }
             ]
         }
     }

@@ -42,7 +42,7 @@ SearchWindow::SearchWindow(QWidget *parent)
     // 响应双击事件
     connect(m_ui->page_list_users, &QListView::doubleClicked, this, [this](const QModelIndex &index) {
         const std::shared_ptr<ContactInfo>&contact_info = index.data(Qt::UserRole).value<std::shared_ptr<ContactInfo>>();
-        this->m_user_window->update(contact_info);
+        this->m_user_window->show_contact(contact_info);
         Utils::widget_raise(this->m_user_window.get());
     });
 
@@ -83,22 +83,18 @@ bool SearchWindow::search_user(const QString&keyword) {
     search_user_params params_search_user = std::make_shared<TaoTieChat::SearchUserRequest>();
     params_search_user->setUserId(str_search_keyword);
     auto network_search_user_callback = [this](const search_user_params&param_search_user, const search_user_reply&reply_search_user) {
-        using ec = TaoTieChat::ErrorCodeGadget::ErrorCode;
-        using TaoTieChat::Result;
-
-        //
-        ec      error_code    = ec::UNSET;
-        QString error_message = tr("network_search_user recv failed.");
-        Result  result;
+        ErrorCode error_code    = ErrorCode::ERROR_UNSET;
+        QString   error_message = tr("network_search_user recv failed.");
+        Result    result;
 
         // 检验错误
         do{
             if(!reply_search_user) {
-                error_code = ec::ERROR_RECV;
+                error_code = ErrorCode::ERROR_RECV;
                 break;
             }
             if(!reply_search_user->hasResult()) {
-                error_code = ec::ERROR_RECV;
+                error_code = ErrorCode::ERROR_RECV;
                 break;
             }
             result = reply_search_user->result();
@@ -108,7 +104,7 @@ bool SearchWindow::search_user(const QString&keyword) {
             }
         } while(false);
         // 处理错误
-        if(error_code != ec::UNSET) {
+        if(error_code != ErrorCode::ERROR_UNSET) {
             qDebug().noquote().nospace() << "network search users error, code : " << error_code << ", message : " << error_message;
             return;
         }

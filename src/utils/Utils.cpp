@@ -1,4 +1,5 @@
 #include "Utils.h"
+#include "Accounts.h"
 
 namespace Utils {
 
@@ -41,6 +42,31 @@ QString users_data_path() {
     return app_data_path() + "/users";
 }
 
+QString user_home_path(QString user_id) {
+    if(user_id.isEmpty()) {
+        std::shared_ptr<ContactInfo> contact_info = Accounts::instance().get_current_account();
+        if(contact_info && !contact_info->baseInfo().accountId().isEmpty()) {
+            user_id = contact_info->baseInfo().accountId();
+        }
+        if(user_id.isEmpty()) {
+            user_id = "tmp";
+        }
+    }
+    return users_data_path() + "/" + user_id;
+}
+
+QString user_storage_path(QString user_id) {
+    return user_home_path(user_id) + "/storage";
+}
+
+QString user_download_path(QString user_id) {
+    return user_home_path(user_id) + "/download";
+}
+
+QString user_cache_path(QString user_id) {
+    return user_home_path(user_id) + "/cache";
+}
+
 QString get_dir(const QString& path) {
     // 获取路径中的目录部分
     QFileInfo file_info(path);
@@ -79,6 +105,20 @@ bool remove_dirs(QString full_path) {
     return dir.removeRecursively(); // 删除目录
 }
 
+bool rename(QString src, QString dst) {
+    // 源路径与目标路径都不能为空，源路径不能不存在，但目标路径不能存在
+    QFileInfo srcInfo(src);
+    QFileInfo dstInfo(dst);
+    if (src.isEmpty() || dst.isEmpty() || !srcInfo.exists() || dstInfo.exists()) {
+        return false;
+    }
+
+    // 确保目标文件的父目录存在，如果不存在则自动级联创建
+    QDir().mkpath(dstInfo.absolutePath());
+
+    // 无论是文件还是目录，QFile::rename 都能一行搞定，它在底层调用操作系统的重命名 API，效率极高
+    return QFile::rename(src, dst);
+}
 
 void init_debug_output_format() {
     constexpr const char* QT_MESSAGE_PATTERN =
@@ -361,7 +401,7 @@ void widget_raise(QWidget*widget) {
 // 获取错误信息
 QString to_string(ErrorCode code) {
     static const QMap<ErrorCode, QString> map_codes = {
-        {ErrorCode::UNSET                      , "Unset Error Code"                },
+        {ErrorCode::ERROR_UNSET                , "Unset Error Code"                },
         {ErrorCode::UNKNOWN                    , "Unknown Error Code"              },
         {ErrorCode::DEFAULT                    , "Default Error"                   },
         {ErrorCode::ERROR_INIT                 , "Error on Init"                   },
@@ -444,7 +484,7 @@ std::shared_ptr<ContactInfo> get_contact_info(const std::shared_ptr<ContactInfos
 namespace Utils::Transform {
 QString to_string(const QProtobufMessage * msg) {
     if(msg == nullptr) {
-        qDebug() << "Utils::to_string: msg is nullptr";
+        qDebug() << "[nullptr]";
         return QString();
     }
 
@@ -460,23 +500,75 @@ QString to_string(const QProtobufMessage * msg) {
 
 }
 
+// 算法相关的工具函数
+namespace Utils::Algorithm {
+// 计算字符串的 MD5 哈希值
+QString md5(const QString& input) {
+    QCryptographicHash hash(QCryptographicHash::Md5);
+    hash.addData(input.toUtf8());
+    return hash.result().toHex();
+}
+
+// 计算文件的 MD5 哈希值，适用于大文件，分块读取
+// 使用示例：
+// QString md5Str = calculate_file_md5("C:/example/large_file.zip");
+// qDebug() << "MD5:" << md5Str;
+QString calculate_file_md5(const QString &filePath) {
+    QFile file(filePath);
+    if (!file.open(QIODevice::ReadOnly)) {
+        return QString();
+    }
+
+    // 防御性编程：确保从文件开头开始计算（可选，但更安全）
+    file.seek(0);
+
+    // 初始化 Hash 对象，指定为 MD5 算法
+    QCryptographicHash hash(QCryptographicHash::Md5);
+    if(!hash.addData(&file)) {
+        // 添加数据失败，可能是文件读取错误
+        return QString();
+    }
+
+    file.close();
+
+    // result() 返回二进制的 Hash 值，toHex() 将其转换为我们常见的 32 位 16 进制字符串
+    return hash.result().toHex();
+}
+
+} // namespace Utils::Algorithm
+
+
 // 重载 QDebug 运算符
+QDebug operator<<(QDebug debug, const AuthRequest &request) {
+    QDebugStateSaver saver(debug); // 保持输出格式一致性
+    debug.nospace() << "AuthRequest{"
+        << "oneof auth_id {"
+        << "accountId:" << (request.hasAccountId() ? request.accountId() : QString()) << ", "
+        << "userId:"    << (request.hasUserId()    ? request.userId()    : QString()) << ", "
+        << "},"
+        << "oneof auth_id {"
+        << "password:"  << (request.hasPassword()  ? request.password()  : QString()) << ", "
+        << "token:"     << (request.hasToken()     ? request.token()     : QString())
+        << "} "
+        << "}";
+    return debug;
+}
 QDebug operator<<(QDebug debug, const Result &result) {
     QDebugStateSaver saver(debug); // 保持输出格式一致性
     if(result.hasSuccessCode()) {
-        debug.nospace() << "Result("
+        debug.nospace() << "Result{"
                         << "success code:" << result.successCode() << ", "
                         << "message:"      << result.message    ()
-                        << ")";
+                        << "}";
     }
     else if(result.hasErrorCode()) {
-        debug.nospace() << "Result("
+        debug.nospace() << "Result{"
                         << "error code:" << result.errorCode() << ", "
                         << "message:"    << result.message  ()
-                        << ")";
+                        << "}";
     }
     else {
-        debug.nospace() << "Result(...)";
+        debug.nospace() << "Result{...}";
     }
     return debug;
 }
@@ -484,22 +576,22 @@ QDebug operator<<(QDebug debug, const Result &result) {
 // register
 QDebug operator<<(QDebug debug, const SignUpRequest &req) {
     QDebugStateSaver saver(debug); // 保持输出格式一致性
-    debug.nospace() << "SignUpRequest("
+    debug.nospace() << "SignUpRequest{"
                     << "userId:"           << req.userId()           << ", "
                     << "password:"         << req.password()         << ", "
                     << "confirm:"          << req.confirm()          << ", "
                     << "securityQuestion:" << req.securityQuestion() << ", "
                     << "securityAnswer:"   << req.securityAnswer()
-                    << ")";
+                    << "}";
     return debug;
 }
 QDebug operator<<(QDebug debug, const SignUpReply &rep) {
     QDebugStateSaver saver(debug); // 保持输出格式一致性
-    debug.nospace() << "SignUpReply("
+    debug.nospace() << "SignUpReply{"
                     << "Request:"   << rep.request  () << ", "
                     << "result:"    << rep.result   () << ", "
                     << "accountId:" << rep.accountId()
-                    << ")";
+                    << "}";
     return debug;
 }
 
@@ -509,42 +601,84 @@ QDebug operator<<(QDebug debug, const SignInRequest &req) {
     const TaoTieChat::AuthRequest auth = req.hasRequestUserAuth()
                                          ? req.requestUserAuth()
                                          : TaoTieChat::AuthRequest();
-    debug.nospace() << "SignInRequest("
+    debug.nospace() << "SignInRequest{"
                     << "userId:"   << (auth.hasUserId  () ? auth.userId  () : QString()) << ", "
                     << "password:" << (auth.hasPassword() ? auth.password() : QString()) << ", "
                     << "token:"    << (auth.hasToken   () ? auth.token   () : QString())
-                    << ")";
+                    << "}";
     return debug;
 }
 QDebug operator<<(QDebug debug, const SignInReply &rep) {
     QDebugStateSaver saver(debug); // 保持输出格式一致性
-    debug.nospace() << "SignInReply("
+    debug.nospace() << "SignInReply{"
                     << "Request:"   << rep.request  () << ", "
                     << "result:"    << rep.result   () << ", "
                     << "accountId:" << rep.accountId() << ", "
                     << "token:"     << rep.token    ()
-                    << ")";
+                    << "}";
+    return debug;
+}
+
+// contact info
+QDebug operator<<(QDebug debug, const ContactInfo& contact_info) {
+    QDebugStateSaver saver(debug); // 保持输出格式一致性
+    debug.nospace() << "ContactInfo{"
+    << "base_info:"   << contact_info.baseInfo  () << ", "
+    << "oneof extra_info{"
+    << "self_info:"   << (contact_info.hasSelfInfo  () ? contact_info.selfInfo  () : ContactInfoSelf  ()) << "{}, "
+    << "friend_info:" << (contact_info.hasFriendInfo() ? contact_info.friendInfo() : ContactInfoFriend()) << "{}"
+    << "}";
+    return debug;
+}
+QDebug operator<<(QDebug debug, const ContactInfoBase& contact_info_base) {
+    QDebugStateSaver saver(debug); // 保持输出格式一致性
+    debug.nospace() << "ContactInfoBase{"
+                    << "account_id:"   << contact_info_base.accountId  () << ", "
+                    << "user_id:"      << contact_info_base.userId     () << ", "
+                    << "avatar_id:"    << contact_info_base.avatarId   () << ", "
+                    << "nickname:"     << contact_info_base.nickname   () << ", "
+                    << "gender:"       << contact_info_base.gender     () << ", "
+                    << "birthday:"     << contact_info_base.birthday   () << ", "
+                    << "signature:"    << contact_info_base.sign       () << ", "
+                    << "region:"       << contact_info_base.region     () << ", "
+                    << "description:"  << contact_info_base.desc       () << ", "
+                    << "phones:"       << contact_info_base.phones     () << ", "
+                    << "emails:"       << contact_info_base.emails     () << ", "
+                    << "social_links:" << contact_info_base.socialLinks() << ", "
+                    << "moments_id:"   << contact_info_base.momentsId  () << ", "
+                    << "groups_id:"    << contact_info_base.groupsId   ()
+                    << "}";
+    return debug;
+}
+QDebug operator<<(QDebug debug, const ContactInfoSelf& contact_info_self) {
+    QDebugStateSaver saver(debug); // 保持输出格式一致性
+    debug.nospace() << "ContactInfoSelf{"
+                    << "modify_self_info :" << contact_info_self.modifySelfInfo  () << ","
+                    << "user_id:"           << contact_info_self.userId          () << ","
+                    << "password:"          << contact_info_self.password        () << ","
+                    << "token:"             << contact_info_self.token           () << ","
+                    << "security_question:" << contact_info_self.securityQuestion() << ","
+                    << "security_answer:"   << contact_info_self.securityAnswer  ()
+                    << "}";
+    return debug;
+}
+QDebug operator<<(QDebug debug, const ContactInfoFriend& contact_info_friend) {
+    QDebugStateSaver saver(debug); // 保持输出格式一致性
+    debug.nospace() << "ContactInfoFriend{"
+                    << "account_id:"   << contact_info_friend.accountId  () << ", "
+                    << "user_id:"      << contact_info_friend.userId     () << ", "
+                    << "status:"       << contact_info_friend.status     () << ", "
+                    << "starred:"      << contact_info_friend.starred    () << ", "
+                    << "silent:"       << contact_info_friend.silent     () << ", "
+                    << "notes:"        << contact_info_friend.notes      () << ", "
+                    << "added_source:" << contact_info_friend.addedSource() << ", "
+                    << "added_time:"   << contact_info_friend.addedTime  () << ", "
+                    << "tags:"         << contact_info_friend.tags       ()
+                    << "}";
     return debug;
 }
 
 // search users
-QDebug operator<<(QDebug debug, const ContactInfo& contact_info) {
-    QDebugStateSaver saver(debug); // 保持输出格式一致性
-    Utils::ContactInfoWrapper ciw(std::make_shared<ContactInfo>(contact_info));
-    debug.nospace() << "ContactInfo("
-                    << "userId:"   << ciw.user_id  << ", "
-                    << "nickname:" << ciw.nickname << ", "
-                    // << "avatar:"   << ciw.avatar   << ", "
-                    << "sign:"     << ciw.sign     << ", "
-                    << "gender:"   << ciw.gender   << ", "
-                    << "region:"   << ciw.region   << ", "
-                    << "birthday:" << ciw.birthday << ", "
-                    << "phones:"   << ciw.phones   << ", "
-                    << "emails:"   << ciw.emails   << ", "
-                    << "..."
-                    << ")";
-    return debug;
-}
 QDebug operator<<(QDebug debug, const SearchUserRequest& req) {
     QDebugStateSaver saver(debug); // 保持输出格式一致性
     debug.nospace() << "SearchUserRequest("

@@ -3,6 +3,25 @@
 #include "Headers.h"
 #include "Utils.h"
 
+struct NetworkFileIONotify{
+    using Status = FileStatusCode;
+    bool    ok      = false    ;  // 是否上传成功
+    int64_t code    = -1       ;  // 成功或失败的代码
+    QString message = QString();  // 成功或失败的消息
+    QString id      = QString();  // 文件 ID
+    Status  status  = FileStatusCode::FILE_STATUS_NONE;  // 文件状态
+    //
+    QString path     = QString();  // 文件路径 // 上传及下载
+    QString name     = QString();  // 文件名称 // 用于下载完成时重命名
+    int64_t size     = -1       ;  // 文件大小
+    QString md5      = QString();  // 文件 md5
+    int64_t uploaded_bytes = -1 ;  // 文件已经上传/下载完成的大小
+    bool    uploading = false   ;  // 是否是正在上传/下载时的通知消息
+};
+
+using network_file_io_notify_callback = std::function<void(const NetworkFileIONotify&)>;
+
+
 class NetworkClient : public QObject{
     Q_OBJECT
 private:
@@ -19,18 +38,37 @@ public:
     bool init();
 
 public:
-    bool signup(const signup_params& params_signup, const signup_callback& callback);
-    bool signin(const signin_params& params_signin, const signin_callback& callback);
-    // 精准匹配，不返回包含查询词的内容
-    bool search_user (const search_user_params&params_search_user, const search_user_callback&callback);
-    bool search_group(const QString&group) { return false; }
-    //
-    bool update_profile(const update_profile_params&params_update_profile, const update_profile_callback&callback);
+    // 直接接口
+    bool signup        (const signup_params        & params, const signup_callback        & callback);  // 注册账号
+    bool signin        (const signin_params        & params, const signin_callback        & callback);  // 登录账号
+    bool search_user   (const search_user_params   & params, const search_user_callback   & callback);  // 搜索用户 ID // 精准匹配
+    bool update_profile(const update_profile_params& params, const update_profile_callback& callback);  // 更新个人资料
+    bool get_file_id   (const get_file_id_params   & params, const get_file_id_callback   & callback);  // 获取文件上传 ID
+    // bool file_upload   (const file_upload_params   & params, const file_upload_callback   & callback);  // 上传文件
+    // bool file_download (const file_download_params & params, const file_download_callback & callback);  // 下载文件
+    // 接口封装
+    bool search_group (const QString&group) { return false; } // 搜索群聊 ID
+    // TODO:get_file_id 应该封装在子线程中
+    bool get_file_id  (const QString&file_path, network_file_io_notify_callback& callback_get_file_id_notiify );
+    // TODO:upload_file 应该封装在子线程中
+    bool upload_file  (const QString&file_path, network_file_io_notify_callback& callback_upload_file_notify  );
+    // TODO:download_file 应该封装在子线程中
+    bool download_file(const QString&file_id  , qint64 downloaded_size, network_file_io_notify_callback& callback_download_file_notify);
+
+signals:
+    // 文件下载成功通知
+    void signal_file_id_downloaded(const QString&file_id);
 
 private:
     bool m_inited = false;
     QUrl m_url_server;
-    std::unique_ptr<AccountClient    > m_client_account;
-    std::unique_ptr<SearchClient     > m_client_search ;
-    std::shared_ptr<QGrpcHttp2Channel> m_channel       ;
+    // ::TaoTieChat::XxxService::Client;
+    std::unique_ptr<AccountClient> m_client_account;
+    std::unique_ptr<FileClient   > m_client_file   ;
+    std::unique_ptr<MessageClient> m_client_message;
+    std::unique_ptr<SearchClient > m_client_search ;
+    std::unique_ptr<StatusClient > m_client_status ;
+    // 共享的 gRPC HTTP/2 通道
+    std::shared_ptr<QGrpcHttp2Channel> m_channel;  // 相同 channel 代表长连接
+    QGrpcCallOptions m_grpc_call_options = QGrpcCallOptions{}.setDeadlineTimeout(std::chrono::seconds(300));  // 公共的调用选项
 };

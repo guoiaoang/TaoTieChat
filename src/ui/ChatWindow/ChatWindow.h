@@ -30,6 +30,14 @@ private:
     // 双击聊天室中的一个对话  // 微信会弹窗聊天窗口
     void on_chat_room_item_activated(const QModelIndex &index);
 
+    // 需要创建副本，而不是使用指针共享同一份内存
+    void set_cache_contact_info(const std::shared_ptr<ContactInfo>&contact_info );
+    void update_contact_avatar (const QString&avatar_id, bool local_only = false);  // local_only 防止循环调用
+    std::shared_ptr<ContactInfo> get_cache_contact_info  () const;
+    std::shared_ptr<QPixmap    > get_cache_contact_avatar() const;
+
+    void show_avatar(const std::shared_ptr<QPixmap>&avatar_pixmap);
+
 public Q_SLOTS:
     // // 聊天室管理
     // 添加到聊天室列表
@@ -43,8 +51,20 @@ public Q_SLOTS:
     // model/view 模式下的选择
     void handle_contact_selection_changed(const QModelIndex &current, const QModelIndex &previous);
 
+    // 更新联系人信息，可能是头像、昵称、状态等
+    void current_accounut_info_changed();
+    void update_contact_info(const std::shared_ptr<ContactInfo>&contact_info);
+
+    // 导航按钮事件
+    void slot_button_navigate_avatar ();
+    void slot_button_navigate_message();
+    void slot_button_navigate_contact();
+
 signals:
     void signout();
+
+public slots:
+    void slot_file_id_downloaded(const QString&file_id);
 
 protected:
     bool eventFilter(QObject *obj, QEvent *event) override;
@@ -62,4 +82,7 @@ private:
     std::shared_ptr<ContactDelegate> m_contact_delegate;
     std::shared_ptr<SearchWindow   > m_search_window   ;
     std::shared_ptr<ContactWindow  > m_contact_window  ;  // 当前显示的联系人详情窗口
+    //
+    std::shared_ptr<ContactInfo    > m_cache_self_info  ;
+    std::shared_ptr<QPixmap        > m_cache_self_avatar;
 };

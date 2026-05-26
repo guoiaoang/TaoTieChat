@@ -1,8 +1,10 @@
 # QT 6 版本选择
 
 * LTS 版本：
-  * 6.5：[What's New in Qt 6.5 | Qt 6.10](https://doc.qt.io/qt-6/zh/whatsnew65.html)
-  * 6.8：[What's New in Qt 6.8 | Qt 6.10](https://doc.qt.io/qt-6/zh/whatsnew68.html)
+  * 6.5：[What's New in Qt 6.5 | Qt 6.10](https://doc.qt.io/qt-6/zh/whatsnew65.html) (不支持 Grpc Server)
+  * 6.8：[What's New in Qt 6.8 | Qt 6.10](https://doc.qt.io/qt-6/zh/whatsnew68.html) (不支持 Grpc Server)
+* 非 LTS 版本
+  * 6.10.3  (支持 Grpc Server)
 
 * 运行时 url 示例
   * https://download.qt.io/online/qtsdkrepository/windows_x86/desktop/qt6_683/qt6_683/qt.qt6.683.win64_msvc2022_64/6.8.3-0-202503201308qtbase-Windows-Windows_11_23H2-MSVC2022-Windows-Windows_11_23H2-X86_64.7z

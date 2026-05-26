@@ -2,7 +2,7 @@
     "version": 10,
     "configurePresets": [
         {
-            "name": "base-msvs2022-vcpkg-qt683",
+            "name": "base-msvs2022-vcpkg-qt6103",
             "condition":
             {
                 "type": "equals",
@@ -22,44 +22,44 @@
             },
             "environment": {
                 "VCPKG_ROOT": "C:/app/dev/vcpkg",
-                "QT_ROOT": "C:/app/dev/Qt/6.8.3/msvc2022_64",
-                "PATH": "C:/app/dev/Qt/6.8.3/msvc2022_64/bin;$penv{PATH}",
+                "QT_ROOT": "C:/app/dev/Qt/6.10.3/msvc2022_64",
+                "PATH": "C:/app/dev/Qt/6.10.3/msvc2022_64/bin;$penv{PATH}",
                 "VCINSTALLDIR": "C:/app/dev/msvs/2022/enterprise/VC/"
             },
             "cacheVariables": {
                 "CMAKE_INSTALL_PREFIX": "${sourceDir}/out/install/${presetName}",
                 "CMAKE_TOOLCHAIN_FILE": "$env{VCPKG_ROOT}/scripts/buildsystems/vcpkg.cmake",
-                "CMAKE_PREFIX_PATH": "C:/app/dev/Qt/6.8.3/msvc2022_64/",
+                "CMAKE_PREFIX_PATH": "C:/app/dev/Qt/6.10.3/msvc2022_64/",
                 "BUILD_TESTING": "ON"
             }
         },
         {
-            "name": "msvs2022x64_vcpkg_qt683_debug",
+            "name": "msvs2022x64_vcpkg_qt6103_debug",
             "condition":
             {
                 "type": "equals",
                 "lhs": "${hostSystemName}",
                 "rhs": "Windows"
             },
-            "inherits": "base-msvs2022-vcpkg-qt683",
-            "displayName": "Microsoft Visual Studio 2022 x64 + vcpkg + Qt 6.8.3 for debug config",
-            "description": "Microsoft Visual Studio 2022 x64 + vcpkg + Qt 6.8.3 for debug",
+            "inherits": "base-msvs2022-vcpkg-qt6103",
+            "displayName": "vs2022x64qt6103-debug config",
+            "description": "vs2022x64qt6103-debug",
             "cacheVariables": {
                 "CMAKE_BUILD_TYPE": "Debug",
                 "CPACK_PACKAGE_FILE_NAME": "TaoTieChat"
             }
         },
         {
-            "name": "msvs2022x64_vcpkg_qt683_release",
+            "name": "msvs2022x64_vcpkg_qt6103_release",
             "condition":
             {
                 "type": "equals",
                 "lhs": "${hostSystemName}",
                 "rhs": "Windows"
             },
-            "inherits": "base-msvs2022-vcpkg-qt683",
-            "displayName": "Microsoft Visual Studio 2022 x64 + vcpkg + Qt 6.8.3 for release config",
-            "description": "Microsoft Visual Studio 2022 x64 + vcpkg + Qt 6.8.3 for release",
+            "inherits": "base-msvs2022-vcpkg-qt6103",
+            "displayName": "vs2022x64qt6103-release config",
+            "description": "vs2022x64qt6103-release",
             "cacheVariables": {
                 "CMAKE_BUILD_TYPE": "Release",
                 "CPACK_PACKAGE_FILE_NAME": "TaoTieChat"
@@ -106,7 +106,7 @@
             ]
         },
         {
-            "name": "msvs2022x64_vcpkg_qt683_debug",
+            "name": "msvs2022x64_vcpkg_qt6103_debug",
             "condition":
             {
                 "type": "equals",
@@ -114,13 +114,13 @@
                 "rhs": "Windows"
             },
             "inherits": "base-msvs2022x64-parallel-local-adaptive",
-            "description": "Microsoft Visual Studio 2022 x64 + vcpkg + Qt 6.8.3 for debug build",
-            "displayName": "Microsoft Visual Studio 2022 x64 + vcpkg + Qt 6.8.3 for debug",
-            "configurePreset": "msvs2022x64_vcpkg_qt683_debug",
+            "description": "vs2022x64qt6103-debug build",
+            "displayName": "vs2022x64qt6103-debug",
+            "configurePreset": "msvs2022x64_vcpkg_qt6103_debug",
             "configuration": "Debug"
         },
         {
-            "name": "msvs2022x64_vcpkg_qt683_release",
+            "name": "msvs2022x64_vcpkg_qt6103_release",
             "condition":
             {
                 "type": "equals",
@@ -128,13 +128,13 @@
                 "rhs": "Windows"
             },
             "inherits": "base-msvs2022x64-parallel-local-adaptive",
-            "description": "Microsoft Visual Studio 2022 x64 + vcpkg + Qt 6.8.3 for release build",
-            "displayName": "Microsoft Visual Studio 2022 x64 + vcpkg + Qt 6.8.3 for release",
-            "configurePreset": "msvs2022x64_vcpkg_qt683_release",
+            "description": "vs2022x64qt6103-release build",
+            "displayName": "vs2022x64qt6103-release",
+            "configurePreset": "msvs2022x64_vcpkg_qt6103_release",
             "configuration": "Release"
         },
         {
-            "name": "msvs2022x64_vcpkg_qt683_debug_install",
+            "name": "msvs2022x64_vcpkg_qt6103_debug_install",
             "condition":
             {
                 "type": "equals",
@@ -144,14 +144,14 @@
             "inherits": "base-msvs2022x64-parallel-local-adaptive",
             "description": "Install build artifacts for debug",
             "displayName": "Install target for debug",
-            "configurePreset": "msvs2022x64_vcpkg_qt683_debug",
+            "configurePreset": "msvs2022x64_vcpkg_qt6103_debug",
             "configuration": "Debug",
             "targets": [
                 "install"
             ]
         },
         {
-            "name": "msvs2022x64_vcpkg_qt683_release_install",
+            "name": "msvs2022x64_vcpkg_qt6103_release_install",
             "condition":
             {
                 "type": "equals",
@@ -161,14 +161,14 @@
             "inherits": "base-msvs2022x64-parallel-local-adaptive",
             "description": "Install build artifacts for release",
             "displayName": "Install target for release",
-            "configurePreset": "msvs2022x64_vcpkg_qt683_release",
+            "configurePreset": "msvs2022x64_vcpkg_qt6103_release",
             "configuration": "Release",
             "targets": [
                 "install"
             ]
         },
         {
-            "name": "msvs2022x64_vcpkg_qt683_debug_ci",
+            "name": "msvs2022x64_vcpkg_qt6103_debug_ci",
             "condition":
             {
                 "type": "equals",
@@ -178,11 +178,11 @@
             "inherits": "base-msvs2022x64-parallel-ci-safe",
             "description": "Debug build with conservative CI parallel policy",
             "displayName": "Debug build (CI parallel policy)",
-            "configurePreset": "msvs2022x64_vcpkg_qt683_debug",
+            "configurePreset": "msvs2022x64_vcpkg_qt6103_debug",
             "configuration": "Debug"
         },
         {
-            "name": "msvs2022x64_vcpkg_qt683_release_ci",
+            "name": "msvs2022x64_vcpkg_qt6103_release_ci",
             "condition":
             {
                 "type": "equals",
@@ -192,13 +192,13 @@
             "inherits": "base-msvs2022x64-parallel-ci-safe",
             "description": "Release build with conservative CI parallel policy",
             "displayName": "Release build (CI parallel policy)",
-            "configurePreset": "msvs2022x64_vcpkg_qt683_release",
+            "configurePreset": "msvs2022x64_vcpkg_qt6103_release",
             "configuration": "Release"
         }
     ],
     "testPresets": [
         {
-            "name": "msvs2022x64_vcpkg_qt683_debug",
+            "name": "msvs2022x64_vcpkg_qt6103_debug",
             "condition":
             {
                 "type": "equals",
@@ -207,7 +207,7 @@
             },
             "displayName": "CTest Debug",
             "description": "Run tests in debug build tree",
-            "configurePreset": "msvs2022x64_vcpkg_qt683_debug",
+            "configurePreset": "msvs2022x64_vcpkg_qt6103_debug",
             "configuration": "Debug",
             "execution": {
                 "stopOnFailure": false,
@@ -215,7 +215,7 @@
             }
         },
         {
-            "name": "msvs2022x64_vcpkg_qt683_release",
+            "name": "msvs2022x64_vcpkg_qt6103_release",
             "condition":
             {
                 "type": "equals",
@@ -224,7 +224,7 @@
             },
             "displayName": "CTest Release",
             "description": "Run tests in release build tree",
-            "configurePreset": "msvs2022x64_vcpkg_qt683_release",
+            "configurePreset": "msvs2022x64_vcpkg_qt6103_release",
             "configuration": "Release",
             "execution": {
                 "stopOnFailure": false,
@@ -234,16 +234,16 @@
     ],
     "packagePresets": [
         {
-            "name": "msvs2022x64_vcpkg_qt683_debug",
+            "name": "msvs2022x64_vcpkg_qt6103_debug",
             "condition":
             {
                 "type": "equals",
                 "lhs": "${hostSystemName}",
                 "rhs": "Windows"
             },
-            "description": "Microsoft Visual Studio 2022 x64 + vcpkg + Qt 6.8.3 for debug package",
-            "displayName": "Microsoft Visual Studio 2022 x64 + vcpkg + Qt 6.8.3 for debug",
-            "configurePreset": "msvs2022x64_vcpkg_qt683_debug",
+            "description": "vs2022x64qt6103-debug package",
+            "displayName": "vs2022x64qt6103-debug",
+            "configurePreset": "msvs2022x64_vcpkg_qt6103_debug",
             "configurations": [
                 "Debug"
             ],
@@ -252,16 +252,16 @@
             ]
         },
         {
-            "name": "msvs2022x64_vcpkg_qt683_release",
+            "name": "msvs2022x64_vcpkg_qt6103_release",
             "condition":
             {
                 "type": "equals",
                 "lhs": "${hostSystemName}",
                 "rhs": "Windows"
             },
-            "description": "Microsoft Visual Studio 2022 x64 + vcpkg + Qt 6.8.3 for release package",
-            "displayName": "Microsoft Visual Studio 2022 x64 + vcpkg + Qt 6.8.3 for release",
-            "configurePreset": "msvs2022x64_vcpkg_qt683_release",
+            "description": "vs2022x64qt6103-release package",
+            "displayName": "vs2022x64qt6103-release",
+            "configurePreset": "msvs2022x64_vcpkg_qt6103_release",
             "configurations": [
                 "Release"
             ],
@@ -272,56 +272,56 @@
     ],
     "workflowPresets": [
         {
-            "name": "msvs2022x64_vcpkg_qt683_debug",
-            "description": "Microsoft Visual Studio 2022 x64 + vcpkg + Qt 6.8.3 for debug workflow",
-            "displayName": "Microsoft Visual Studio 2022 x64 + vcpkg + Qt 6.8.3 for debug",
+            "name": "msvs2022x64_vcpkg_qt6103_debug",
+            "description": "vs2022x64qt6103-debug workflow",
+            "displayName": "vs2022x64qt6103-debug",
             "steps": [
                 {
                     "type": "configure",
-                    "name": "msvs2022x64_vcpkg_qt683_debug"
+                    "name": "msvs2022x64_vcpkg_qt6103_debug"
                 },
                 {
                     "type": "build",
-                    "name": "msvs2022x64_vcpkg_qt683_debug"
+                    "name": "msvs2022x64_vcpkg_qt6103_debug"
                 },
                 {
                     "type": "test",
-                    "name": "msvs2022x64_vcpkg_qt683_debug"
+                    "name": "msvs2022x64_vcpkg_qt6103_debug"
                 },
                 {
                     "type": "build",
-                    "name": "msvs2022x64_vcpkg_qt683_debug_install"
+                    "name": "msvs2022x64_vcpkg_qt6103_debug_install"
                 },
                 {
                     "type": "package",
-                    "name": "msvs2022x64_vcpkg_qt683_debug"
+                    "name": "msvs2022x64_vcpkg_qt6103_debug"
                 }
             ]
         },
         {
-            "name": "msvs2022x64_vcpkg_qt683_release",
-            "description": "Microsoft Visual Studio 2022 x64 + vcpkg + Qt 6.8.3 for release workflow",
-            "displayName": "Microsoft Visual Studio 2022 x64 + vcpkg + Qt 6.8.3 for release",
+            "name": "msvs2022x64_vcpkg_qt6103_release",
+            "description": "vs2022x64qt6103-release workflow",
+            "displayName": "vs2022x64qt6103-release",
             "steps": [
                 {
                     "type": "configure",
-                    "name": "msvs2022x64_vcpkg_qt683_release"
+                    "name": "msvs2022x64_vcpkg_qt6103_release"
                 },
                 {
                     "type": "build",
-                    "name": "msvs2022x64_vcpkg_qt683_release"
+                    "name": "msvs2022x64_vcpkg_qt6103_release"
                 },
                 {
                     "type": "test",
-                    "name": "msvs2022x64_vcpkg_qt683_release"
+                    "name": "msvs2022x64_vcpkg_qt6103_release"
                 },
                 {
                     "type": "build",
-                    "name": "msvs2022x64_vcpkg_qt683_release_install"
+                    "name": "msvs2022x64_vcpkg_qt6103_release_install"
                 },
                 {
                     "type": "package",
-                    "name": "msvs2022x64_vcpkg_qt683_release"
+                    "name": "msvs2022x64_vcpkg_qt6103_release"
                 }
             ]
         }

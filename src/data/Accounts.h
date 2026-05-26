@@ -26,8 +26,10 @@ public:
     bool is_contact(const std::shared_ptr<ContactInfo >& contact_info) const;
 
 signals:
-    void signal_account_changed     (const std::shared_ptr<ContactInfo >& contact_info );
-    void signal_contact_list_changed(const std::shared_ptr<ContactInfos>& contact_infos);
+    void signal_account_changing(const std::shared_ptr<ContactInfo >& contact_info );
+    void signal_account_changed ();
+    void signal_contact_list_changing(const std::shared_ptr<ContactInfos>& contact_infos);
+    void signal_contact_list_changed ();
     // void signal_contact_changed  (const std::shared_ptr<ContactInfo >& contact_info );
 
 private:

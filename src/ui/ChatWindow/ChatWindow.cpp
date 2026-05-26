@@ -19,41 +19,11 @@ ChatWindow::ChatWindow(QWidget *parent)
     // m_search_window = std::make_shared<SearchWindow>();  // 需要时再创建
 
     // 连接消息
-    // 点击了头像按钮
-    connect(m_ui->navigate_button_avatar, &QToolButton::clicked  , this, [&]() {
-        // 重建后再显示
-        if( m_contact_window) { m_contact_window.reset(); }
-        if(!m_contact_window) { m_contact_window = std::make_shared<ContactWindow>(Accounts::instance().get_current_account()); }
-        m_contact_window->show();
-
-        // 先显示窗口再更新内容，避免网络请求较慢时窗口无响应
-        auto&user_id = Accounts::instance().get_current_account()->baseInfo().userId();
-        // 更新成功，刷新显示
-        // update(params_update_profile->contact());
-        search_user_params params_search_user = std::make_shared<TaoTieChat::SearchUserRequest>();
-        params_search_user->setRequestUserAuth(*Accounts::instance().get_auth_request().get());
-        params_search_user->setUserId(user_id);
-        NetworkClient::instance().search_user(params_search_user, [this](const search_user_params&params_search_user, const search_user_reply&reply_search_user) {
-            if(!reply_search_user || !reply_search_user->result().hasSuccessCode()) { return; }
-            m_contact_window->update(std::make_shared<ContactInfo>(reply_search_user->contactInfo()));
-        });
-    });
-    // 点击了聊天室按钮
-    connect(m_ui->navigate_button_chat_room, &QToolButton::clicked  , this, [&](){
-        m_ui->stacked_contact_list     ->setCurrentWidget(m_ui->stacked_page_chat_room);
-        m_ui->navigate_button_chat_room->setEnabled(false);
-        m_ui->navigate_button_contact  ->setEnabled(true );
-    });
-    // 点击了联系人按钮
-    connect(m_ui->navigate_button_contact, &QToolButton::clicked  , this, [&](){
-        m_ui->stacked_contact_list     ->setCurrentWidget(m_ui->stacked_page_contact);
-        m_ui->navigate_button_chat_room->setEnabled(true );
-        m_ui->navigate_button_contact  ->setEnabled(false);
-    });
-    // 点击了设置按钮
-    connect(m_ui->button_settings  , &QToolButton::clicked, this, [&](){ this->on_show_settings_menu(); });
-    // 点击了添加按钮
-    connect(m_ui->button_add       , &QToolButton::clicked, this, [&](){ this->on_show_add_menu     (); });
+    connect(m_ui->navigate_button_avatar   , &QToolButton::clicked, this, &ChatWindow::slot_button_navigate_avatar ); // 点击了头像按钮
+    connect(m_ui->navigate_button_chat_room, &QToolButton::clicked, this, &ChatWindow::slot_button_navigate_message); // 点击了聊天室按钮
+    connect(m_ui->navigate_button_contact  , &QToolButton::clicked, this, &ChatWindow::slot_button_navigate_contact); // 点击了联系人按钮
+    connect(m_ui->button_settings          , &QToolButton::clicked, this, [&](){ this->on_show_settings_menu(); }); // 点击了设置按钮
+    connect(m_ui->button_add               , &QToolButton::clicked, this, [&](){ this->on_show_add_menu     (); }); // 点击了添加按钮
     // 各种菜单事件
     connect(m_action_signout .get(), &QAction::triggered, this, [&](){ emit signout(); });
     connect(m_action_settings.get(), &QAction::triggered, this, [&](){ qDebug() << "m_action_settings"; });
@@ -65,13 +35,15 @@ ChatWindow::ChatWindow(QWidget *parent)
     // connect(m_ui->page_list_contact->selectionModel(), &QItemSelectionModel::currentChanged, this, &ChatWindow::on_contact_selection_changed);
     // 用于同步显示搜索词
     // connect(m_search_window, &SearchWindow::SearchEditTextChanged, m_ui->edit_search, &QLineEdit::setText);
+    connect(&Accounts     ::instance(), &Accounts     ::signal_account_changed   , this, &ChatWindow::current_accounut_info_changed);
+    connect(&NetworkClient::instance(), &NetworkClient::signal_file_id_downloaded, this, &ChatWindow::slot_file_id_downloaded      );
 
     // 执行操作
     m_ui->chat_splitter->setStretchFactor(0, 0); // 编号 0 的窗口拉伸因子为 0 // 整个窗口调整大小时左侧宽度不调整
     m_ui->chat_splitter->setStretchFactor(1, 1);
 
     // 设置图标
-    static Utils::UtilsFontIcons ufi;
+    static Utils::FontIcons font_icon =  Utils::FontIcons().update();
     auto button_set = [](QToolButton* button, const QIcon& icon, const QSize& size = QSize(36, 36)) {
         // QToolButton 默认显示模式为图标 + 文字，因此直接设置时会导致使用默认的小图标
         button->setIcon     (icon);
@@ -85,13 +57,13 @@ ChatWindow::ChatWindow(QWidget *parent)
         // 设置悬浮提示词
         button->setToolTip(button->text());
     };
-    button_set(m_ui->navigate_button_chat_room, ufi.icon_chat_room);
-    button_set(m_ui->navigate_button_contact  , ufi.icon_contacts );
-    button_set(m_ui->button_settings          , ufi.icon_settings );
+    button_set(m_ui->navigate_button_chat_room, font_icon.icon.chat_room);
+    button_set(m_ui->navigate_button_contact  , font_icon.icon.contacts );
+    button_set(m_ui->button_settings          , font_icon.icon.settings );
     // tooltips
-    m_ui->navigate_button_avatar->setIcon     (ufi.icon_profile);
-    m_ui->navigate_button_avatar->setIconSize (ufi.size_avatar );
-    m_ui->navigate_button_avatar->setFixedSize(ufi.size_avatar );
+    m_ui->navigate_button_avatar->setIcon     (font_icon.icon.profile);
+    m_ui->navigate_button_avatar->setIconSize (font_icon.size.avatar );
+    m_ui->navigate_button_avatar->setFixedSize(font_icon.size.avatar );
     m_ui->navigate_button_avatar->setToolTip  (m_ui->navigate_button_avatar->text());
     // 控件居中对齐
     m_ui->navigate_layout        ->setAlignment(m_ui->navigate_button_avatar   , Qt::AlignHCenter);
@@ -100,7 +72,7 @@ ChatWindow::ChatWindow(QWidget *parent)
     m_ui->navigate_layout        ->setAlignment(m_ui->button_settings          , Qt::AlignHCenter);
     // window icon
     // 设置应用级别的图标后就不需要再手动设置窗口级别的图标了
-    QApplication::setWindowIcon(ufi.icon_profile);
+    QApplication::setWindowIcon(font_icon.icon.profile);
 
     // 设置菜单
     // m_ui->navigate_button_menu->setMenu(m_menu_settings);
@@ -149,6 +121,24 @@ ChatWindow::ChatWindow(QWidget *parent)
 
     // 设置要初始化显示的页面
     m_ui->navigate_button_chat_room->click();  // 初始化状态
+
+    // 更新个人信息显示  // 初始化赋值，需要创建副本，而不是共享同一片内存
+    auto copy_contact_info = std::make_shared<ContactInfo>(*Accounts::instance().get_current_account().get());
+    // set_cache_contact_info(copy_contact_info);
+    update_contact_info(copy_contact_info);
+
+    // 从网络获取当前用户的个人信息并更新显示
+    {
+        auto&user_id = Accounts::instance().get_current_account()->baseInfo().userId();
+        search_user_params params_search_user = std::make_shared<SearchUserRequest>();
+        params_search_user->setRequestUserAuth(*Accounts::instance().get_auth_request().get());
+        params_search_user->setUserId(user_id);
+        NetworkClient::instance().search_user(params_search_user, [this](const search_user_params&params_search_user, const search_user_reply&reply_search_user) {
+            if(!reply_search_user || !reply_search_user->result().hasSuccessCode()) { return; }
+            // update_contact_info(std::make_shared<ContactInfo>(*reply_search_user->contactInfo().get()));
+            Accounts::instance().set_current_account(std::make_shared<ContactInfo>(reply_search_user->contactInfo()));
+        });
+    }
 }
 
 ChatWindow::~ChatWindow() {
@@ -219,7 +209,7 @@ void ChatWindow::handle_contact_selection_changed(const QModelIndex &current, co
         if(!contact_window_already) {
             break;
         }
-        const std::shared_ptr<ContactInfo>&contact_info_already = contact_window_already->get_contact();
+        const std::shared_ptr<ContactInfo>&contact_info_already = contact_window_already->get_cache_contact_info();
         if(contact_info->baseInfo().accountId() == contact_info_already->baseInfo().accountId() &&
            contact_info->baseInfo().userId   () == contact_info_already->baseInfo().userId   ()) {
             contact_window_update = contact_window_already;  // 找到需要更新的窗口
@@ -228,15 +218,43 @@ void ChatWindow::handle_contact_selection_changed(const QModelIndex &current, co
     }
     // 如果已经添加则更新信息
     if(contact_window_update) {
-        contact_window_update->update(contact_info);
+        contact_window_update->show_contact(contact_info);
     }
     // 如果没有则添加
     else {
-        contact_window_update = new ContactWindow(contact_info, this);
+        contact_window_update = new ContactWindow(this);
+        contact_window_update->show_contact(contact_info);
         m_ui->stacked_contact_detail->addWidget(contact_window_update);
     }
     // 显示
     m_ui->stacked_contact_detail->setCurrentWidget(contact_window_update);
+}
+
+// 账号当前用户信息被修改时触发
+void ChatWindow::current_accounut_info_changed() {
+    update_contact_info(Accounts::instance().get_current_account());
+}
+
+void ChatWindow::update_contact_info(const std::shared_ptr<ContactInfo>&contact_info) {
+
+    // qDebug().noquote().nospace() << "Current account contactInfo: " << Utils::Transform::to_string(Accounts::instance().get_current_account());
+    // qDebug().noquote().nospace() << "Cache           contactInfo: " << Utils::Transform::to_string(m_cache_self_info);
+    // qDebug().noquote().nospace() << "To              contactInfo: " << Utils::Transform::to_string(contact_info);
+
+    bool is_self = Accounts::instance().is_self(contact_info);
+    if(is_self) {
+        // 更新头像显示
+        QString old_avatar_id = m_cache_self_info ? m_cache_self_info->baseInfo().avatarId() : QString();
+        QString to_avatar_id  = contact_info->baseInfo().avatarId();
+        if(old_avatar_id != to_avatar_id) {
+            update_contact_avatar(to_avatar_id);
+        }
+        m_cache_self_info = std::make_shared<ContactInfo>(*contact_info.get());
+    }
+    else {
+        // // 更新联系人列表中的信息
+        // Accounts::instance().set_contact_list(Accounts::instance().get_contact_list());  // 触发联系人列表更新信号
+    }
 }
 
 bool ChatWindow::eventFilter(QObject *obj, QEvent *event) {
@@ -253,4 +271,109 @@ bool ChatWindow::eventFilter(QObject *obj, QEvent *event) {
         }
     }
     return QMainWindow::eventFilter(obj, event);
+}
+
+void ChatWindow::slot_button_navigate_avatar() {
+    // 重建后再显示
+    // if( m_contact_window) { m_contact_window.reset(); }
+    if(!m_contact_window) { m_contact_window = std::make_shared<ContactWindow>(this); }
+    // 设置为弹窗窗口，否则有父窗口时会显示在父窗口内，发生与父窗口内容重叠的情况
+    m_contact_window->setWindowFlags(m_contact_window->windowFlags() |  Qt::Dialog);
+    m_contact_window->show_contact(Accounts::instance().get_current_account());
+    m_contact_window->show();
+
+    // 先显示窗口再更新内容，避免网络请求较慢时窗口无响应
+    auto&user_id = Accounts::instance().get_current_account()->baseInfo().userId();
+    // 更新成功，刷新显示
+    // update(params_update_profile->contact());
+    search_user_params params_search_user = std::make_shared<TaoTieChat::SearchUserRequest>();
+    params_search_user->setRequestUserAuth(*Accounts::instance().get_auth_request().get());
+    params_search_user->setUserId(user_id);
+    NetworkClient::instance().search_user(params_search_user, [this](const search_user_params&params_search_user, const search_user_reply&reply_search_user) {
+        if(!reply_search_user || !reply_search_user->result().hasSuccessCode()) { return; }
+        m_contact_window->show_contact(std::make_shared<ContactInfo>(reply_search_user->contactInfo()));
+    });
+}
+
+void ChatWindow::slot_button_navigate_message() {
+    m_ui->stacked_contact_list     ->setCurrentWidget(m_ui->stacked_page_chat_room);
+    m_ui->navigate_button_chat_room->setEnabled(false);
+    m_ui->navigate_button_contact  ->setEnabled(true );
+}
+
+void ChatWindow::slot_button_navigate_contact() {
+    m_ui->stacked_contact_list     ->setCurrentWidget(m_ui->stacked_page_contact);
+    m_ui->navigate_button_chat_room->setEnabled(true );
+    m_ui->navigate_button_contact  ->setEnabled(false);
+}
+
+void ChatWindow::set_cache_contact_info(const std::shared_ptr<ContactInfo>&contact_info) {
+    // m_cache_self_info = m_cache_self_info == contact_info ? std::make_shared<ContactInfo>(*contact_info.get()) : contact_info;
+    m_cache_self_info = std::make_shared<ContactInfo>(*contact_info.get());  // 必须直接创建副本
+}
+
+void ChatWindow::show_avatar(const std::shared_ptr<QPixmap>&avatar_pixmap) {
+    // 设置头像按钮
+    QIcon icon_avatar(avatar_pixmap->scaled(m_ui->navigate_button_avatar->iconSize(), Qt::KeepAspectRatio, Qt::SmoothTransformation));
+    m_ui->navigate_button_avatar->setIcon(icon_avatar);
+    // 设置窗口图标
+    QIcon icon_window(avatar_pixmap->scaled(QSize(128, 128), Qt::KeepAspectRatio, Qt::SmoothTransformation));
+    QApplication::setWindowIcon(icon_window);
+    // 保存
+    m_cache_self_avatar = avatar_pixmap;
+}
+
+void ChatWindow::update_contact_avatar(const QString&avatar_id, bool local_only) {
+    // m_cache_self_avatar = m_cache_self_avatar == avatar_pixmap ? std::make_shared<QPixmap>(avatar_pixmap) : avatar_pixmap;
+    // 必须创建副本
+    // 本地有则直接加载
+    auto avatar_pixmap = std::make_shared<QPixmap>(Database::instance().get_local_file_id_path(avatar_id));
+    if(!avatar_pixmap->isNull()) {
+        show_avatar(avatar_pixmap);
+        // QIcon icon_avatar(m_cache_self_avatar->scaled(m_ui->navigate_button_avatar->iconSize(), Qt::KeepAspectRatio, Qt::SmoothTransformation));
+        // m_ui->navigate_button_avatar->setIcon(icon_avatar);
+        // QIcon icon_avatar(m_cache_self_avatar->scaled(m_ui->navigate_button_avatar->iconSize(), Qt::KeepAspectRatio, Qt::SmoothTransformation));
+        // QApplication::setWindowIcon(icon_avatar);
+        return;
+    }
+    if(local_only) { return; }
+    // 本地没有则需要从网络下载
+    network_file_io_notify_callback callback_download_file_notify = [this, avatar_id](const NetworkFileIONotify&notify) {
+        // 忽略下载进度通知
+        if(notify.ok && notify.code == int64_t(SuccessCode::SUCCESS) && notify.uploading) {
+            return;
+        }
+        if(!notify.ok) {
+            QString error_message = tr("Failed to download avatar.");
+            error_message += tr("\n\ncode : 0x%1\nmessage : %2")
+                .arg(notify.code, 8, 16, QChar('0'))  // 16 进制显示，宽度 8 位，不足补 0
+                .arg(notify.message);
+            QMessageBox::information(this, tr("Error"), error_message, QMessageBox::StandardButton::Ok);
+            return;
+        }
+        // 下载成功，文件已保存到本地，可以直接显示了
+        auto avatar_pixmap = std::make_shared<QPixmap>(Database::instance().get_local_file_id_path(avatar_id));
+        // m_cache_self_avatar = avatar_pixmap;
+        // m_ui->navigate_button_avatar->setIcon(QIcon(m_cache_self_avatar->scaled(m_ui->navigate_button_avatar->iconSize(), Qt::KeepAspectRatio, Qt::SmoothTransformation)));
+        show_avatar(avatar_pixmap);
+    };
+    qint64 downloaded_size = QFileInfo(Database::instance().get_local_file_id_path(avatar_id)).size();
+    NetworkClient::instance().download_file(avatar_id, qMax(qint64(0), downloaded_size), callback_download_file_notify);
+}
+
+std::shared_ptr<ContactInfo> ChatWindow::get_cache_contact_info  () const {
+    return m_cache_self_info;
+}
+
+std::shared_ptr<QPixmap    > ChatWindow::get_cache_contact_avatar() const {
+    return m_cache_self_avatar;
+}
+
+void ChatWindow::slot_file_id_downloaded(const QString&file_id) {
+    if(file_id.isEmpty()) { return; }
+    // 更新头像
+    QString cache_avatar_id = !get_cache_contact_info() ? QString{} : get_cache_contact_info()->baseInfo().avatarId();
+    if(cache_avatar_id == file_id) {
+        update_contact_avatar(file_id);
+    }
 }

@@ -36,9 +36,6 @@ ContactWindow::ContactWindow(QWidget *parent) : QWidget(parent), m_ui(std::make_
     m_action_remove->setText  (tr("remove"));
     m_menu_manager ->addAction(m_action_edit  .get());
     m_menu_manager ->addAction(m_action_remove.get());
-
-    //
-    Database::instance().set_config_dir(Utils::user_home_path());
 }
 
 ContactWindow::~ContactWindow() {
@@ -370,11 +367,16 @@ std::shared_ptr<QPixmap> ContactWindow::get_local_avatar_id_pixmap(const QString
 
 // 在弹窗中查看头像
 void ContactWindow::view_avatar(const std::shared_ptr<ContactInfo>&contact_info) {
+    QString avatar_id;
+    if(get_cache_contact_info()) {
+        avatar_id = get_cache_contact_info()->baseInfo().avatarId();
+    }
     // 获取显示内容
     std::vector<std::shared_ptr<MediaInfo>> play_list = {
         std::make_shared<MediaInfo>(MediaInfo{
             .media_path   = "",
-            .media_pixmap = *get_cache_avatar_pixmap().get(),
+            // .media_pixmap = *get_cache_avatar_pixmap().get(),
+            .media_pixmap = QPixmap(Database::instance().get_local_file_id_path(avatar_id)),  // 使用原始的图片
             .media_name   = get_cache_contact_info()->baseInfo().nickname()
         })
     };
@@ -393,7 +395,7 @@ void ContactWindow::show_avatar(const std::shared_ptr<QPixmap>&avatar_pixmap) {
 // 传入头像 ID，自动从本地或网络加载头像
 void ContactWindow::show_avatar_id(const QString&avatar_id) {
     // 先尝试从本地加载头像
-    std::shared_ptr<QPixmap> avatar_pixmap = get_local_avatar_id_pixmap(avatar_id);
+    std::shared_ptr<QPixmap> avatar_pixmap = get_local_avatar_id_pixmap(avatar_id + ";size:128*128");
     if((avatar_pixmap && !avatar_pixmap->isNull()) || avatar_id.isEmpty()) {
         show_avatar(avatar_pixmap);
         return;
@@ -418,7 +420,7 @@ void ContactWindow::show_avatar_id(const QString&avatar_id) {
             return;
         }
         // 下载成功，文件已保存到本地，可以直接显示了
-        show_avatar(get_local_avatar_id_pixmap(notify.id));
+        show_avatar(get_local_avatar_id_pixmap(notify.id + ";size:128*128"));
     };
     qint64 downloaded_size = QFileInfo(Database::instance().get_local_file_id_path(avatar_id)).size();
     NetworkClient::instance().download_file(avatar_id, qMax(qint64(0), downloaded_size), callback_download_file_notify);

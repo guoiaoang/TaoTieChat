@@ -327,7 +327,11 @@ void ChatWindow::update_contact_avatar(const QString&avatar_id, bool local_only)
     // m_cache_self_avatar = m_cache_self_avatar == avatar_pixmap ? std::make_shared<QPixmap>(avatar_pixmap) : avatar_pixmap;
     // 必须创建副本
     // 本地有则直接加载
-    auto avatar_pixmap = std::make_shared<QPixmap>(Database::instance().get_local_file_id_path(avatar_id));
+    // 先尝试加载缩略图，失败再用原图兜底
+    auto avatar_pixmap = std::make_shared<QPixmap>(Database::instance().get_local_file_id_path(avatar_id + ";size:128*128"));
+    if(avatar_pixmap->isNull()) {
+        avatar_pixmap = std::make_shared<QPixmap>(Database::instance().get_local_file_id_path(avatar_id));
+    }
     if(!avatar_pixmap->isNull()) {
         show_avatar(avatar_pixmap);
         // QIcon icon_avatar(m_cache_self_avatar->scaled(m_ui->navigate_button_avatar->iconSize(), Qt::KeepAspectRatio, Qt::SmoothTransformation));
@@ -352,7 +356,7 @@ void ChatWindow::update_contact_avatar(const QString&avatar_id, bool local_only)
             return;
         }
         // 下载成功，文件已保存到本地，可以直接显示了
-        auto avatar_pixmap = std::make_shared<QPixmap>(Database::instance().get_local_file_id_path(avatar_id));
+        auto avatar_pixmap = std::make_shared<QPixmap>(Database::instance().get_local_file_id_path(avatar_id + ";size:128*128"));
         // m_cache_self_avatar = avatar_pixmap;
         // m_ui->navigate_button_avatar->setIcon(QIcon(m_cache_self_avatar->scaled(m_ui->navigate_button_avatar->iconSize(), Qt::KeepAspectRatio, Qt::SmoothTransformation)));
         show_avatar(avatar_pixmap);

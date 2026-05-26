@@ -817,7 +817,7 @@ bool NetworkClient::download_file(const QString&file_id, qint64 downloaded_size,
 
                 // 成功时的进度通知
                 emit signal_file_id_downloaded(file_download_args->notify.id);
-                file_download_args->error_occued = false;
+                file_download_args->error_occued   = false;
                 file_download_args->notify.ok      = true;
                 file_download_args->notify.code    = int64_t(SuccessCode::SUCCESS);
                 file_download_args->notify.message = tr("Download completed: %1").arg(file_download_args->notify.path);

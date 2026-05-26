@@ -1,5 +1,6 @@
 #include "AuthWindow.h"
 #include "ui_AuthWindow.h"
+#include "ContactWindow.h"
 
 AuthWindow::AuthWindow(QWidget *parent)
     : QDialog(parent), m_ui(std::make_shared<Ui::AuthWindow>()) {
@@ -198,6 +199,9 @@ bool AuthWindow::handle_signin_successd(const signin_params& params_signin, cons
     self_info.setToken   (reply_signin->token());
     contact_info->setSelfInfo(self_info);
     Accounts::instance().set_current_account(contact_info);
+
+    // 初始化配置目录
+    Database::instance().set_config_dir(Utils::user_home_path());
 
     // 实际上登陆消息瞬间完成，延迟 1 秒再显示主界面，防止用户误以为登陆窗口闪烁的错误判断
     QTimer::singleShot(1000, this, [this]() {

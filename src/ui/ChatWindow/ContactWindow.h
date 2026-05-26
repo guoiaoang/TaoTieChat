@@ -19,13 +19,13 @@ class ContactWindow;
 //         void func2() {}
 //         void func3() {}
 //     };
-// 
+//
 // public:
 //     // 2. 此时可以直接使用 using 将基类函数导出为公有
 //     using Power::func1;
 //     using Power::func2;
 //     using Power::func3;
-// 
+//
 //     Wrapper() {
 //         // 3. 继承关系下直接调用基类方法，不需要 p.init()
 //         init();
@@ -82,6 +82,7 @@ public:
         bool save() {
             if(!m_inited) { return false; }  // 没有初始化时调用不必保存，防止出现无用文件
             QString m_map_file_path =  m_map_file_dir + "/" +  m_map_file_name;
+            Utils::create_dirs(Utils::get_dir(m_map_file_path));
             QFile file(m_map_file_path);
             if(file.open(QIODevice::WriteOnly | QIODevice::Text)) {
                 QTextStream out(&file);
@@ -117,7 +118,56 @@ public:
 
     // 无法直接使用子成员中的函数，只能挨个转发
     QString get_local_file_id_path(const QString&file_id) {
-        return m_file_id_path_map.get_local_file_id_path(file_id);
+        // return m_file_id_path_map.get_local_file_id_path(file_id);
+
+        QString file_path;
+        do {
+            // 如果命中则直接返回
+            if(file_id  .isEmpty()) { break; }
+            file_path = m_file_id_path_map.get_local_file_id_path(file_id);
+            if(!file_path.isEmpty()) { break; }
+
+            // 没有直接命中则尝试转换
+            // uuid-xxx-uuid;size:128*128
+            QStringList strs_group = file_id.split(";");
+            if(strs_group.size() <= 1) { break; }
+            QString str_id;
+            int size_width  = -1;
+            int size_height = -1;
+            for(auto&str: strs_group) {
+                QStringList strs_kv = str.split(":");
+                if(strs_kv.size() <= 1) {
+                    str_id = strs_kv.at(0);
+                }
+                else {
+                    auto key    = strs_kv.at(0);
+                    auto values = strs_kv.at(1);
+                    if(key == "size") {
+                        auto str_wh = values.split("*");
+                        if(str_wh.size() == 2) {
+                            size_width  = str_wh.at(0).toInt();
+                            size_height = str_wh.at(1).toInt();
+                        }
+                    }
+                }
+            }
+            if(!str_id.isEmpty() && size_width >= 0 && size_height > 0) {
+                // 将 id 再次传入进行查找
+                file_path = m_file_id_path_map.get_local_file_id_path(str_id);
+                if(file_path.isEmpty()) { break; }  // 仅 ID 时还是找不到源文件
+                // 转换文件
+                QString file_name = QFileInfo(file_path).fileName();
+                QString size_path = QString("%1/size/%2-%3/%4").arg(Utils::user_cache_path()).arg(size_width).arg(size_height).arg(file_name);
+                // 如果不存在则需要转换
+                if(!QFileInfo(size_path).exists()) {
+                    Utils::create_dirs(Utils::get_dir(size_path));
+                    QPixmap(file_path).scaled(QSize(size_width, size_height), Qt::KeepAspectRatio, Qt::SmoothTransformation).save(size_path);
+                }
+                m_file_id_path_map.save_local_file_id_path(file_id, size_path);
+                file_path = size_path;
+            }
+        } while(false);
+        return file_path;
     }
     bool save_local_file_id_path(const QString&file_id, const QString&file_path) {
         return m_file_id_path_map.save_local_file_id_path(file_id, file_path);

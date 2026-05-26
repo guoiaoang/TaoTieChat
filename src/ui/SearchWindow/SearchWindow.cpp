@@ -112,6 +112,7 @@ bool SearchWindow::search_user(const QString&keyword) {
         // 刷新显示
         auto contacts = std::make_shared<ContactInfos>();
         contacts->setContactInfos({reply_search_user->contactInfo()});
+        qDebug().noquote().nospace() << "Search user id : " << reply_search_user->request().userId() << ". userinfo : " << reply_search_user->contactInfo();
         this->m_users_model->set_contacts(contacts);
     };
     NetworkClient::instance().search_user(params_search_user, network_search_user_callback);

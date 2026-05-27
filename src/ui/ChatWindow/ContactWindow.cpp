@@ -122,8 +122,7 @@ bool ContactWindow::set_edit_mode(bool edit) {
     if(!contact_info) { return false; }
     bool is_self    = Accounts::instance().is_self   (contact_info);
     bool is_contact = Accounts::instance().is_contact(contact_info);
-    // 模式错误，暂时全部显示并禁用
-    if(!is_self && !is_contact) {
+    if(false) {
         m_menu_manager         ->setDisabled(false); m_menu_manager         ->setVisible(true);
         m_action_edit          ->setDisabled(true ); m_action_edit          ->setVisible(true);
         m_action_remove        ->setDisabled(true ); m_action_remove        ->setVisible(true);
@@ -157,6 +156,21 @@ bool ContactWindow::set_edit_mode(bool edit) {
         m_ui->button_video     ->setDisabled(true ); m_ui->button_video     ->setVisible(true);
         m_ui->button_voice     ->setDisabled(true ); m_ui->button_voice     ->setVisible(true);
         return false;
+    }
+    // 陌生人，可添加为联系人，不可修改资料
+    if(!is_self && !is_contact) {
+        m_action_edit          ->setDisabled(true ); m_action_edit          ->setVisible(false);  // 陌生人不支持编辑好友信息
+        m_action_remove        ->setDisabled(true ); m_action_remove        ->setVisible(false);  // 陌生人不支持删除好友关系
+        m_ui->button_add       ->setDisabled(false); m_ui->button_add       ->setVisible(true );  // 陌生人可添加为好友
+        m_ui->button_avatar    ->setDisabled(false); m_ui->button_avatar    ->setVisible(true );  // 可查看陌生人的头像
+        m_ui->button_cancel    ->setDisabled(true ); m_ui->button_cancel    ->setVisible(false);
+        m_ui->button_gender    ->setDisabled(true ); m_ui->button_gender    ->setVisible(false);
+        m_ui->button_manager   ->setDisabled(true ); m_ui->button_manager   ->setVisible(false);  // 陌生人不支持管理及编辑
+        m_ui->button_messages  ->setDisabled(true ); m_ui->button_messages  ->setVisible(false);
+        m_ui->button_modify    ->setDisabled(true ); m_ui->button_modify    ->setVisible(false);
+        m_ui->button_starred   ->setDisabled(true ); m_ui->button_starred   ->setVisible(false);
+        m_ui->button_video     ->setDisabled(true ); m_ui->button_video     ->setVisible(false);
+        m_ui->button_voice     ->setDisabled(true ); m_ui->button_voice     ->setVisible(false);
     }
 
     auto set_editable = [](QLineEdit*edit_field, bool edit) {

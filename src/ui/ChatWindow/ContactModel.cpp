@@ -17,6 +17,7 @@ int ContactModel::rowCount(const QModelIndex &parent) const {
     return m_contact_infos ? m_contact_infos->contactInfos().size() : 0;
 }
 
+// 从内部变量中获取数据
 QVariant ContactModel::data(const QModelIndex &index, int role) const {
     if(!m_contact_infos) {
         return QVariant();
@@ -28,7 +29,9 @@ QVariant ContactModel::data(const QModelIndex &index, int role) const {
     }
 
     if(role == Qt::UserRole) {
-        return QVariant::fromValue(contact_infos.at(index.row()));
+        // 传出指针有利于判断类型转换结果是否正确
+        // 双击显示条目时获取的数据类型要与这里的类型一致
+        return QVariant::fromValue(std::make_shared<ContactInfo>(contact_infos.at(index.row())));
     }
 
     return QVariant();

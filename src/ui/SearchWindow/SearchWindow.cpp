@@ -41,7 +41,9 @@ SearchWindow::SearchWindow(QWidget *parent)
     // connect(ui->page_list_users->selectionModel(), &QItemSelectionModel::currentChanged, this, &ChatWindow::handle_contact_selection_changed);
     // 响应双击事件
     connect(m_ui->page_list_users, &QListView::doubleClicked, this, [this](const QModelIndex &index) {
+        if(!index.isValid()) { return; }
         const std::shared_ptr<ContactInfo>&contact_info = index.data(Qt::UserRole).value<std::shared_ptr<ContactInfo>>();
+        if (!contact_info || !m_user_window) { return; }
         this->m_user_window->show_contact(contact_info);
         Utils::widget_raise(this->m_user_window.get());
     });
@@ -112,7 +114,6 @@ bool SearchWindow::search_user(const QString&keyword) {
         // 刷新显示
         auto contacts = std::make_shared<ContactInfos>();
         contacts->setContactInfos({reply_search_user->contactInfo()});
-        qDebug().noquote().nospace() << "Search user id : " << reply_search_user->request().userId() << ". userinfo : " << reply_search_user->contactInfo();
         this->m_users_model->set_contacts(contacts);
     };
     NetworkClient::instance().search_user(params_search_user, network_search_user_callback);

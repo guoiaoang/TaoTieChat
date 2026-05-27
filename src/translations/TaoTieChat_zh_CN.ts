@@ -595,7 +595,7 @@ message : %2</source>
         <translation>群组</translation>
     </message>
     <message>
-        <location filename="../ui/SearchWindow/SearchWindow.cpp" line="87"/>
+        <location filename="../ui/SearchWindow/SearchWindow.cpp" line="89"/>
         <source>network_search_user recv failed.</source>
         <translation>数据接收错误。</translation>
     </message>

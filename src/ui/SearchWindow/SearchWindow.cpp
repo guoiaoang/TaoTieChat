@@ -17,9 +17,9 @@ SearchWindow::SearchWindow(QWidget *parent)
         QString str_search_key = m_ui->searchpage_lineedit_key->text();
         str_search_key = str_search_key.trimmed();
         m_ui->searchpage_toolbutton_search->setEnabled(!str_search_key.isEmpty());
-        if(str_search_key.isEmpty()) {
-            this->m_users_model->clean();  // 搜索词为空时清空搜索结果
-        }
+        // if(str_search_key.isEmpty()) {
+        //     this->m_users_model->clean();  // 搜索词为空时清空搜索结果
+        // }
     });
     connect(m_ui->searchpage_toolbutton_search, &QToolButton::triggered, this, [this](){
         // qDebug().nospace().noquote() << "searchpage_toolbutton_search triggered";
@@ -51,6 +51,9 @@ SearchWindow::SearchWindow(QWidget *parent)
     // TODO:群组功能当前未实现
     m_ui->searchpage_widget_groups  ->hide();
     m_ui->searchpage_toolbutton_user->hide();  // 只有一个作用时可暂不显示标签
+
+    // 设置回车键操作
+    this->installEventFilter(this);
 }
 
 SearchWindow::~SearchWindow() {
@@ -130,4 +133,24 @@ bool SearchWindow::search_group(const QString&keyword) {
     // local_search_groups();
     NetworkClient::instance();
     return false;
+}
+
+bool SearchWindow::eventFilter(QObject *watched, QEvent *event) {
+    if (watched == this && event->type() == QEvent::KeyPress) {
+        QKeyEvent *keyEvent = static_cast<QKeyEvent*>(event);
+
+        if (keyEvent->key() == Qt::Key_Return || keyEvent->key() == Qt::Key_Enter) {
+
+            // 补充一个人性化体验：如果当前焦点在一个本来就要响应回车的控件上（比如别的 QPushButton），就别抢人家的回车了
+            QWidget *focusWidget = this->focusWidget();
+            if (focusWidget && qobject_cast<QAbstractButton*>(focusWidget) && focusWidget != m_ui->searchpage_toolbutton_search) {
+                return QScrollArea::eventFilter(watched, event); // 放行
+            }
+
+            // 否则，触发我们的 QToolButton
+            m_ui->searchpage_toolbutton_search->animateClick();
+            return true; // 拦截
+        }
+    }
+    return QScrollArea::eventFilter(watched, event);
 }

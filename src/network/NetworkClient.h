@@ -27,7 +27,9 @@ class NetworkClient : public QObject{
 private:
     NetworkClient() = default;
     NetworkClient(const NetworkClient&) = delete;
+    NetworkClient operator=(const NetworkClient&) = delete;
 public:
+    ~NetworkClient() = default;
     static NetworkClient& instance() {
         static NetworkClient s_network_client;
         return s_network_client;

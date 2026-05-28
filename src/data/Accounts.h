@@ -5,14 +5,13 @@
 
 class Accounts : public QObject{
     Q_OBJECT
-public:
-    static Accounts& instance();
 private:
     Accounts();
     Accounts(const Accounts&) = default;
     Accounts& operator=(const Accounts&) = default;
 public:
     ~Accounts();
+    static Accounts& instance();
 
 public:
     // 设置当前账号信息及设置好友列表

@@ -255,7 +255,7 @@
        <item row="4" column="0">
         <widget class="QLabel" name="label_desc">
          <property name="text">
-          <string>desc:</string>
+          <string>description:</string>
          </property>
          <property name="alignment">
           <set>Qt::AlignmentFlag::AlignRight|Qt::AlignmentFlag::AlignTrailing|Qt::AlignmentFlag::AlignVCenter</set>
@@ -263,7 +263,7 @@
         </widget>
        </item>
        <item row="4" column="2">
-        <widget class="QLineEdit" name="edit_desc">
+        <widget class="QLineEdit" name="edit_description">
          <property name="styleSheet">
           <string notr="true">background: transparent;border: none;</string>
          </property>
@@ -332,7 +332,7 @@
        <item row="0" column="0">
         <widget class="QLabel" name="label_sign">
          <property name="text">
-          <string>sign:</string>
+          <string>signature:</string>
          </property>
          <property name="alignment">
           <set>Qt::AlignmentFlag::AlignRight|Qt::AlignmentFlag::AlignTrailing|Qt::AlignmentFlag::AlignVCenter</set>
@@ -353,7 +353,7 @@
         </spacer>
        </item>
        <item row="0" column="2">
-        <widget class="QLineEdit" name="edit_sign">
+        <widget class="QLineEdit" name="edit_signature">
          <property name="styleSheet">
           <string notr="true">background: transparent;border: none;</string>
          </property>
@@ -480,10 +480,10 @@
   <tabstop>edit_userid</tabstop>
   <tabstop>edit_region</tabstop>
   <tabstop>edit_phones</tabstop>
-  <tabstop>edit_sign</tabstop>
+  <tabstop>edit_signature</tabstop>
   <tabstop>edit_emails</tabstop>
   <tabstop>edit_notes</tabstop>
-  <tabstop>edit_desc</tabstop>
+  <tabstop>edit_description</tabstop>
   <tabstop>edit_tags</tabstop>
   <tabstop>button_gender</tabstop>
   <tabstop>button_starred</tabstop>

@@ -260,6 +260,10 @@ void ChatWindow::update_contact_info(const std::shared_ptr<ContactInfo>&contact_
 bool ChatWindow::eventFilter(QObject *obj, QEvent *event) {
     if(obj == m_ui->edit_search) {
         if(event->type() == QEvent::MouseButtonRelease) {
+            // // 主动关闭后才应该重建窗口
+            // if(m_search_window) {
+            //     m_search_window.reset();
+            // }
             if(!m_search_window) {
                 m_search_window = std::make_shared<SearchWindow>();
                 // 用于同步显示搜索词

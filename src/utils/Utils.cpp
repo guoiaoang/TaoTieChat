@@ -378,6 +378,19 @@ QString to_string(SuccessCode code) {
     return "Unknown Success Code";
 }
 
+// 内存中展开布局器 In-Memory Layout Expander  // 窗口不需要显示即可应用实际布局
+void in_memory_layout_expander(const QWidget*widget) {
+    if(!widget) { return; }
+    // 关键核心：强制触发 Qt 的初始化和样式抛光
+    // 这会确保控件的 Font、Palette 以及基本尺寸策略被正确初始化
+    widget->ensurePolished();
+    // 关键核心：如果该模板控件内部使用了 QLayout 布局
+    if (widget->layout()) {
+        // 强行让布局管理器抛弃“懒刷新”，立刻在内存中计算所有子控件的真实 geometry
+        widget->layout()->activate();
+    }
+}
+
 // 窗口前置显示
 void widget_raise(QWidget*widget) {
     if(!widget) { return; }
@@ -639,9 +652,9 @@ QDebug operator<<(QDebug debug, const ContactInfoBase& contact_info_base) {
                     << "nickname:"     << contact_info_base.nickname   () << ", "
                     << "gender:"       << contact_info_base.gender     () << ", "
                     << "birthday:"     << contact_info_base.birthday   () << ", "
-                    << "signature:"    << contact_info_base.sign       () << ", "
+                    << "signature:"    << contact_info_base.signature  () << ", "
                     << "region:"       << contact_info_base.region     () << ", "
-                    << "description:"  << contact_info_base.desc       () << ", "
+                    << "description:"  << contact_info_base.description() << ", "
                     << "phones:"       << contact_info_base.phones     () << ", "
                     << "emails:"       << contact_info_base.emails     () << ", "
                     << "social_links:" << contact_info_base.socialLinks() << ", "

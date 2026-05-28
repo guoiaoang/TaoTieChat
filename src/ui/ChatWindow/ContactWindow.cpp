@@ -84,16 +84,16 @@ void ContactWindow::show_contact(const std::shared_ptr<ContactInfo>&contact_info
     auto base_info   = contact_info->baseInfo();
     auto friend_info = contact_info->hasFriendInfo() ? contact_info->friendInfo() : ContactInfoFriend{};
     auto self_info   = contact_info->hasSelfInfo  () ? contact_info->selfInfo  () : ContactInfoSelf  {};
-    m_ui->edit_nickname_big->setText(base_info  .nickname());
-    m_ui->edit_nickname    ->setText(base_info  .nickname());
-    m_ui->edit_userid      ->setText(base_info  .userId  ());
-    m_ui->edit_region      ->setText(base_info  .region  ());
-    m_ui->edit_notes       ->setText(friend_info.notes   ());
-    m_ui->edit_phones      ->setText(base_info  .phones  ().join(";"));
-    m_ui->edit_emails      ->setText(base_info  .emails  ().join(";"));
-    m_ui->edit_tags        ->setText(friend_info.tags    ().join(";"));
-    m_ui->edit_desc        ->setText(base_info  .desc    ());
-    m_ui->edit_sign        ->setText(base_info  .sign    ());
+    m_ui->edit_nickname_big->setText(base_info  .nickname   ());
+    m_ui->edit_nickname    ->setText(base_info  .nickname   ());
+    m_ui->edit_userid      ->setText(base_info  .userId     ());
+    m_ui->edit_region      ->setText(base_info  .region     ());
+    m_ui->edit_notes       ->setText(friend_info.notes      ());
+    m_ui->edit_phones      ->setText(base_info  .phones     ().join(";"));
+    m_ui->edit_emails      ->setText(base_info  .emails     ().join(";"));
+    m_ui->edit_tags        ->setText(friend_info.tags       ().join(";"));
+    m_ui->edit_description ->setText(base_info  .description());
+    m_ui->edit_signature   ->setText(base_info  .signature  ());
 
     // // 设置头像  // 临时显示
     // if(avatar_pixmap) {
@@ -135,14 +135,14 @@ bool ContactWindow::set_edit_mode(bool edit) {
         m_ui->label_sign       ->setDisabled(true ); m_ui->label_sign       ->setVisible(true);
         m_ui->label_tags       ->setDisabled(true ); m_ui->label_tags       ->setVisible(true);
         m_ui->label_userid     ->setDisabled(true ); m_ui->label_userid     ->setVisible(true);
-        m_ui->edit_desc        ->setDisabled(true ); m_ui->edit_desc        ->setVisible(true);
+        m_ui->edit_description ->setDisabled(true ); m_ui->edit_description ->setVisible(true);
         m_ui->edit_emails      ->setDisabled(true ); m_ui->edit_emails      ->setVisible(true);
         m_ui->edit_nickname_big->setDisabled(true ); m_ui->edit_nickname_big->setVisible(true);
         m_ui->edit_nickname    ->setDisabled(true ); m_ui->edit_nickname    ->setVisible(true);
         m_ui->edit_notes       ->setDisabled(true ); m_ui->edit_notes       ->setVisible(true);
         m_ui->edit_phones      ->setDisabled(true ); m_ui->edit_phones      ->setVisible(true);
         m_ui->edit_region      ->setDisabled(true ); m_ui->edit_region      ->setVisible(true);
-        m_ui->edit_sign        ->setDisabled(true ); m_ui->edit_sign        ->setVisible(true);
+        m_ui->edit_signature   ->setDisabled(true ); m_ui->edit_signature   ->setVisible(true);
         m_ui->edit_tags        ->setDisabled(true ); m_ui->edit_tags        ->setVisible(true);
         m_ui->edit_userid      ->setDisabled(true ); m_ui->edit_userid      ->setVisible(true);
         m_ui->button_add       ->setDisabled(true ); m_ui->button_add       ->setVisible(true);
@@ -185,9 +185,9 @@ bool ContactWindow::set_edit_mode(bool edit) {
     };
 
     // 关联组件
-    set_visiable(m_ui->label_notes, m_ui->edit_notes, is_contact);  // 好友显示备注
-    set_visiable(m_ui->label_tags , m_ui->edit_tags , is_contact);  // 好友显示标签
-    set_visiable(m_ui->label_desc , m_ui->edit_desc , is_contact);  // 好友显示描述
+    set_visiable(m_ui->label_notes, m_ui->edit_notes      , is_contact);  // 好友显示备注
+    set_visiable(m_ui->label_tags , m_ui->edit_tags       , is_contact);  // 好友显示标签
+    set_visiable(m_ui->label_desc , m_ui->edit_description, is_contact);  // 好友显示描述
 
     // 按钮显示
     m_action_edit        ->setVisible(               !edit);  // 编辑模式下隐藏编辑按钮
@@ -199,20 +199,20 @@ bool ContactWindow::set_edit_mode(bool edit) {
     m_ui->button_video   ->setVisible( is_contact && !edit);  // 好友且非编辑模式才显示视频通话按钮
     m_action_remove      ->setVisible( is_contact && !edit);  // 好友且非编辑模式才显示删除好友按钮
     // 输入组件
-    set_editable(m_ui->edit_notes   , is_contact && edit);  // 好友才允许修改备注
-    set_editable(m_ui->edit_tags    , is_contact && edit);  // 好友才允许修改标签
-    set_editable(m_ui->edit_desc    , is_contact && edit);  // 好友才允许修改个人说明
-    set_editable(m_ui->edit_nickname, is_self    && edit);  // 自己才允许修改昵称
-    set_editable(m_ui->edit_userid  , is_self    && edit);  // 自己才允许修改用户 ID
-    set_editable(m_ui->edit_region  , is_self    && edit);  // 自己才允许修改地区
-    set_editable(m_ui->edit_phones  , is_self    && edit);  // 自己才允许修改电话
-    set_editable(m_ui->edit_emails  , is_self    && edit);  // 自己才允许修改邮箱
-    set_editable(m_ui->edit_sign    , is_self    && edit);  // 自己才允许修改签名
+    set_editable(m_ui->edit_notes      , is_contact && edit);  // 好友才允许修改备注
+    set_editable(m_ui->edit_tags       , is_contact && edit);  // 好友才允许修改标签
+    set_editable(m_ui->edit_description, is_contact && edit);  // 好友才允许修改个人说明
+    set_editable(m_ui->edit_nickname   , is_self    && edit);  // 自己才允许修改昵称
+    set_editable(m_ui->edit_userid     , is_self    && edit);  // 自己才允许修改用户 ID
+    set_editable(m_ui->edit_region     , is_self    && edit);  // 自己才允许修改地区
+    set_editable(m_ui->edit_phones     , is_self    && edit);  // 自己才允许修改电话
+    set_editable(m_ui->edit_emails     , is_self    && edit);  // 自己才允许修改邮箱
+    set_editable(m_ui->edit_signature  , is_self    && edit);  // 自己才允许修改签名
 
     // if(is_self) {
-    //     m_ui->edit_notes ->setVisible(false); m_ui->label_notes->setVisible(false);
-    //     m_ui->edit_tags  ->setVisible(false); m_ui->label_tags ->setVisible(false);
-    //     m_ui->edit_desc  ->setVisible(false); m_ui->label_desc ->setVisible(false);
+    //     m_ui->edit_notes      ->setVisible(false); m_ui->label_notes     ->setVisible(false);
+    //     m_ui->edit_tags       ->setVisible(false); m_ui->label_tags      ->setVisible(false);
+    //     m_ui->edit_description->setVisible(false); m_ui->edit_description->setVisible(false);
     // }
     return true;
 }
@@ -280,12 +280,12 @@ void ContactWindow::on_button_save() {
     // 自己特有字段，只有在是自己的资料时才需要填充
     else if(is_self) {
         // 修改自己资料时包括可修改自己的基础资料
-        base_info.setNickname(m_ui->edit_nickname->text());
-        base_info.setRegion  (m_ui->edit_region  ->text());
-        base_info.setDesc    (m_ui->edit_desc    ->text());
-        base_info.setSign    (m_ui->edit_sign    ->text());
-        base_info.setPhones  (m_ui->edit_phones  ->text().split(";", Qt::SkipEmptyParts));
-        base_info.setEmails  (m_ui->edit_emails  ->text().split(";", Qt::SkipEmptyParts));
+        base_info.setNickname   (m_ui->edit_nickname   ->text());
+        base_info.setRegion     (m_ui->edit_region     ->text());
+        base_info.setDescription(m_ui->edit_description->text());
+        base_info.setSignature  (m_ui->edit_signature  ->text());
+        base_info.setPhones     (m_ui->edit_phones     ->text().split(";", Qt::SkipEmptyParts));
+        base_info.setEmails     (m_ui->edit_emails     ->text().split(";", Qt::SkipEmptyParts));
         copy_contact_info->setBaseInfo(base_info);
 
         // 修改自己资料时还需要一个标志，告诉服务器这是修改自己的资料，而不是修改别人的资料。

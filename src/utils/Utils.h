@@ -48,6 +48,11 @@ QIcon to_icon(const QString&text, const QPen&pen = QPen(Qt::white), const QSize 
 QPixmap to_pixmap(const QString&text, const QSize size = QSize(128, 128));
 
 // ====================================================================== //
+// 内存中展开布局器 In-Memory Layout Expander  // 窗口不需要显示即可应用实际布局
+// 1. 不要使用 QSplitter，会导致自动调整大小
+// 2. 不要调用 widget->adjustSize() 自适应大小，会按照控件所需实际大小进行缩小
+// 3. ui 中修改后要确保编译也已经更新，否则界面也看不到变化
+void in_memory_layout_expander(const QWidget*widget);
 // 窗口前置显示
 void widget_raise(QWidget*widget);
 // 添加圆角遮罩
@@ -219,9 +224,9 @@ struct ContactInfoBaseWrapper {
     QString     nickname     = QString    {};  // 昵称
     int64_t     gender       = 0            ;  // 性别  // 0: 未知 1: 男 2: 女
     QString     birthday     = QString    {};  // 生日
-    QString     sign         = QString    {};  // 签名
+    QString     signature    = QString    {};  // 签名
     QString     region       = QString    {};  // 地区
-    QString     desc         = QString    {};  // 个人简介
+    QString     description  = QString    {};  // 个人简介
     QStringList phones       = QStringList{};  // 手机号
     QStringList emails       = QStringList{};  // 邮箱
     QStringList social_links = QStringList{};  // 社交链接，逗号分隔
@@ -234,9 +239,9 @@ struct ContactInfoBaseWrapper {
         nickname     = other.nickname   ();
         gender       = other.gender     ();
         birthday     = other.birthday   ();
-        sign         = other.sign       ();
+        signature    = other.signature  ();
         region       = other.region     ();
-        desc         = other.desc       ();
+        description  = other.description();
         phones       = other.phones     ();
         emails       = other.emails     ();
         social_links = other.socialLinks();
@@ -252,9 +257,9 @@ struct ContactInfoBaseWrapper {
         base_info.setNickname    (nickname    );
         base_info.setGender      (gender      );
         base_info.setBirthday    (birthday    );
-        base_info.setSign        (sign        );
+        base_info.setSignature   (signature   );
         base_info.setRegion      (region      );
-        base_info.setDesc        (desc        );
+        base_info.setDescription (description );
         base_info.setPhones      (phones      );
         base_info.setEmails      (emails      );
         base_info.setSocialLinks (social_links);
@@ -269,9 +274,9 @@ struct ContactInfoBaseWrapper {
                 nickname     != other.nickname     ||
                 gender       != other.gender       ||
                 birthday     != other.birthday     ||
-                sign         != other.sign         ||
+                signature    != other.signature    ||
                 region       != other.region       ||
-                desc         != other.desc         ||
+                description  != other.description  ||
                 phones       != other.phones       ||
                 emails       != other.emails       ||
                 social_links != other.social_links ||

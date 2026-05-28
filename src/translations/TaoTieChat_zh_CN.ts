@@ -173,12 +173,12 @@
         <translation>创建群</translation>
     </message>
     <message>
-        <location filename="../ui/ChatWindow/ChatWindow.cpp" line="351"/>
+        <location filename="../ui/ChatWindow/ChatWindow.cpp" line="355"/>
         <source>Failed to download avatar.</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../ui/ChatWindow/ChatWindow.cpp" line="352"/>
+        <location filename="../ui/ChatWindow/ChatWindow.cpp" line="356"/>
         <source>
 
 code : 0x%1
@@ -186,7 +186,7 @@ message : %2</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../ui/ChatWindow/ChatWindow.cpp" line="355"/>
+        <location filename="../ui/ChatWindow/ChatWindow.cpp" line="359"/>
         <source>Error</source>
         <translation type="unfinished">错误</translation>
     </message>
@@ -250,12 +250,12 @@ message : %2</source>
     </message>
     <message>
         <location filename="../ui/ChatWindow/ContactWindow.ui" line="258"/>
-        <source>desc:</source>
+        <source>description:</source>
         <translation>描述：</translation>
     </message>
     <message>
         <location filename="../ui/ChatWindow/ContactWindow.ui" line="335"/>
-        <source>sign:</source>
+        <source>signature:</source>
         <translation>签名：</translation>
     </message>
     <message>
@@ -378,6 +378,39 @@ message : %2</source>
         <location filename="../ui/ChatWindow/ContactWindow.cpp" line="368"/>
         <source>cancel</source>
         <translation>取消</translation>
+    </message>
+</context>
+<context>
+    <name>DemoContactDelegateItem</name>
+    <message>
+        <location filename="../ui/Demo/DemoContactDelegateItem.ui" line="14"/>
+        <source>Form</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location filename="../ui/Demo/DemoContactDelegateItem.ui" line="26"/>
+        <source>Avatar</source>
+        <translation type="unfinished">头像</translation>
+    </message>
+    <message>
+        <location filename="../ui/Demo/DemoContactDelegateItem.ui" line="43"/>
+        <source>NickName</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location filename="../ui/Demo/DemoContactDelegateItem.ui" line="56"/>
+        <source>Time</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location filename="../ui/Demo/DemoContactDelegateItem.ui" line="70"/>
+        <source>LastMessage</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location filename="../ui/Demo/DemoContactDelegateItem.ui" line="83"/>
+        <source>Notice</source>
+        <translation type="unfinished"></translation>
     </message>
 </context>
 <context>
@@ -595,7 +628,7 @@ message : %2</source>
         <translation>群组</translation>
     </message>
     <message>
-        <location filename="../ui/SearchWindow/SearchWindow.cpp" line="89"/>
+        <location filename="../ui/SearchWindow/SearchWindow.cpp" line="92"/>
         <source>network_search_user recv failed.</source>
         <translation>数据接收错误。</translation>
     </message>

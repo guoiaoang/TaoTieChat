@@ -20,10 +20,14 @@ public:
 
 Q_SIGNALS:
     void SearchEditTextChanged(const QString &);
+
 private:
     bool do_search   (const QString&keyword);
     bool search_user (const QString&keyword);
     bool search_group(const QString&keyword);
+
+protected:
+    bool eventFilter(QObject *obj, QEvent *event) override;
 
 private:
     std::unique_ptr<Ui::SearchWindow> m_ui            ;

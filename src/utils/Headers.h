@@ -136,6 +136,7 @@
 #include <QByteArrayView>
 #include <QCheckBox>
 #include <QColor>
+#include <QColorDialog>
 #include <QCommandLineParser>
 #include <QCoreApplication>
 #include <QCryptographicHash>
@@ -144,6 +145,7 @@
 #include <QDateEdit>
 #include <QDateTime>
 #include <QDebug>
+#include <QDesktopServices>
 #include <QDialog>
 #include <QDir>          // 遍历子目录，较老版本 // QDir::entryList()
 #include <QDirIterator>  // 遍历子目录，较新版本，单个遍历
@@ -167,6 +169,7 @@
 #include <QJsonParseError>
 #include <QJsonValue>
 #include <QLabel>
+#include <QLayout>
 #include <QList>
 #include <QListWidgetItem>
 #include <QLocale>
@@ -189,6 +192,8 @@
 #include <QPalette>
 #include <QPicture>
 #include <QPixmap>
+#include <QProcess>
+#include <QProgressBar>
 #include <QPropertyAnimation>
 #include <QProtobufJsonSerializer>
 #include <QProtobufMessage>

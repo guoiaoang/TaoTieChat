@@ -76,7 +76,7 @@
                     "disturb" : false,
                     "region" : "Example Region",
                     "notes" : "Met at the conference.",
-                    "sign" : "Carpe Diem",
+                    "signature" : "Carpe Diem",
                     "from" : "WeChat",
                 },
                 // ...

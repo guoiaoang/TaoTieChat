@@ -33,15 +33,17 @@ class ContactWindow;
 // };
 
 class Database{
+    // Q_OBJECT
+private:
+    Database() = default;
+    Database(const Database&) = delete;
+    Database& operator=(const Database&) = delete;
 public:
+    ~Database() = default;
     static Database& instance() {
         static Database s_database;
         return s_database;
     }
-private:
-    Database() {}
-    Database(const Database&) {}
-    Database& operator=(const Database&) {}
 public:
     class FileIDPathMap {
     public:

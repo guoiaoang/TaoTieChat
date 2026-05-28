@@ -14,19 +14,16 @@ struct MediaInfo {
 
 class MediaWindow : public QMainWindow {
     Q_OBJECT
+private:
+    explicit MediaWindow(QWidget *parent = nullptr);
+    MediaWindow (const MediaWindow&) = delete;
+    MediaWindow& operator=(const MediaWindow&) = delete;
 public:
+    ~MediaWindow();
     static MediaWindow &instance() {
         static MediaWindow s_media_window;
         return s_media_window;
     }
-private:
-    explicit MediaWindow(QWidget *parent = nullptr);
-    MediaWindow              (const MediaWindow & ) = delete;
-    MediaWindow              (      MediaWindow &&) = delete;
-    MediaWindow & operator = (const MediaWindow & ) = delete;
-    MediaWindow & operator = (      MediaWindow &&) = delete;
-public:
-    ~MediaWindow();
 
 public:
     void set_play_list(const std::vector<std::shared_ptr<MediaInfo>>&play_list);

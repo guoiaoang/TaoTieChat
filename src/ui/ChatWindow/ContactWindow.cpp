@@ -36,6 +36,18 @@ ContactWindow::ContactWindow(QWidget *parent) : QWidget(parent), m_ui(std::make_
     m_action_remove->setText  (tr("remove"));
     m_menu_manager ->addAction(m_action_edit  .get());
     m_menu_manager ->addAction(m_action_remove.get());
+
+    // 添加样式
+    m_edit_tool.add_long_text_tip_button(m_ui->edit_description );
+    m_edit_tool.add_long_text_tip_button(m_ui->edit_emails      );
+    m_edit_tool.add_long_text_tip_button(m_ui->edit_nickname_big);
+    m_edit_tool.add_long_text_tip_button(m_ui->edit_nickname    );
+    m_edit_tool.add_long_text_tip_button(m_ui->edit_notes       );
+    m_edit_tool.add_long_text_tip_button(m_ui->edit_phones      );
+    m_edit_tool.add_long_text_tip_button(m_ui->edit_region      );
+    m_edit_tool.add_long_text_tip_button(m_ui->edit_signature   );
+    m_edit_tool.add_long_text_tip_button(m_ui->edit_tags        );
+    m_edit_tool.add_long_text_tip_button(m_ui->edit_userid      );
 }
 
 ContactWindow::~ContactWindow() {
@@ -80,20 +92,27 @@ void ContactWindow::show_contact(const std::shared_ptr<ContactInfo>&contact_info
     // 更新显示模式  // 初始化时没有账号信息，会导致显示模式错误
     set_edit_mode(m_edit_mode);
 
+    auto set_text = [](QLineEdit*edit, const QString&text) {
+        if(!edit) { return; }
+        edit->setText(text);
+        edit->setToolTip(text);
+        edit->setCursorPosition(0); // 光标回到文本开头
+    };
+
     // 文本信息
     auto base_info   = contact_info->baseInfo();
     auto friend_info = contact_info->hasFriendInfo() ? contact_info->friendInfo() : ContactInfoFriend{};
     auto self_info   = contact_info->hasSelfInfo  () ? contact_info->selfInfo  () : ContactInfoSelf  {};
-    m_ui->edit_nickname_big->setText(base_info  .nickname   ());
-    m_ui->edit_nickname    ->setText(base_info  .nickname   ());
-    m_ui->edit_userid      ->setText(base_info  .userId     ());
-    m_ui->edit_region      ->setText(base_info  .region     ());
-    m_ui->edit_notes       ->setText(friend_info.notes      ());
-    m_ui->edit_phones      ->setText(base_info  .phones     ().join(";"));
-    m_ui->edit_emails      ->setText(base_info  .emails     ().join(";"));
-    m_ui->edit_tags        ->setText(friend_info.tags       ().join(";"));
-    m_ui->edit_description ->setText(base_info  .description());
-    m_ui->edit_signature   ->setText(base_info  .signature  ());
+    set_text(m_ui->edit_nickname_big, base_info  .nickname   ()          );
+    set_text(m_ui->edit_nickname    , base_info  .nickname   ()          );
+    set_text(m_ui->edit_userid      , base_info  .userId     ()          );
+    set_text(m_ui->edit_region      , base_info  .region     ()          );
+    set_text(m_ui->edit_notes       , friend_info.notes      ()          );
+    set_text(m_ui->edit_phones      , base_info  .phones     ().join(";"));
+    set_text(m_ui->edit_emails      , base_info  .emails     ().join(";"));
+    set_text(m_ui->edit_tags        , friend_info.tags       ().join(";"));
+    set_text(m_ui->edit_description , base_info  .description()          );
+    set_text(m_ui->edit_signature   , base_info  .signature  ()          );
 
     // // 设置头像  // 临时显示
     // if(avatar_pixmap) {
@@ -214,6 +233,9 @@ bool ContactWindow::set_edit_mode(bool edit) {
     //     m_ui->edit_tags       ->setVisible(false); m_ui->label_tags      ->setVisible(false);
     //     m_ui->edit_description->setVisible(false); m_ui->edit_description->setVisible(false);
     // }
+
+    m_ui->button_gender ->setVisible(false);  // 功能未完善，暂不显示
+    m_ui->button_starred->setVisible(false);  // 功能未完善，暂不显示
     return true;
 }
 

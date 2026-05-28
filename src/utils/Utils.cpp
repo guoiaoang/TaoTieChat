@@ -550,6 +550,109 @@ QString calculate_file_md5(const QString &filePath) {
 
 } // namespace Utils::Algorithm
 
+// class Utils::WidgetTools::LineEdit;
+namespace Utils::WidgetTools{
+
+void LineEdit::add_long_text_tip_button(QLineEdit* edit_line) {
+    if(!edit_line) { return; }
+
+    // 1. 初始化输入框（这里以一个名称输入框为例）
+    edit_line->setReadOnly(true); // 通常这种带省略号的多为只读或失焦状态
+
+    // 2. 创建自定义的 ... 动作按钮（可以使用内置的样式图标，或者自定义的图片）
+    // 如果你有专门的 ... 图标，换成 QIcon(":/icons/more.png")
+    // QIcon icon_elide = edit_line->style()->standardIcon(QStyle::SP_TitleBarContextHelpButton);
+    static QIcon icon_elide = Utils::to_icon("...");
+    QAction* action_elide = new QAction(icon_elide, edit_line->text(), edit_line);
+
+    m_map_edit_action.emplace(edit_line, action_elide);
+
+    // 3. 将其丢入 QLineEdit 的末尾（右侧）
+    edit_line->addAction(action_elide, QLineEdit::TrailingPosition);
+
+    // 4. 默认先藏起来
+    action_elide->setVisible(false);
+
+    // 5. 绑定点击事件（如果用户点击了这个 ...，可以弹窗显示完整内容，也可以不绑定纯当视觉提示）
+    connect(action_elide, &QAction::triggered, this, [this, edit_line]() {
+        // 点击 ... 弹出气泡或复制全文
+        QToolTip::showText(QCursor::pos(), edit_line->text(), edit_line);
+    });
+
+    // 6. 监听文本改变信号
+    connect(edit_line, &QLineEdit::textChanged, this, [this](){
+        auto*edit_line = dynamic_cast<QLineEdit*>(sender());
+        if(!edit_line) { return; }
+        update_elide_action_status(edit_line);
+    });
+
+    // 7. 🌟 关键：输入框被拉伸或缩小时，可见性也会变，所以必须为输入框安装事件过滤器
+    edit_line->installEventFilter(this);
+}
+
+// 判断文本是否完整展示（接上一题的精准算法）
+bool LineEdit::is_text_fully_visible(QLineEdit* edit_line) {
+    if (!edit_line) { return true; }
+
+    // 1. 获取输入框的字体度量信息（Font Metrics）
+    QFontMetrics metrics(edit_line->font());
+
+    // 2. 计算当前文本在屏幕上渲染所需的绝对像素宽度
+    int width_text = metrics.horizontalAdvance(edit_line->text());
+
+    // 3. 计算 QLineEdit 扣除边框和内边距（Padding）后，真正用来显示文字的“可视区域宽度”
+    // lineEdit->rect() 是总大小，contentsRect() 会自动帮你扣除掉边框 (border) 等
+    // 注意：如果 action 已经显示出来了，可视区域会变小（因为 action 占用了约 20-30px 的宽度）
+    // 为了防止显隐状态“反复横跳”闪烁，我们采用总 contentsRect 的宽度做基准
+    int width_visible = edit_line->contentsRect().width();
+
+    // 4. 关键修正：QLineEdit 内部左右两端通常会有 2~4 像素的微小 margin（留白）
+    // 为了极度精准，我们需要把这个潜在的 padding 扣除掉
+    // 动态获取两端留白，如果拿不到默认可以减去 4 到 6 像素
+    int margins_text = 0;
+    QMargins margins = edit_line->textMargins();
+    margins_text += margins.left() + margins.right();
+
+    // 还要考虑 QStyle 里的基本样式微调，通常安全起见可以再减去 4 像素
+    width_visible -= (margins_text + 4);
+
+    // 5. 比较：如果文本实际宽度 <= 可视区域宽度，说明完美容纳，全部显示出来了
+    return width_text <= width_visible;
+}
+
+// 刷新 Action 的状态
+void LineEdit::update_elide_action_status(QLineEdit* edit_line) {
+    if (!edit_line) { return; }
+
+    QAction* action_elide = m_map_edit_action.at(edit_line);
+    if(!action_elide) { return; }
+
+    // 判断当前输入框的内容是否能装得下
+    bool is_fully_visible = is_text_fully_visible(edit_line);
+
+    if (is_fully_visible || !edit_line->isReadOnly()) {
+        // 能完全显示，把 ... 藏起来，清空提示
+        action_elide->setVisible(false);
+        edit_line->setToolTip("");
+    } else {
+        // 显示不全了！立刻让右侧的 ... 动作冒出来
+        action_elide->setVisible(true);
+        // 人性化体验：把输入框的悬浮提示设为完整文本
+        edit_line->setToolTip(edit_line->text());
+    }
+}
+
+bool LineEdit::eventFilter(QObject *watched, QEvent *event) {
+    auto*edit_line = dynamic_cast<QLineEdit*>(watched);
+    // 捕捉输入框的大小变化事件
+    if (edit_line && event->type() == QEvent::Resize && m_map_edit_action.contains(edit_line)) {
+        // 输入框大小一变，立刻重新核算 ... 的显隐
+        update_elide_action_status(edit_line);
+    }
+    return QObject::eventFilter(watched, event);
+}
+
+}
 
 // 重载 QDebug 运算符
 QDebug operator<<(QDebug debug, const AuthRequest &request) {

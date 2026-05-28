@@ -1,6 +1,6 @@
 #pragma once
 
-#include "Headers.h"
+#include "headers.h"
 #include "Utils.h"
 
 struct AuthOpt;
@@ -59,9 +59,9 @@ class AuthOptRW {
     static QString m_username_prefix() { return "user:"; }
 public:
     static bool save(const std::shared_ptr<AuthOpt> & auth_opt) {
-        auto user_section = m_username_prefix() + auth_opt->user_id;
+        auto user_section     = m_username_prefix() + auth_opt->user_id;
         auto user_section_str = user_section.toStdString();
-        auto user_section_sz = user_section_str.c_str();
+        auto user_section_sz  = user_section_str.c_str();
 
         Utils::create_dirs(Utils::get_dir(config_path()));  // 确保目录存在
 
@@ -86,9 +86,9 @@ public:
         for (auto const& ite_section : ini) {
             auto const& section    = ite_section.first;
             if(section.starts_with(m_username_prefix().toUtf8().toStdString().data())) {
-                auto auth_opt = std::make_shared<AuthOpt>();
-                auth_opt->user_id = QString::fromStdString(section.substr(5));  // 去掉 "user:" 前缀
-                auto const& collection = ite_section.second;
+                auto auth_opt             = std::make_shared<AuthOpt>();
+                auth_opt->user_id         = QString::fromStdString(section.substr(5));  // 去掉 "user:" 前缀
+                auto const& collection    = ite_section.second;
                 auth_opt->token           = collection.has("token"          ) ? QString::fromStdString(collection.get("token")) : QString();
                 auth_opt->password        = collection.has("password"       ) ? QString::fromStdString(collection.get("password")) : QString();
                 auth_opt->rember_password = collection.has("rember_password") ? collection.get("rember_password") == "true" : false;

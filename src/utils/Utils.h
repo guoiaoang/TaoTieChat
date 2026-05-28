@@ -1,6 +1,6 @@
 #pragma once
 
-#include "Headers.h"
+#include "headers.h"
 #include "taotie_chat.qpb.h"
 #include "taotie_chat_client.grpc.qpb.h"
 
@@ -312,7 +312,7 @@ struct ContactInfoWrapper{
 
 } // namespace Utils::Wrapper
 
-//
+// FontIcons
 namespace Utils {
 // 必须在加载字体后创建该结构体的实例，以确保图标能够正确显示
 struct FontIcons {
@@ -552,6 +552,7 @@ QString to_string(const T& ptr) {
     // 如果不为空，解引用并复用上面的基础 to_string 模板
     return to_string(*ptr);
 }
+
 }
 
 // 算法相关的工具函数
@@ -606,6 +607,26 @@ private:
     QSet<T> m_active_tasks;
     QMutex  m_mutex       ;
 };
+
+}
+
+// class Utils::WidgetTools::LineEdit;
+namespace Utils::WidgetTools{
+class LineEdit : public QObject{
+    Q_OBJECT
+public:
+    // 要操作的控件
+    void add_long_text_tip_button(QLineEdit* line_edit);
+    // 封装我们上一题实现的“文本是否全部显示”的精准判断函数
+    bool is_text_fully_visible(QLineEdit* lineEdit);
+    // 动态刷新 Action 显隐的函数
+    void update_elide_action_status(QLineEdit* line_edit);
+private:
+    bool eventFilter(QObject *watched, QEvent *event);
+private:
+    std::map<QLineEdit*, QAction*> m_map_edit_action;
+};
+
 }
 
 // 重载 QDebug 运算符

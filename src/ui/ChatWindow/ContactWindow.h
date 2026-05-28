@@ -1,6 +1,6 @@
 #pragma once
 
-#include "Headers.h"
+#include "headers.h"
 #include "Utils.h"
 #include "MediaWindow.h"
 #include "Accounts.h"
@@ -240,4 +240,5 @@ private:
     std::shared_ptr<ContactInfo      > m_cache_contact_info ;
     std::shared_ptr<QPixmap          > m_cache_avatar       ;
     bool m_edit_mode = false;
+    Utils::WidgetTools::LineEdit m_edit_tool;
 };

@@ -31,6 +31,7 @@ SearchWindow::SearchWindow(QWidget *parent)
     // set
     m_action_search->setText(m_ui->searchpage_toolbutton_search->text());
     m_ui->searchpage_toolbutton_search->setDefaultAction(m_action_search.get());
+    m_ui->searchpage_toolbutton_search->setEnabled(m_action_search->text().isEmpty());  // 搜索词为空时不允许点击搜索按钮
     // 设置应用级别的图标后就不需要再手动设置窗口级别的图标了
     // this->setWindowIcon(QApplication::windowIcon());
 

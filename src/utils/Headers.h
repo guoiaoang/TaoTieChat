@@ -170,6 +170,7 @@
 #include <QJsonValue>
 #include <QLabel>
 #include <QLayout>
+#include <QLineEdit>
 #include <QList>
 #include <QListWidgetItem>
 #include <QLocale>
@@ -247,6 +248,7 @@
 #include <QToolBar>
 #include <QToolBox>
 #include <QToolButton>
+#include <QToolTip>
 #include <QTranslator>
 #include <QtSvg/QSvgGenerator>
 #include <QUrl>

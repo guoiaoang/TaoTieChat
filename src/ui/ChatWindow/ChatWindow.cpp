@@ -43,11 +43,14 @@ ChatWindow::ChatWindow(QWidget *parent)
     connect(m_action_rember_password.get(), &QAction::triggered, this, [&](){
         auto current_account = Accounts::instance().get_current_account();
         if(!current_account) { return; }
-        auto auth_opt = Accounts::instance().get_auth_opt(current_account->baseInfo().accountId());
+        // 创建副本，不要修改原先的数据，防止恢复为保存登陆信息时数据丢失
+        std::shared_ptr<AuthOpt> auth_opt = std::make_shared<AuthOpt>(*Accounts::instance().get_auth_opt(current_account->baseInfo().accountId()).get());
         if(!auth_opt) { return; }
         // 保存数据
         auth_opt->rember_password = m_action_rember_password->isChecked();
         auth_opt->auto_login      = m_action_rember_password->isChecked() && m_action_auto_login->isChecked();  // 记住密码才允许自动登陆
+        auth_opt->password        = !auth_opt->rember_password ? QString{} : auth_opt->password;
+        auth_opt->token           = !auth_opt->rember_password ? QString{} : auth_opt->token   ;
         AuthOptRW::save(auth_opt);
         // 设置到界面
         m_action_rember_password->setChecked(auth_opt->rember_password);
@@ -56,11 +59,14 @@ ChatWindow::ChatWindow(QWidget *parent)
     connect(m_action_auto_login     .get(), &QAction::triggered, this, [&](){
         auto current_account = Accounts::instance().get_current_account();
         if(!current_account) { return; }
-        auto auth_opt = Accounts::instance().get_auth_opt(current_account->baseInfo().accountId());
+        // 创建副本，不要修改原先的数据，防止恢复为保存登陆信息时数据丢失
+        std::shared_ptr<AuthOpt> auth_opt = std::make_shared<AuthOpt>(*Accounts::instance().get_auth_opt(current_account->baseInfo().accountId()).get());
         if(!auth_opt) { return; }
         // 保存数据
         auth_opt->rember_password = m_action_rember_password->isChecked() || m_action_auto_login->isChecked();  // 自动登陆必须记住密码
         auth_opt->auto_login      = m_action_auto_login->isChecked();
+        auth_opt->password        = !auth_opt->rember_password ? QString{} : auth_opt->password;
+        auth_opt->token           = !auth_opt->rember_password ? QString{} : auth_opt->token   ;
         AuthOptRW::save(auth_opt);
         // 设置到界面
         m_action_rember_password->setChecked(auth_opt->rember_password);
@@ -120,7 +126,7 @@ ChatWindow::ChatWindow(QWidget *parent)
     m_action_auto_login     ->setChecked  (!auth_opt ? false : auth_opt->auto_login);
     m_action_settings->setText     (tr("settings"));
     m_action_settings->setDisabled (true); // TODO:功能未实现，暂时禁用
-    m_action_signout ->setText     (tr("Signout"));
+    m_action_signout ->setText     (tr("Exit"));  // TODO:退出到登陆界面
     m_menu_settings  ->addAction   (m_action_settings.get());
     m_menu_settings  ->addSeparator();
     m_menu_settings  ->addAction   (m_action_rember_password.get());

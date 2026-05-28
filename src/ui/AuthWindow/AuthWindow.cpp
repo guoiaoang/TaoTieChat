@@ -182,6 +182,9 @@ bool AuthWindow::handle_signin_successd(const signin_params& params_signin, cons
         auth_opt->password   = auth_opt->rember_password ? params_signin->requestUserAuth().password() : QString();
         // 保存登录记录
         AuthOptRW::save(auth_opt);
+        // 这里的赋值是为了传递，便于主界面恢复为记住密码
+        auth_opt->token      = reply_signin->token();
+        auth_opt->password   = params_signin->requestUserAuth().password();
     }
 
     const TaoTieChat::AuthRequest auth = (params_signin && params_signin->hasRequestUserAuth())

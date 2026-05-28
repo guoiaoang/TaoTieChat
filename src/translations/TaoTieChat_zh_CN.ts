@@ -300,29 +300,45 @@ message : %2</source>
     </message>
     <message>
         <location filename="../ui/ChatWindow/ContactWindow.cpp" line="36"/>
-        <location filename="../ui/ChatWindow/ContactWindow.cpp" line="367"/>
+        <location filename="../ui/ChatWindow/ContactWindow.cpp" line="391"/>
         <source>remove</source>
         <translation>删除</translation>
     </message>
     <message>
-        <location filename="../ui/ChatWindow/ContactWindow.cpp" line="429"/>
+        <location filename="../ui/ChatWindow/ContactWindow.cpp" line="353"/>
+        <source>Failed to send contact request.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location filename="../ui/ChatWindow/ContactWindow.cpp" line="363"/>
+        <source>Success</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location filename="../ui/ChatWindow/ContactWindow.cpp" line="363"/>
+        <source>Send contact request success.</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location filename="../ui/ChatWindow/ContactWindow.cpp" line="453"/>
         <source>Failed to download avatar.</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../ui/ChatWindow/ContactWindow.cpp" line="450"/>
+        <location filename="../ui/ChatWindow/ContactWindow.cpp" line="474"/>
         <source>Image Files (*.png;*.jpg;*.bmp)</source>
         <translation>图片格式 (*.png;*.jpg;*.bmp)</translation>
     </message>
     <message>
-        <location filename="../ui/ChatWindow/ContactWindow.cpp" line="453"/>
+        <location filename="../ui/ChatWindow/ContactWindow.cpp" line="477"/>
         <source>Select Avatar</source>
         <translation>选择头像</translation>
     </message>
     <message>
         <location filename="../ui/ChatWindow/ContactWindow.cpp" line="309"/>
-        <location filename="../ui/ChatWindow/ContactWindow.cpp" line="430"/>
-        <location filename="../ui/ChatWindow/ContactWindow.cpp" line="510"/>
+        <location filename="../ui/ChatWindow/ContactWindow.cpp" line="355"/>
+        <location filename="../ui/ChatWindow/ContactWindow.cpp" line="454"/>
+        <location filename="../ui/ChatWindow/ContactWindow.cpp" line="534"/>
         <source>
 
 code : 0x%1
@@ -330,7 +346,7 @@ message : %2</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../ui/ChatWindow/ContactWindow.cpp" line="483"/>
+        <location filename="../ui/ChatWindow/ContactWindow.cpp" line="507"/>
         <source>Failed to upload avatar. 
 
 code : 0x%1
@@ -347,15 +363,16 @@ message : %2</source>
     </message>
     <message>
         <location filename="../ui/ChatWindow/ContactWindow.cpp" line="313"/>
-        <location filename="../ui/ChatWindow/ContactWindow.cpp" line="433"/>
-        <location filename="../ui/ChatWindow/ContactWindow.cpp" line="484"/>
-        <location filename="../ui/ChatWindow/ContactWindow.cpp" line="514"/>
+        <location filename="../ui/ChatWindow/ContactWindow.cpp" line="359"/>
+        <location filename="../ui/ChatWindow/ContactWindow.cpp" line="457"/>
+        <location filename="../ui/ChatWindow/ContactWindow.cpp" line="508"/>
+        <location filename="../ui/ChatWindow/ContactWindow.cpp" line="538"/>
         <source>Error</source>
         <translation>错误</translation>
     </message>
     <message>
         <location filename="../ui/ChatWindow/ContactWindow.cpp" line="307"/>
-        <location filename="../ui/ChatWindow/ContactWindow.cpp" line="508"/>
+        <location filename="../ui/ChatWindow/ContactWindow.cpp" line="532"/>
         <source>Failed to update profile.</source>
         <translation>更新信息失败。</translation>
     </message>
@@ -364,18 +381,18 @@ message : %2</source>
         <translation type="vanished">获取更新信息失败。</translation>
     </message>
     <message>
-        <location filename="../ui/ChatWindow/ContactWindow.cpp" line="364"/>
-        <location filename="../ui/ChatWindow/ContactWindow.cpp" line="365"/>
+        <location filename="../ui/ChatWindow/ContactWindow.cpp" line="388"/>
+        <location filename="../ui/ChatWindow/ContactWindow.cpp" line="389"/>
         <source>Remove Contact</source>
         <translation>删除好友</translation>
     </message>
     <message>
-        <location filename="../ui/ChatWindow/ContactWindow.cpp" line="366"/>
+        <location filename="../ui/ChatWindow/ContactWindow.cpp" line="390"/>
         <source>Are you sure?</source>
         <translation>确定删除？</translation>
     </message>
     <message>
-        <location filename="../ui/ChatWindow/ContactWindow.cpp" line="368"/>
+        <location filename="../ui/ChatWindow/ContactWindow.cpp" line="392"/>
         <source>cancel</source>
         <translation>取消</translation>
     </message>
@@ -575,27 +592,27 @@ message : %2</source>
 <context>
     <name>NetworkClient</name>
     <message>
-        <location filename="../network/NetworkClient.cpp" line="524"/>
+        <location filename="../network/NetworkClient.cpp" line="590"/>
         <source>open file error.</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../network/NetworkClient.cpp" line="536"/>
+        <location filename="../network/NetworkClient.cpp" line="602"/>
         <source>Failed to seek upload file</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../network/NetworkClient.cpp" line="551"/>
+        <location filename="../network/NetworkClient.cpp" line="617"/>
         <source>Failed to read upload file</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../network/NetworkClient.cpp" line="617"/>
+        <location filename="../network/NetworkClient.cpp" line="683"/>
         <source>Failed to open file for md5 calculation: %1</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../network/NetworkClient.cpp" line="823"/>
+        <location filename="../network/NetworkClient.cpp" line="889"/>
         <source>Download completed: %1</source>
         <translation type="unfinished"></translation>
     </message>

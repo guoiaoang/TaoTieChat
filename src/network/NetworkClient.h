@@ -41,13 +41,14 @@ public:
 
 public:
     // 直接接口
-    bool signup        (const signup_params        & params, const signup_callback        & callback);  // 注册账号
-    bool signin        (const signin_params        & params, const signin_callback        & callback);  // 登录账号
-    bool search_user   (const search_user_params   & params, const search_user_callback   & callback);  // 搜索用户 ID // 精准匹配
-    bool update_profile(const update_profile_params& params, const update_profile_callback& callback);  // 更新个人资料
-    bool get_file_id   (const get_file_id_params   & params, const get_file_id_callback   & callback);  // 获取文件上传 ID
-    // bool file_upload   (const file_upload_params   & params, const file_upload_callback   & callback);  // 上传文件
-    // bool file_download (const file_download_params & params, const file_download_callback & callback);  // 下载文件
+    bool signup         (const signup_params        & params, const signup_callback        & callback);  // 注册账号
+    bool signin         (const signin_params        & params, const signin_callback        & callback);  // 登录账号
+    bool search_user    (const search_user_params   & params, const search_user_callback   & callback);  // 搜索用户 ID // 精准匹配
+    bool update_profile (const update_profile_params& params, const update_profile_callback& callback);  // 更新个人资料
+    bool get_file_id    (const get_file_id_params   & params, const get_file_id_callback   & callback);  // 获取文件上传 ID
+    bool contact_request    (const contact_request_params    & params, const contact_request_callback    & callback);  // 好友申请
+    bool contact_reply      (const contact_reply_params      & params, const contact_reply_callback      & callback);  // 被好友申请的回复
+    bool get_contact_request(const get_contact_request_params& params, const get_contact_request_callback& callback);  // 获取被好友申请的列表
     // 接口封装
     bool search_group (const QString&group) { return false; } // 搜索群聊 ID
     // TODO:get_file_id 应该封装在子线程中

@@ -118,3 +118,14 @@ bool Accounts::is_contact(const std::shared_ptr<ContactInfo >& contact_info) con
     }
     return false;
 }
+
+// 记住密码及自动登陆选项
+void Accounts::set_account_auth_opt(const QString&account_id, const std::shared_ptr<AuthOpt>& auth_opt) {
+    m_map_account_id_auth_opt[account_id] = auth_opt;
+}
+
+// 记住密码及自动登陆选项
+std::shared_ptr<AuthOpt> Accounts::get_auth_opt(const QString&account_id) const {
+    return m_map_account_id_auth_opt.at(account_id);
+}
+

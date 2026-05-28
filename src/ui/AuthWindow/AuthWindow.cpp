@@ -199,6 +199,7 @@ bool AuthWindow::handle_signin_successd(const signin_params& params_signin, cons
     self_info.setToken   (reply_signin->token());
     contact_info->setSelfInfo(self_info);
     Accounts::instance().set_current_account(contact_info);
+    Accounts::instance().set_account_auth_opt(reply_signin->accountId(), auth_opt);
 
     // 初始化配置目录
     Database::instance().set_config_dir(Utils::user_home_path());

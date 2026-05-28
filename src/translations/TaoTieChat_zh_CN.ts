@@ -105,12 +105,12 @@
         <translation>注册成功。关闭当前弹窗以便登录。</translation>
     </message>
     <message>
-        <location filename="../ui/AuthWindow/AuthWindow.cpp" line="224"/>
+        <location filename="../ui/AuthWindow/AuthWindow.cpp" line="225"/>
         <source>logining...</source>
         <translation>正在登陆...</translation>
     </message>
     <message>
-        <location filename="../ui/AuthWindow/AuthWindow.cpp" line="239"/>
+        <location filename="../ui/AuthWindow/AuthWindow.cpp" line="240"/>
         <source>signing up...</source>
         <translation>正在注册...</translation>
     </message>
@@ -153,32 +153,42 @@
         <translation></translation>
     </message>
     <message>
-        <location filename="../ui/ChatWindow/ChatWindow.cpp" line="82"/>
+        <location filename="../ui/ChatWindow/ChatWindow.cpp" line="115"/>
+        <source>Rember password</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location filename="../ui/ChatWindow/ChatWindow.cpp" line="118"/>
+        <source>Auto login</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location filename="../ui/ChatWindow/ChatWindow.cpp" line="121"/>
         <source>settings</source>
         <translation>设置</translation>
     </message>
     <message>
-        <location filename="../ui/ChatWindow/ChatWindow.cpp" line="84"/>
+        <location filename="../ui/ChatWindow/ChatWindow.cpp" line="123"/>
         <source>Signout</source>
         <translation>退出登陆</translation>
     </message>
     <message>
-        <location filename="../ui/ChatWindow/ChatWindow.cpp" line="89"/>
+        <location filename="../ui/ChatWindow/ChatWindow.cpp" line="131"/>
         <source>Add as a friend or join a group</source>
         <translation>添加好友或群组</translation>
     </message>
     <message>
-        <location filename="../ui/ChatWindow/ChatWindow.cpp" line="90"/>
+        <location filename="../ui/ChatWindow/ChatWindow.cpp" line="132"/>
         <source>Create a group</source>
         <translation>创建群</translation>
     </message>
     <message>
-        <location filename="../ui/ChatWindow/ChatWindow.cpp" line="355"/>
+        <location filename="../ui/ChatWindow/ChatWindow.cpp" line="397"/>
         <source>Failed to download avatar.</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../ui/ChatWindow/ChatWindow.cpp" line="356"/>
+        <location filename="../ui/ChatWindow/ChatWindow.cpp" line="398"/>
         <source>
 
 code : 0x%1
@@ -186,7 +196,7 @@ message : %2</source>
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../ui/ChatWindow/ChatWindow.cpp" line="359"/>
+        <location filename="../ui/ChatWindow/ChatWindow.cpp" line="401"/>
         <source>Error</source>
         <translation type="unfinished">错误</translation>
     </message>

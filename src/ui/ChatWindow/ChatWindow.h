@@ -71,6 +71,10 @@ protected:
 
 private:
     std::shared_ptr<Ui::ChatWindow > m_ui              ;
+    // 记住密码与自动登陆
+    std::shared_ptr<QAction        > m_action_rember_password;
+    std::shared_ptr<QAction        > m_action_auto_login     ;
+    //
     std::shared_ptr<QMenu          > m_menu_settings   ;
     std::shared_ptr<QAction        > m_action_signout  ;
     std::shared_ptr<QAction        > m_action_settings ;

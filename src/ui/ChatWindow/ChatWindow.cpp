@@ -17,6 +17,9 @@ ChatWindow::ChatWindow(QWidget *parent)
     m_contact_delegate = std::make_shared<ContactDelegate>();
     // search
     // m_search_window = std::make_shared<SearchWindow>();  // 需要时再创建
+    // 记住密码及自动登陆
+    m_action_rember_password = std::make_shared<QAction>();
+    m_action_auto_login      = std::make_shared<QAction>();
 
     // 连接消息
     connect(m_ui->navigate_button_avatar   , &QToolButton::clicked, this, &ChatWindow::slot_button_navigate_avatar ); // 点击了头像按钮
@@ -37,6 +40,32 @@ ChatWindow::ChatWindow(QWidget *parent)
     // connect(m_search_window, &SearchWindow::SearchEditTextChanged, m_ui->edit_search, &QLineEdit::setText);
     connect(&Accounts     ::instance(), &Accounts     ::signal_account_changed   , this, &ChatWindow::current_accounut_info_changed);
     connect(&NetworkClient::instance(), &NetworkClient::signal_file_id_downloaded, this, &ChatWindow::slot_file_id_downloaded      );
+    connect(m_action_rember_password.get(), &QAction::triggered, this, [&](){
+        auto current_account = Accounts::instance().get_current_account();
+        if(!current_account) { return; }
+        auto auth_opt = Accounts::instance().get_auth_opt(current_account->baseInfo().accountId());
+        if(!auth_opt) { return; }
+        // 保存数据
+        auth_opt->rember_password = m_action_rember_password->isChecked();
+        auth_opt->auto_login      = m_action_rember_password->isChecked() && m_action_auto_login->isChecked();  // 记住密码才允许自动登陆
+        AuthOptRW::save(auth_opt);
+        // 设置到界面
+        m_action_rember_password->setChecked(auth_opt->rember_password);
+        m_action_auto_login     ->setChecked(auth_opt->auto_login     );
+    });
+    connect(m_action_auto_login     .get(), &QAction::triggered, this, [&](){
+        auto current_account = Accounts::instance().get_current_account();
+        if(!current_account) { return; }
+        auto auth_opt = Accounts::instance().get_auth_opt(current_account->baseInfo().accountId());
+        if(!auth_opt) { return; }
+        // 保存数据
+        auth_opt->rember_password = m_action_rember_password->isChecked() || m_action_auto_login->isChecked();  // 自动登陆必须记住密码
+        auth_opt->auto_login      = m_action_auto_login->isChecked();
+        AuthOptRW::save(auth_opt);
+        // 设置到界面
+        m_action_rember_password->setChecked(auth_opt->rember_password);
+        m_action_auto_login     ->setChecked(auth_opt->auto_login     );
+    });
 
     // 执行操作
     m_ui->chat_splitter->setStretchFactor(0, 0); // 编号 0 的窗口拉伸因子为 0 // 整个窗口调整大小时左侧宽度不调整
@@ -74,15 +103,28 @@ ChatWindow::ChatWindow(QWidget *parent)
     // 设置应用级别的图标后就不需要再手动设置窗口级别的图标了
     QApplication::setWindowIcon(font_icon.icon.profile);
 
+    auto current_account = Accounts::instance().get_current_account();
+    auto auth_opt = Accounts::instance().get_auth_opt(!current_account ? QString{} : current_account->baseInfo().accountId());
+
     // 设置菜单
     // m_ui->navigate_button_menu->setMenu(m_menu_settings);
     // m_ui->navigate_button_menu->setPopupMode(QToolButton::InstantPopup);        // 点击按钮立即弹出菜单  // 带下三角
     // // m_ui->navigate_button_menu->setPopupMode(QToolButton::MenuButtonPopup);  // 分隔符 + 下三角
     // // m_ui->navigate_button_menu->setPopupMode(QToolButton::DelayedPopup);     // 带下三角
+    // 记住密码及自动登陆
+    m_action_rember_password->setText     (tr("Rember password"));
+    m_action_rember_password->setCheckable(true);
+    m_action_rember_password->setChecked  (!auth_opt ? false : auth_opt->rember_password);
+    m_action_auto_login     ->setText     (tr("Auto login"));
+    m_action_auto_login     ->setCheckable(true);
+    m_action_auto_login     ->setChecked  (!auth_opt ? false : auth_opt->auto_login);
     m_action_settings->setText     (tr("settings"));
     m_action_settings->setDisabled (true); // TODO:功能未实现，暂时禁用
     m_action_signout ->setText     (tr("Signout"));
     m_menu_settings  ->addAction   (m_action_settings.get());
+    m_menu_settings  ->addSeparator();
+    m_menu_settings  ->addAction   (m_action_rember_password.get());
+    m_menu_settings  ->addAction   (m_action_auto_login     .get());
     m_menu_settings  ->addSeparator();
     m_menu_settings  ->addAction   (m_action_signout.get());
     // add

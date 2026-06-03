@@ -18,6 +18,8 @@ public:
     explicit AuthWindow(QWidget *parent = nullptr);
     ~AuthWindow();
 
+    void view();
+
 private slots:
     void handle_page_signin_tips_error(const QString&message);
     void handle_page_signin_tips_clean();
@@ -39,4 +41,5 @@ private:
     std::shared_ptr<Ui::AuthWindow   > m_ui     ;
     std::unique_ptr<Client           > m_client ;
     std::shared_ptr<QGrpcHttp2Channel> m_channel;
+    std::vector<std::shared_ptr<AuthOpt>> m_auth_opts;
 };

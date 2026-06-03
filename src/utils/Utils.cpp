@@ -654,6 +654,49 @@ bool LineEdit::eventFilter(QObject *watched, QEvent *event) {
 
 }
 
+// 系统相关的操作
+namespace Utils::OS {
+
+// windows 管道可以被多个进程同时访问
+bool try_grab_account_pipe(const QString& user_id, bool grab) {
+    // 改为指针形式管理，避免 static 的某些局限，方便控制生命周期
+    static QLocalServer* server = nullptr;
+
+    if(!grab) {
+        if(server) {
+            server->close();
+            delete server;
+            server = nullptr;
+        }
+        return true;
+    }
+
+    if (server && server->isListening()) {
+        return true; // 已经由当前进程占用了
+    }
+
+    QString pipeName = QString("pipe_%1_%2").arg(qApp->applicationName()).arg(user_id);
+
+    // 在监听前，先用 Socket 去试探连一下
+    QLocalSocket socket;
+    socket.connectToServer(pipeName);
+
+    // 如果在 50 毫秒内连接成功了，说明已经有一个前置客户端正在 listen 这个管道并活着呢！
+    if (socket.waitForConnected(50)) {
+        socket.disconnectFromServer();
+        return false; // 被别人占用了，直接返回 false！
+    }
+
+    // 如果连不上，说明当前没有活着的进程在用这个名字，赶紧占领它
+    if (!server) {
+        server = new QLocalServer();
+    }
+
+    return server->listen(pipeName);
+}
+
+}
+
 // 重载 QDebug 运算符
 QDebug operator<<(QDebug debug, const AuthRequest &request) {
     QDebugStateSaver saver(debug); // 保持输出格式一致性

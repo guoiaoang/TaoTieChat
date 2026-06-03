@@ -629,6 +629,13 @@ private:
 
 }
 
+// 系统相关的操作
+namespace Utils::OS {
+// 检查账号操作是否已经被占用
+// windows 管道可以被多个进程同时访问
+bool try_grab_account_pipe(const QString& user_id, bool grab = true);
+}
+
 // 重载 QDebug 运算符
 QDebug operator<<(QDebug debug, const AuthRequest &request);
 QDebug operator<<(QDebug debug, const Result &result);

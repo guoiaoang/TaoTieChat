@@ -17,8 +17,12 @@ class ChatWindow : public QMainWindow {
 public:
     explicit ChatWindow(QWidget *parent = nullptr);
     ~ChatWindow();
+    void reinit();  // 重新初始化界面及数据
 
 private:
+    void release_resources();
+    void init();
+
     // 显示设置菜单
     void on_show_settings_menu();
     // 显示 创建/添加 好友/群组 菜单
@@ -71,13 +75,15 @@ protected:
 
 private:
     std::shared_ptr<Ui::ChatWindow > m_ui              ;
+    // 主窗口菜单
     // 记住密码与自动登陆
+    std::shared_ptr<QMenu          > m_menu_settings   ;
+    std::shared_ptr<QAction        > m_action_settings ;
     std::shared_ptr<QAction        > m_action_rember_password;
     std::shared_ptr<QAction        > m_action_auto_login     ;
-    //
-    std::shared_ptr<QMenu          > m_menu_settings   ;
     std::shared_ptr<QAction        > m_action_signout  ;
-    std::shared_ptr<QAction        > m_action_settings ;
+    std::shared_ptr<QAction        > m_action_exit     ;
+    // 搜索按钮
     std::shared_ptr<QMenu          > m_menu_add        ;
     std::shared_ptr<QAction        > m_action_add      ;
     std::shared_ptr<QAction        > m_action_create   ;

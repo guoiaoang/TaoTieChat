@@ -527,7 +527,7 @@ void ContactWindow::update_profile_avatar(const QString&avatar_path) {
     network_file_io_notify_callback callback_upload_file_notify = [this](const NetworkFileIONotify&notify) {
         if(!notify.ok || notify.status != FileStatusCode::FILE_STATUS_UPLOADED) {
             // 16 进制显示，宽度 8 位，不足补 0
-            QString error_message = tr("Failed to upload avatar. \n\ncode : 0x%1\nmessage : %2").arg(notify.code, 8, 16, QChar('0')).arg(notify.message);
+            QString error_message = tr("Failed to upload avatar.\n\ncode : 0x%1\nmessage : %2").arg(notify.code, 8, 16, QChar('0')).arg(notify.message);
             QMessageBox::information(this, tr("Error"), error_message, QMessageBox::StandardButton::Ok);
             return;
         }

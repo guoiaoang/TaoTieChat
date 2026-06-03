@@ -1,13 +1,51 @@
 #include "ChatWindow.h"
 #include "ui_ChatWindow.h"
 
-ChatWindow::ChatWindow(QWidget *parent)
-    : QMainWindow(parent), m_ui(std::make_shared<Ui::ChatWindow>()) {
+ChatWindow::ChatWindow(QWidget *parent) : QMainWindow(parent) {}
+
+ChatWindow::~ChatWindow() {
+    release_resources();
+}
+
+void ChatWindow::reinit() {
+    release_resources();
+    init();
+}
+
+void ChatWindow::release_resources() {
+    if(m_ui                    ) { m_ui                    .reset(); }
+    // 主窗口菜单
+    if(m_menu_settings         ) { m_menu_settings         .reset(); }
+    if(m_action_settings       ) { m_action_settings       .reset(); }
+    if(m_action_rember_password) { m_action_rember_password.reset(); }
+    if(m_action_auto_login     ) { m_action_auto_login     .reset(); }
+    if(m_action_signout        ) { m_action_signout        .reset(); }
+    if(m_action_exit           ) { m_action_exit           .reset(); }
+    // 搜索按钮
+    if(m_menu_add              ) { m_menu_add              .reset(); }
+    if(m_action_add            ) { m_action_add            .reset(); }
+    if(m_action_create         ) { m_action_create         .reset(); }
+    // model/view/delegate
+    if(m_contact_model         ) { m_contact_model         .reset(); }
+    if(m_contact_delegate      ) { m_contact_delegate      .reset(); }
+    if(m_search_window         ) { m_search_window         .reset(); }
+    if(m_contact_window        ) { m_contact_window        .reset(); }
+    //
+    if(m_cache_self_info       ) { m_cache_self_info       .reset(); }
+    if(m_cache_self_avatar     ) { m_cache_self_avatar     .reset(); }
+}
+
+void ChatWindow::init() {
+    // 重新初始化界面及数据
+    m_ui = std::make_shared<Ui::ChatWindow>();
     m_ui->setupUi(this);
     // 创建对象
     m_menu_settings    = std::make_shared<QMenu  >();
-    m_action_signout   = std::make_shared<QAction>();
     m_action_settings  = std::make_shared<QAction>();
+    m_action_rember_password = std::make_shared<QAction>();
+    m_action_auto_login      = std::make_shared<QAction>();
+    m_action_signout   = std::make_shared<QAction>();
+    m_action_exit      = std::make_shared<QAction>();
     // add
     m_menu_add         = std::make_shared<QMenu  >();
     m_action_add       = std::make_shared<QAction>();
@@ -17,9 +55,6 @@ ChatWindow::ChatWindow(QWidget *parent)
     m_contact_delegate = std::make_shared<ContactDelegate>();
     // search
     // m_search_window = std::make_shared<SearchWindow>();  // 需要时再创建
-    // 记住密码及自动登陆
-    m_action_rember_password = std::make_shared<QAction>();
-    m_action_auto_login      = std::make_shared<QAction>();
 
     // 连接消息
     connect(m_ui->navigate_button_avatar   , &QToolButton::clicked, this, &ChatWindow::slot_button_navigate_avatar ); // 点击了头像按钮
@@ -28,7 +63,12 @@ ChatWindow::ChatWindow(QWidget *parent)
     connect(m_ui->button_settings          , &QToolButton::clicked, this, [&](){ this->on_show_settings_menu(); }); // 点击了设置按钮
     connect(m_ui->button_add               , &QToolButton::clicked, this, [&](){ this->on_show_add_menu     (); }); // 点击了添加按钮
     // 各种菜单事件
-    connect(m_action_signout .get(), &QAction::triggered, this, [&](){ emit signout(); });
+    connect(m_action_signout .get(), &QAction::triggered, this, [&](){
+        emit signout();
+        // 退出登录时释放管道，允许下一次登录
+        Utils::OS::try_grab_account_pipe(Accounts::instance().get_current_account()->baseInfo().userId(), false);
+    });
+    connect(m_action_exit    .get(), &QAction::triggered, this, [&](){ QApplication::exit(0); });
     connect(m_action_settings.get(), &QAction::triggered, this, [&](){ qDebug() << "m_action_settings"; });
     connect(m_action_add     .get(), &QAction::triggered, this, [&](){ qDebug() << "m_action_add"     ; });
     connect(m_action_create  .get(), &QAction::triggered, this, [&](){ qDebug() << "m_action_create"  ; });
@@ -124,15 +164,18 @@ ChatWindow::ChatWindow(QWidget *parent)
     m_action_auto_login     ->setText     (tr("Auto login"));
     m_action_auto_login     ->setCheckable(true);
     m_action_auto_login     ->setChecked  (!auth_opt ? false : auth_opt->auto_login);
-    m_action_settings->setText     (tr("settings"));
+    m_action_settings->setText     (tr("Settings"));
     m_action_settings->setDisabled (true); // TODO:功能未实现，暂时禁用
-    m_action_signout ->setText     (tr("Exit"));  // TODO:退出到登陆界面
+    m_action_signout ->setText     (tr("Signout"));  // 退出到登陆界面
+    m_action_exit    ->setText     (tr("Exit"   ));  // 退出程序
     m_menu_settings  ->addAction   (m_action_settings.get());
     m_menu_settings  ->addSeparator();
     m_menu_settings  ->addAction   (m_action_rember_password.get());
     m_menu_settings  ->addAction   (m_action_auto_login     .get());
     m_menu_settings  ->addSeparator();
-    m_menu_settings  ->addAction   (m_action_signout.get());
+    m_menu_settings  ->addAction   (m_action_signout        .get());
+    m_menu_settings  ->addSeparator();
+    m_menu_settings  ->addAction   (m_action_exit           .get());
     // add
     m_action_add   ->setText   (tr("Add as a friend or join a group"));
     m_action_create->setText   (tr("Create a group"));
@@ -187,20 +230,6 @@ ChatWindow::ChatWindow(QWidget *parent)
             Accounts::instance().set_current_account(std::make_shared<ContactInfo>(reply_search_user->contactInfo()));
         });
     }
-}
-
-ChatWindow::~ChatWindow() {
-    if(m_contact_window  ) { m_contact_window  .reset(); }
-    if(m_menu_settings   ) { m_menu_settings   .reset(); }
-    if(m_action_signout  ) { m_action_signout  .reset(); }
-    if(m_action_settings ) { m_action_settings .reset(); }
-    if(m_menu_add        ) { m_menu_add        .reset(); }
-    if(m_action_add      ) { m_action_add      .reset(); }
-    if(m_action_create   ) { m_action_create   .reset(); }
-    if(m_contact_model   ) { m_contact_model   .reset(); }
-    if(m_contact_delegate) { m_contact_delegate.reset(); }
-    if(m_search_window   ) { m_search_window   .reset(); }
-    if(m_ui              ) { m_ui              .reset(); }
 }
 
 void ChatWindow::on_show_settings_menu() {
@@ -400,11 +429,12 @@ void ChatWindow::update_contact_avatar(const QString&avatar_id, bool local_only)
             return;
         }
         if(!notify.ok) {
-            QString error_message = tr("Failed to download avatar.");
-            error_message += tr("\n\ncode : 0x%1\nmessage : %2")
-                .arg(notify.code, 8, 16, QChar('0'))  // 16 进制显示，宽度 8 位，不足补 0
-                .arg(notify.message);
-            QMessageBox::information(this, tr("Error"), error_message, QMessageBox::StandardButton::Ok);
+            // 忽略错误弹窗 // 防止退出再登陆时弹窗，实际后续会更新头像
+            // QString error_message = tr("Failed to download avatar.");
+            // error_message += tr("\n\ncode : 0x%1\nmessage : %2")
+            //     .arg(notify.code, 8, 16, QChar('0'))  // 16 进制显示，宽度 8 位，不足补 0
+            //     .arg(notify.message);
+            // QMessageBox::information(this, tr("Error"), error_message, QMessageBox::StandardButton::Ok);
             return;
         }
         // 下载成功，文件已保存到本地，可以直接显示了

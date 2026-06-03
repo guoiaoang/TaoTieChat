@@ -115,7 +115,6 @@ private:
     void scaleImage(double factor);
     void adjustScrollBar(QScrollBar *scrollBar, double factor);
 
-
 #if defined(QT_PRINTSUPPORT_LIB) && QT_CONFIG(printer)
     QPrinter printer;
 #endif
@@ -141,4 +140,4 @@ private:
 // TODO: 窗口已经显示时，图像打开不会重置缩放选项
 // TDOO: 原始大小菜单无效
 
-// 图片支持鼠标缩放,视频不支持鼠标缩放
+// 图片支持鼠标缩放，视频不支持鼠标缩放

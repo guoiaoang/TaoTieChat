@@ -125,3 +125,111 @@ disableAll(nameLabel, noteLabel, submitButton, inputLineEdit);
 
 如果需要我帮你用 C++20 的模板 Lambda 或 C++17 的折叠表达式来重构你当前的 Qt 界面代码，可以随时把你的具体代码片段发给我！
 
+## Q3: 聊天软件的自动登陆功能怎么设计？密码怎么保存？
+
+设计一款高并发、现代的即时通讯（IM）软件，**自动登录（Auto-Login）与密码安全存储**是客户端与服务端架构设计中非常核心的工程问题。
+
+绝对不能直接在本地保存明文密码，也不能每次自动登录都把密码传给服务器。现代商业 IM（如微信、飞书等）普遍采用“双 Token（令牌）+ 设备指纹”的架构设计。
+
+---
+
+### 一、核心架构：双 Token 自动登录机制
+
+在客户端成功进行首次「账号密码登录」后，服务器**不再要求客户端感知密码**，而是颁发两个随机生成的令牌：`AccessToken` 和 `RefreshToken`。
+
+#### 1. 令牌的职责分工
+
+* **AccessToken（访问令牌）**：
+* **寿命极短**：通常为 2 ~ 12 小时。
+* **用途**：客户端后续的每一次 gRPC 请求（如拉取好友列表、发送消息），都在 Metadata（Header）中携带它。由于高频传输，它泄露的风险最大，因此必须让它快点过期。
+
+* **RefreshToken（刷新令牌）**：
+* **寿命极长**：通常为 30 天到半年，专门用来实现“记住登录状态”。
+* **用途**：唯一作用是当 `AccessToken` 过期导致请求报 `UNAUTHENTICATED` 错误时，客户端悄悄用它去向服务端换取一个新的 `AccessToken`。它只在刷新时传输一次，暴露机会极低。
+
+#### 2. 自动登录的标准业务流程
+
+1. **首次登录**：用户输入账号密码 ➔ 客户端计算密码哈希 ➔ 通过 gRPC 发送给服务器。
+2. **生成凭证**：服务器校验成功，生成 `AccessToken`、`RefreshToken` 以及过期时间，存入 Redis，并返回给客户端。
+3. **本地持久化**：客户端将这两个 Token 和当前用户唯一标识（如 `AccountId`）加密存储在本地数据库（如 SQLCipher）或系统安全凭据中。
+4. **后续自动登录（唤醒 App）**：
+* 客户端检测本地是否存在未过期的 `RefreshToken`。
+* 如果存在，**不需要弹出登录界面**，直接在后台向服务端发起 `RefreshToken` 校验请求（或者在建立 gRPC 双向流、Websocket 时作为鉴权握手参数）。
+* 服务端校验通过 ➔ 自动登录成功，下发最新的系统配置与离线消息序列号（Sequence ID）。
+
+---
+
+### 二、密码在客户端应该怎么保存？
+
+在客户端本地（无论是 Windows、Linux 还是移动端），对于数据的保护分为两个维度：**不可逆凭证（密码处理）** 与 **可逆凭证（Token/敏感配置处理）**。
+
+#### 1. 用户的原始密码处理
+
+> ⚠️ **核心原则：客户端绝对不留存用户的明文密码，也绝不把明文密码发网。**
+
+* **加盐哈希存储**：当用户注册或修改密码时，客户端可以使用安全哈希算法（如 `Argon2id` 或 `bcrypt`）对密码进行处理。
+* **网络传输防御**：为了防止重放攻击，即使在 TLS 加密通道内，也可以在客户端先对密码进行一次 `SHA-256(password + salt)`，服务器端收到后再进行二次高强度哈希后入库（如使用 `scrypt`）。
+
+#### 2. 本地 Token 与临时密钥的存储方案
+
+自动登录所需的 `RefreshToken` 是可逆的（需要读取并发送给服务器）。为了防止用户电脑中木马被直接拷走配置文件，不能直接存放在明文明文的 JSON 或 SQLite 中。
+
+根据你的跨平台开发环境（Windows + Linux），推荐以下两套业界标准方案：
+
+##### 方案 A：使用操作系统原生的安全凭据管理器（最地道 🌟）
+
+现代操作系统都提供了硬件/内核级别的密钥托管服务。它们会利用当前系统登录用户的安全凭据对数据进行底层加密，其他非授权程序极难窃取。
+
+* **Windows 平台**：使用 **DPAPI (Data Protection API)** 或是 **Credential Manager (凭据管理器)**。
+* **Linux 平台**：使用 **Secret Service API / libsecret**（对接 GNOME Keyring 或 KWallet）。
+
+> 💡 **Qt 开发利器**：在 Qt 中不需要自己去写复杂的底层系统 API，可以直接集成开源跨平台库 **[qtkeychain](https://github.com/frankosterfeld/qtkeychain)**。它完美封装了 Windows, Linux, macOS, Android, iOS 的原生凭据存储，几行代码就能安全读写 Token。
+
+```cpp
+// 使用 qtkeychain 存储 RefreshToken 示例
+#include <qtkeychain/keychain.h>
+
+void saveToken(const QString& accountId, const QString& token) {
+    QKeychain::WritePasswordJob job("TaoTieChat");
+    job.setAutoDelete(true);
+    job.setKey(accountId + "_refresh_token");
+    job.setBinaryData(token.toUtf8());
+
+    QObject::connect(&job, &QKeychain::WritePasswordJob::finished, [](QProviderJob* j) {
+        if (j->error()) {
+            qDebug() << "存储 Token 失败：" << j->errorString();
+        }
+    });
+    job.start();
+}
+```
+
+##### 方案 B：使用带密钥加密的本地数据库（SQLCipher）
+
+如果你在客户端使用了 SQLite 存储聊天历史记录、联系人缓存，可以引入 **SQLCipher** 对整个数据库文件进行 AES-256 全盘加密。
+
+* 你可以将 `RefreshToken` 存在这个动态加密的数据库中。
+* **问题来了：解密 SQLCipher 数据库的“主密钥（Master Key）”存哪？** ➔ 依然需要使用**方案 A** 的系统凭据管理器（DPAPI / Secret Service）来保管这个主密钥。
+
+---
+
+### 三、IM 独有的安全防御：绑定「设备指纹」
+
+在即时通讯软件中，光有 Token 还不够。如果黑客通过某种手段复制了用户电脑里的 `RefreshToken` 并粘贴到另一台电脑上，就能实现盗号。因此，自动登录必须加入**设备指纹（Device Fingerprint）限制**。
+
+#### 1. 采集客户端设备硬件信息
+
+客户端在首次登录和每次自动登录时，采集当前机器的非易变硬件特征，计算出一个唯一的 `DeviceID`：
+
+* **Windows**：主板序列号 (UUID)、网卡 MAC 地址、CPU 厂商信息。
+* **Linux (WSL2/Ubuntu)**：`/etc/machine-id` 或主板 DMI 信息。
+
+#### 2. 服务端多设备登录管理
+
+1. 用户首次登录成功时，服务端不仅颁发 Token，还会在数据库中将该 `RefreshToken` 与当前请求的 `DeviceID`、`DeviceName`（如 "Windows 11 Client"）进行**强绑定**。
+2. **自动登录校验时**，服务端不仅检查 Token 是否有效，还会比对当前连接的 `DeviceID` 是否匹配。
+3. 如果 Token 对了，但 `DeviceID` 变了：
+* 服务端应果断拒绝登录。
+* 触发安全风控，向用户的手机端发送“新设备登录确认通知”，或者直接强制转为验证码/密码登录。
+
+4. 这套机制还能顺带实现多设备同时在线管理（如同一个账号允许一台 Windows、一台 Mac、一辆车机和一部手机同时在线，但同类型的第二台 Windows 上线会把第一台顶掉）。

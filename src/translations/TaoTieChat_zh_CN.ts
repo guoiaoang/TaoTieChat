@@ -313,45 +313,53 @@ message : %2</source>
     </message>
     <message>
         <location filename="../ui/ChatWindow/ContactWindow.cpp" line="36"/>
-        <location filename="../ui/ChatWindow/ContactWindow.cpp" line="413"/>
+        <location filename="../ui/ChatWindow/ContactWindow.cpp" line="414"/>
         <source>remove</source>
         <translation>删除</translation>
     </message>
     <message>
-        <location filename="../ui/ChatWindow/ContactWindow.cpp" line="375"/>
+        <location filename="../ui/ChatWindow/ContactWindow.cpp" line="376"/>
         <source>Failed to send contact request.</source>
         <translation>好友申请发送失败。</translation>
     </message>
     <message>
-        <location filename="../ui/ChatWindow/ContactWindow.cpp" line="385"/>
+        <location filename="../ui/ChatWindow/ContactWindow.cpp" line="386"/>
         <source>Success</source>
         <translation>成功</translation>
     </message>
     <message>
-        <location filename="../ui/ChatWindow/ContactWindow.cpp" line="385"/>
+        <location filename="../ui/ChatWindow/ContactWindow.cpp" line="386"/>
         <source>Send contact request success.</source>
         <translation>好友申请发送成功。</translation>
     </message>
     <message>
-        <location filename="../ui/ChatWindow/ContactWindow.cpp" line="475"/>
+        <location filename="../ui/ChatWindow/ContactWindow.cpp" line="476"/>
         <source>Failed to download avatar.</source>
         <translation>头像图片下载失败。</translation>
     </message>
     <message>
-        <location filename="../ui/ChatWindow/ContactWindow.cpp" line="496"/>
+        <location filename="../ui/ChatWindow/ContactWindow.cpp" line="497"/>
         <source>Image Files (*.png;*.jpg;*.bmp)</source>
         <translation>图片格式 (*.png;*.jpg;*.bmp)</translation>
     </message>
     <message>
-        <location filename="../ui/ChatWindow/ContactWindow.cpp" line="499"/>
+        <location filename="../ui/ChatWindow/ContactWindow.cpp" line="500"/>
         <source>Select Avatar</source>
         <translation>选择头像</translation>
     </message>
     <message>
-        <location filename="../ui/ChatWindow/ContactWindow.cpp" line="331"/>
-        <location filename="../ui/ChatWindow/ContactWindow.cpp" line="377"/>
-        <location filename="../ui/ChatWindow/ContactWindow.cpp" line="476"/>
-        <location filename="../ui/ChatWindow/ContactWindow.cpp" line="556"/>
+        <location filename="../ui/ChatWindow/ContactWindow.cpp" line="530"/>
+        <source>Failed to upload avatar. 
+
+code : 0x%1
+message : %2</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location filename="../ui/ChatWindow/ContactWindow.cpp" line="332"/>
+        <location filename="../ui/ChatWindow/ContactWindow.cpp" line="378"/>
+        <location filename="../ui/ChatWindow/ContactWindow.cpp" line="477"/>
+        <location filename="../ui/ChatWindow/ContactWindow.cpp" line="557"/>
         <source>
 
 code : 0x%1
@@ -362,12 +370,11 @@ message : %2</source>
 错误消息 : %2</translation>
     </message>
     <message>
-        <location filename="../ui/ChatWindow/ContactWindow.cpp" line="529"/>
-        <source>Failed to upload avatar. 
+        <source>Failed to upload avatar.
 
 code : 0x%1
 message : %2</source>
-        <translation>头像图片下载失败。 
+        <translation type="vanished">头像图片下载失败。
 
 错误代码 : 0x%1
 错误消息 : %2</translation>
@@ -381,17 +388,17 @@ message : %2</source>
         <translation type="vanished">所选文件无法解析为图片。</translation>
     </message>
     <message>
-        <location filename="../ui/ChatWindow/ContactWindow.cpp" line="335"/>
-        <location filename="../ui/ChatWindow/ContactWindow.cpp" line="381"/>
-        <location filename="../ui/ChatWindow/ContactWindow.cpp" line="479"/>
-        <location filename="../ui/ChatWindow/ContactWindow.cpp" line="530"/>
-        <location filename="../ui/ChatWindow/ContactWindow.cpp" line="560"/>
+        <location filename="../ui/ChatWindow/ContactWindow.cpp" line="336"/>
+        <location filename="../ui/ChatWindow/ContactWindow.cpp" line="382"/>
+        <location filename="../ui/ChatWindow/ContactWindow.cpp" line="480"/>
+        <location filename="../ui/ChatWindow/ContactWindow.cpp" line="531"/>
+        <location filename="../ui/ChatWindow/ContactWindow.cpp" line="561"/>
         <source>Error</source>
         <translation>错误</translation>
     </message>
     <message>
-        <location filename="../ui/ChatWindow/ContactWindow.cpp" line="329"/>
-        <location filename="../ui/ChatWindow/ContactWindow.cpp" line="554"/>
+        <location filename="../ui/ChatWindow/ContactWindow.cpp" line="330"/>
+        <location filename="../ui/ChatWindow/ContactWindow.cpp" line="555"/>
         <source>Failed to update profile.</source>
         <translation>更新信息失败。</translation>
     </message>
@@ -400,18 +407,18 @@ message : %2</source>
         <translation type="vanished">获取更新信息失败。</translation>
     </message>
     <message>
-        <location filename="../ui/ChatWindow/ContactWindow.cpp" line="410"/>
         <location filename="../ui/ChatWindow/ContactWindow.cpp" line="411"/>
+        <location filename="../ui/ChatWindow/ContactWindow.cpp" line="412"/>
         <source>Remove Contact</source>
         <translation>删除好友</translation>
     </message>
     <message>
-        <location filename="../ui/ChatWindow/ContactWindow.cpp" line="412"/>
+        <location filename="../ui/ChatWindow/ContactWindow.cpp" line="413"/>
         <source>Are you sure?</source>
         <translation>确定删除？</translation>
     </message>
     <message>
-        <location filename="../ui/ChatWindow/ContactWindow.cpp" line="414"/>
+        <location filename="../ui/ChatWindow/ContactWindow.cpp" line="415"/>
         <source>cancel</source>
         <translation>取消</translation>
     </message>
@@ -611,29 +618,29 @@ message : %2</source>
 <context>
     <name>NetworkClient</name>
     <message>
-        <location filename="../network/NetworkClient.cpp" line="590"/>
+        <location filename="../network/NetworkClient.cpp" line="589"/>
         <source>open file error.</source>
         <translation>文件打开失败。</translation>
     </message>
     <message>
-        <location filename="../network/NetworkClient.cpp" line="602"/>
+        <location filename="../network/NetworkClient.cpp" line="601"/>
         <source>Failed to seek upload file</source>
         <translation>文件读取失败</translation>
     </message>
     <message>
-        <location filename="../network/NetworkClient.cpp" line="617"/>
+        <location filename="../network/NetworkClient.cpp" line="616"/>
         <source>Failed to read upload file</source>
         <translation>文件读取失败</translation>
     </message>
     <message>
-        <location filename="../network/NetworkClient.cpp" line="683"/>
+        <location filename="../network/NetworkClient.cpp" line="682"/>
         <source>Failed to open file for md5 calculation: %1</source>
         <translation>无法校验文件 : %1</translation>
     </message>
     <message>
-        <location filename="../network/NetworkClient.cpp" line="889"/>
+        <location filename="../network/NetworkClient.cpp" line="888"/>
         <source>Download completed: %1</source>
-        <translation>文件已下载。下载位置: %1</translation>
+        <translation>文件已下载。下载位置：%1</translation>
     </message>
 </context>
 <context>

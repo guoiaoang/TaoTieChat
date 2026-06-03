@@ -39,7 +39,7 @@ auto task1 = [&ptr1]() {
 auto ptr2 = std::make_unique<int>(100);
 auto task2 = [p = std::move(ptr2)]() {
     // 在这里使用 p
-}; 
+};
 // unique_ptr 传值传递，此时 ptr2 == nullptr
 
 // 3.lambda 中需要再次转移时，需要 mutable 关键字，否则 p 在 Lambda 内默认是 const
@@ -47,7 +47,7 @@ auto ptr3 = std::make_unique<int>(300);
 auto task3 = [p = std::move(ptr3)]() mutable {
     // 在这里使用 p
     someFunction(std::move(p)); // 必须加 mutable，否则 p 在 Lambda 内默认是 const
-}; 
+};
 // unique_ptr 传值传递，此时 ptr3 == nullptr
 
 // =========================================================================== //

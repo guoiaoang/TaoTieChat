@@ -21,7 +21,6 @@ struct NetworkFileIONotify{
 
 using network_file_io_notify_callback = std::function<void(const NetworkFileIONotify&)>;
 
-
 class NetworkClient : public QObject{
     Q_OBJECT
 private:

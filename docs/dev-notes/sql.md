@@ -10,16 +10,16 @@
 SELECT account_id, nickname FROM user LIMIT 10 OFFSET 9;
 
 # 排序后查询 user 表中第10-19条数据
-SELECT account_id, nickname FROM user 
+SELECT account_id, nickname FROM user
 ORDER BY id ASC
 LIMIT 11 OFFSET 9;
 
 # 查询 user 表中第10-19条数据的account_id和nickname字段，并对查询到的数据以nickname正序排序
-SELECT account_id, nickname 
+SELECT account_id, nickname
 FROM (
     # 需要使用子查询语句
-    SELECT account_id, nickname 
-    FROM user 
+    SELECT account_id, nickname
+    FROM user
     LIMIT 10 OFFSET 9
 ) AS sub
 ORDER BY nickname ASC;
@@ -28,9 +28,9 @@ ORDER BY nickname ASC;
 # 子句的顺序是固定的，正确顺序：SELECT ... WHERE ... ORDER BY ... LIMIT ... OFFSET ...
 CREATE INDEX idx_user_query ON user(nickname, register_time); # 可以先创建索引
 SELECT account_id, nickname # 可以不输出 register_time
-FROM user 
-WHERE nickname = 'nickname' 
-ORDER BY register_time ASC 
+FROM user
+WHERE nickname = 'nickname'
+ORDER BY register_time ASC
 LIMIT 10 OFFSET 9;
 ```
 

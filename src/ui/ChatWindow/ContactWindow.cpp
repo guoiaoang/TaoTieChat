@@ -90,7 +90,8 @@ void ContactWindow::show_contact(const std::shared_ptr<ContactInfo>&contact_info
     set_cache_contact_info(contact_info);
 
     // 更新显示模式  // 初始化时没有账号信息，会导致显示模式错误
-    set_edit_mode(m_edit_mode);
+    // set_edit_mode(m_edit_mode);
+    set_edit_mode(false);
 
     auto set_text = [](QLineEdit*edit, const QString&text) {
         if(!edit) { return; }

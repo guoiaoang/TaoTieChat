@@ -321,7 +321,6 @@ void ImageViewer::fitToWindow() {
 }
 //! [14]
 
-
 //! [15]
 void ImageViewer::about() {
 //! [15] //! [16]
@@ -451,28 +450,28 @@ void ImageViewer::wheelEvent(QWheelEvent *event) {
         QMainWindow::wheelEvent(event);
         return;
     }
-    
+
     // 如果启用了"适应窗口"模式，先禁用它
     if (fitToWindowAct && fitToWindowAct->isChecked()) {
         fitToWindowAct->setChecked(false);
         fitToWindow();
     }
-    
+
     // 获取滚轮的角度增量
     int numDegrees = event->angleDelta().y() / 8;
     int numSteps = numDegrees / 15;  // 每 15 度为一步
-    
+
     if (numSteps != 0) {
         // 计算缩放因子（每步缩放 10%）
         double factor = qPow(1.1, numSteps);
-        
+
         // 限制缩放范围
         double newScaleFactor = scaleFactor * factor;
         if (newScaleFactor < 0.1 || newScaleFactor > 10.0) {
             event->accept();
             return;
         }
-        
+
         // 执行缩放
         scaleImage(factor);
         event->accept();

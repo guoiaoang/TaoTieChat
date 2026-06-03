@@ -391,7 +391,6 @@ bool NetworkClient::get_contact_request(const get_contact_request_params& params
     return false;
 }
 
-
 bool NetworkClient::get_file_id(const QString&file_path, network_file_io_notify_callback& callback_get_file_id_notiify) {
     using Wrapper  = Utils::Wrapper::FileMetadataWrapper;
     using Notify   = NetworkFileIONotify;

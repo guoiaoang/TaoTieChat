@@ -219,8 +219,10 @@ elseif(ENABLE_SERVER)
         ${PROJECT_DIR_SOURCE}/utils/headers.h
         ${PROJECT_DIR_SOURCE}/utils/utils.h
         ${PROJECT_DIR_SOURCE}/utils/utils.cpp
+        ${PROJECT_DIR_SOURCE}/utils/ThreadPool.h
         ${PROJECT_DIR_SOURCE}/data/DBSQLCipherCmds.h
         ${PROJECT_DIR_SOURCE}/data/DBSQLCipher.h
+        ${PROJECT_DIR_SOURCE}/service/AsyncCall.h
         ${PROJECT_DIR_SOURCE}/service/AccountService.h
         ${PROJECT_DIR_SOURCE}/service/SearchService.h
         ${PROJECT_DIR_SOURCE}/service/StatusService.h
@@ -246,7 +248,6 @@ if(ENABLE_CLIENT)
     include_directories(${PROJECT_DIR_SOURCE}/data)
     include_directories(${PROJECT_DIR_SOURCE}/utils)
     include_directories(${PROJECT_DIR_SOURCE}/network)
-    # include_directories(${PROJECT_DIR_SOURCE}/ui/MainWindow)
     include_directories(${PROJECT_DIR_SOURCE}/ui/AuthWindow)
     include_directories(${PROJECT_DIR_SOURCE}/ui/ChatWindow)
     include_directories(${PROJECT_DIR_SOURCE}/ui/PluginsWindow)

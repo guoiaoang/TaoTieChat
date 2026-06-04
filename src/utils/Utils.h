@@ -706,3 +706,11 @@ using contact_reply_callback = std::function  <void(const contact_reply_params&,
 using get_contact_request_params   = std::shared_ptr<AuthRequest            >;
 using get_contact_request_reply    = std::optional  <GetContactRequestsReply>;
 using get_contact_request_callback = std::function  <void(const get_contact_request_params&, const get_contact_request_reply&)>;
+// rpc GetLastID(AuthRequest) returns (GetLastIDReply) {}
+using get_last_id_params   = std::shared_ptr<AuthRequest   >;
+using get_last_id_reply    = std::optional  <GetLastIDReply>;
+using get_last_id_callback = std::function  <void(const get_last_id_params&, const get_last_id_reply&)>;
+// rpc Sync(stream SyncRequest) returns (stream SyncReply) {}
+using sync_params   = std::shared_ptr<SyncRequest>;
+using sync_reply    = std::optional  <SyncReply  >;
+using sync_callback = std::function  <void(const sync_params&, const sync_reply&)>;

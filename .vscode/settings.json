@@ -1,6 +1,6 @@
 {
     "[cpp]": {
-        "editor.defaultFormatter": "ms-vscode.cpptools",
+        "editor.defaultFormatter": "llvm-vs-code-extensions.vscode-clangd",
         "editor.formatOnSave": false,
         "editor.semanticHighlighting.enabled": true
     },
@@ -166,5 +166,8 @@
     "commentTranslate.hover.enabled": true,
     "workbench.tree.renderIndentGuides": "always",
     "commentTranslate.multiLineMerge": true,
-    "C_Cpp.errorSquiggles": "enabled"
+    "C_Cpp.errorSquiggles": "enabled",
+    "clangd.arguments": [
+        "--compile-commands-dir=out/build/msvs2022x64_vcpkg_qt6103_debug"
+    ]
 }

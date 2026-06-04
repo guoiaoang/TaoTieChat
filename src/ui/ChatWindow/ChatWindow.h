@@ -95,4 +95,5 @@ private:
     //
     std::shared_ptr<ContactInfo    > m_cache_self_info  ;
     std::shared_ptr<QPixmap        > m_cache_self_avatar;
+    std::shared_ptr<PtsSync        > m_ptr_sync         ;  // 消息同步
 };

@@ -164,7 +164,7 @@
     </message>
     <message>
         <location filename="../ui/ChatWindow/ChatWindow.ui" line="142"/>
-        <location filename="../ui/ChatWindow/ChatWindow.cpp" line="167"/>
+        <location filename="../ui/ChatWindow/ChatWindow.cpp" line="173"/>
         <source>Settings</source>
         <translation>设置</translation>
     </message>
@@ -179,12 +179,12 @@
         <translation></translation>
     </message>
     <message>
-        <location filename="../ui/ChatWindow/ChatWindow.cpp" line="161"/>
+        <location filename="../ui/ChatWindow/ChatWindow.cpp" line="167"/>
         <source>Rember password</source>
         <translation>记住密码</translation>
     </message>
     <message>
-        <location filename="../ui/ChatWindow/ChatWindow.cpp" line="164"/>
+        <location filename="../ui/ChatWindow/ChatWindow.cpp" line="170"/>
         <source>Auto login</source>
         <translation>自动登陆</translation>
     </message>
@@ -193,22 +193,22 @@
         <translation type="vanished">设置</translation>
     </message>
     <message>
-        <location filename="../ui/ChatWindow/ChatWindow.cpp" line="169"/>
+        <location filename="../ui/ChatWindow/ChatWindow.cpp" line="175"/>
         <source>Signout</source>
         <translation>退出登陆</translation>
     </message>
     <message>
-        <location filename="../ui/ChatWindow/ChatWindow.cpp" line="170"/>
+        <location filename="../ui/ChatWindow/ChatWindow.cpp" line="176"/>
         <source>Exit</source>
         <translation>退出程序</translation>
     </message>
     <message>
-        <location filename="../ui/ChatWindow/ChatWindow.cpp" line="180"/>
+        <location filename="../ui/ChatWindow/ChatWindow.cpp" line="186"/>
         <source>Add as a friend or join a group</source>
         <translation>添加好友或群组</translation>
     </message>
     <message>
-        <location filename="../ui/ChatWindow/ChatWindow.cpp" line="181"/>
+        <location filename="../ui/ChatWindow/ChatWindow.cpp" line="187"/>
         <source>Create a group</source>
         <translation>创建群</translation>
     </message>
@@ -638,27 +638,27 @@ message : %2</source>
 <context>
     <name>NetworkClient</name>
     <message>
-        <location filename="../network/NetworkClient.cpp" line="589"/>
+        <location filename="../network/NetworkClient.cpp" line="726"/>
         <source>open file error.</source>
         <translation>文件打开失败。</translation>
     </message>
     <message>
-        <location filename="../network/NetworkClient.cpp" line="601"/>
+        <location filename="../network/NetworkClient.cpp" line="738"/>
         <source>Failed to seek upload file</source>
         <translation>文件读取失败</translation>
     </message>
     <message>
-        <location filename="../network/NetworkClient.cpp" line="616"/>
+        <location filename="../network/NetworkClient.cpp" line="753"/>
         <source>Failed to read upload file</source>
         <translation>文件读取失败</translation>
     </message>
     <message>
-        <location filename="../network/NetworkClient.cpp" line="682"/>
+        <location filename="../network/NetworkClient.cpp" line="819"/>
         <source>Failed to open file for md5 calculation: %1</source>
         <translation>无法校验文件 : %1</translation>
     </message>
     <message>
-        <location filename="../network/NetworkClient.cpp" line="888"/>
+        <location filename="../network/NetworkClient.cpp" line="1025"/>
         <source>Download completed: %1</source>
         <translation>文件已下载。下载位置：%1</translation>
     </message>

@@ -17,6 +17,7 @@ bool NetworkClient::init() {
     m_client_message = std::make_unique<MessageClient>();
     m_client_search  = std::make_unique<SearchClient >();
     m_client_status  = std::make_unique<StatusClient >();
+    m_client_sync    = std::make_unique<SyncClient   >();
 
     // 将客户端连接到共享的 gRPC HTTP/2 通道
     if (!m_client_account->attachChannel(m_channel)) { qDebug().nospace().noquote() << "attach AccountService Channel failed."; return false; }
@@ -24,6 +25,7 @@ bool NetworkClient::init() {
     if (!m_client_message->attachChannel(m_channel)) { qDebug().nospace().noquote() << "attach MessageService Channel failed."; return false; }
     if (!m_client_search ->attachChannel(m_channel)) { qDebug().nospace().noquote() << "attach SearchService Channel failed." ; return false; }
     if (!m_client_status ->attachChannel(m_channel)) { qDebug().nospace().noquote() << "attach StatusService Channel failed." ; return false; }
+    if (!m_client_sync   ->attachChannel(m_channel)) { qDebug().nospace().noquote() << "attach SyncService Channel failed."   ; return false; }
 
     m_inited = true;
 
@@ -389,6 +391,141 @@ bool NetworkClient::contact_reply(const contact_reply_params& params, const cont
 
 bool NetworkClient::get_contact_request(const get_contact_request_params& params, const get_contact_request_callback& callback) {
     return false;
+}
+
+bool NetworkClient::get_last_id(const get_last_id_params& params, const get_last_id_callback& callback) {
+    using namespace Utils::Wrapper;
+    using Request  = AuthRequest;
+    using Reply    = GetLastIDReply;
+    using ReplyOpt = std::optional<Reply>;
+    // 有用的参数
+    const AuthRequest auth = *params.get(); // (params && params->hasRequestUserAuth()) ? params->requestUserAuth() : AuthRequest();
+    QString account_id = auth.hasAccountId() ? auth.accountId() : QString();
+    QString user_id    = auth.hasUserId   () ? auth.userId   () : QString();
+    QString password   = auth.hasPassword () ? auth.password () : QString();
+    QString token      = auth.hasToken    () ? auth.token    () : QString();
+    // ====================================================================== //
+    // 参数校验
+    do{
+        Result result(ResultWrapper{.error_code = ErrorCode::ERROR_UNSET}()); // 默认设为错误
+        // 参数简单校验
+        // ===============                                                    //
+        ;    if(account_id.isEmpty() && user_id.isEmpty()) { result = ResultWrapper{.error_code = ErrorCode::AUTH_ID_EMPTY    }(); }
+        else if(password  .isEmpty() && token  .isEmpty()) { result = ResultWrapper{.error_code = ErrorCode::AUTH_METHOD_EMPTY}(); }
+        else if(!m_client_sync                           ) { result = ResultWrapper{.error_code = ErrorCode::ERROR_INIT       }(); }
+        //                                                    =============== //
+        // 失败时也要发送通知
+        if(result.hasErrorCode() && result.errorCode() != ErrorCode::ERROR_UNSET) {
+            ReplyOpt reply_opt = Reply();
+            reply_opt->setResult(result);
+            if(callback) { callback(params, reply_opt); }
+            return false;
+        }
+        break;
+    } while(false);
+    // 业务逻辑
+    do{
+        // ===============                                                    //
+        std::unique_ptr<QGrpcCallReply> reply_conn = m_client_sync->GetLastID(*params, m_grpc_call_options);
+        //                                                    =============== //
+        const auto *rep_conn_ptr = reply_conn.get();  // 必须
+        if (!rep_conn_ptr) {
+            ReplyOpt reply_opt = Reply();
+            reply_opt->setResult(ResultWrapper{.error_code = ErrorCode::ERROR_CONN}());
+            if (callback) { callback(params, reply_opt); }
+            return false;
+        }
+        // 捕获输出返回信息  // 单次模型需要使用 `Qt::SingleShotConnection` 以便结束后销毁
+        // lamda 表达式不可使用引用，会造成生命周期问题
+        connect(rep_conn_ptr, &QGrpcCallReply::finished, rep_conn_ptr,
+            [reply_conn = std::move(reply_conn), params, callback](const QGrpcStatus &status) mutable {
+                ReplyOpt reply_opt;
+                if(status.isOk()) { reply_opt = reply_conn->read<Reply>(); }
+                if(callback) { callback(params, reply_opt); }
+            }, Qt::SingleShotConnection);
+        break;
+    } while(false);
+    return true;
+}
+
+bool NetworkClient::sync(const sync_params& params, const sync_callback& callback) {
+    using namespace Utils::Wrapper;
+    using Request  = SyncRequest;
+    using Reply    = SyncReply;
+    using ReplyOpt = std::optional<Reply>;
+    using Params   = sync_params;
+    //
+    using Header   = SyncReplyHeader;
+    using Callback = sync_callback;
+    using Stream   = QGrpcBidiStream;
+
+    auto&request = params;
+    // 先添加认证信息
+    if(!request->hasRequestUserAuth()) { return false; }
+    auto auth = request->requestUserAuth();
+    QString account_id = auth.hasAccountId() ? auth.accountId() : QString();
+    QString user_id    = auth.hasUserId   () ? auth.userId   () : QString();
+    QString password   = auth.hasPassword () ? auth.password () : QString();
+    QString token      = auth.hasToken    () ? auth.token    () : QString();
+    // ====================================================================== //
+    // 参数校验
+    do{
+        Result result(ResultWrapper{.error_code = ErrorCode::ERROR_UNSET}()); // 默认设为错误
+        // 参数简单校验
+        // ===============                                                    //
+        ;    if(account_id.isEmpty() && user_id.isEmpty()) { result = ResultWrapper{.error_code = ErrorCode::AUTH_ID_EMPTY    }(); }
+        else if(password  .isEmpty() && token  .isEmpty()) { result = ResultWrapper{.error_code = ErrorCode::AUTH_METHOD_EMPTY}(); }
+        else if(!m_client_sync                           ) { result = ResultWrapper{.error_code = ErrorCode::ERROR_INIT       }(); }
+        //                                                    =============== //
+        // 失败时也要发送通知
+        if(result.hasErrorCode() && result.errorCode() != ErrorCode::ERROR_UNSET) {
+            ReplyOpt reply_opt = Reply();
+            Header header;
+            header.setRequest(*params.get());
+            header.setResult(result);
+            reply_opt->setHeader(header);
+            if(callback) { callback(params, reply_opt); }
+            return false;
+        }
+        break;
+    } while(false);
+    // 网络操作
+    // 业务逻辑
+    do{
+        std::unique_ptr<Stream> reply_conn = m_client_sync->Sync(*request.get(), m_grpc_call_options);
+        //                                                    =============== //
+        const auto *rep_conn_ptr = reply_conn.get();  // 必须
+        if (!rep_conn_ptr) {
+            ReplyOpt reply_opt = Reply();
+            Header header;
+            header.setRequest(*params.get());
+            Result result(ResultWrapper{.error_code = ErrorCode::ERROR_CONN}()); // 网络错误
+            header.setResult(result);
+            reply_opt->setHeader(header);
+            if(callback) { callback(params, reply_opt); }
+            return false;
+        }
+
+        Stream* raw_stream_ptr = reply_conn.release(); // 释放所有权，由信号槽挂载生命周期
+
+        // 收到数据时触发的消息
+        // 服务器每次 while 写数据到客户端都会触发一次
+        // 监听服务器下发的数据 (长连接核心)
+        connect(raw_stream_ptr, &Stream::messageReceived, this, [raw_stream_ptr, params, callback]() {
+            // 读取服务器推过来的长连接通知
+            std::optional<Reply> reply = raw_stream_ptr->read<Reply>();
+            if (reply && callback) {
+                // 将数据异步回调给外面（PtsSync）
+                callback(params, reply);
+            }
+        });
+
+        connect(raw_stream_ptr, &Stream::finished, raw_stream_ptr, [raw_stream_ptr](const QGrpcStatus &status) {
+            raw_stream_ptr->deleteLater(); // 优雅销毁流对象
+        });
+        break;
+    } while(false);
+    return true;
 }
 
 bool NetworkClient::get_file_id(const QString&file_path, network_file_io_notify_callback& callback_get_file_id_notiify) {

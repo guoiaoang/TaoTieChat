@@ -97,9 +97,45 @@ AuthWindow::~AuthWindow() {
     if(m_ui) { m_ui.reset(); }
 }
 
+void AuthWindow::clear_login_info() {
+    m_ui->signin_combo_username->clear();
+}
+
+void AuthWindow::reload_login_config(bool auto_login) {
+    // 1. 清除页面数据
+    clear_login_info();
+    // 加载登录记录
+    m_auth_opts = AuthOptRW::load();
+    for(auto const& auth_opt : m_auth_opts) {
+        m_ui->signin_combo_username->addItem(auth_opt->user_id);
+    }
+    m_ui->signin_combo_username->setCurrentIndex(0);
+
+    // 执行自动登陆
+    for(auto const& auth_opt : m_auth_opts) {
+        if(auth_opt->auto_login && auto_login) {
+            // 自动登录
+            signin_params params_signin = std::make_shared<TaoTieChat::SignInRequest>();
+            TaoTieChat::AuthRequest auth;
+            auth.setUserId  (auth_opt->user_id );
+            auth.setPassword(auth_opt->password);
+            // auth.setToken(auth_opt->token   );
+            params_signin->setRequestUserAuth(std::move(auth));
+            // 修改界面显示
+            m_ui->signin_combo_username->setCurrentText(auth_opt->user_id );
+            // 执行操作
+            signin(params_signin, auth_opt);
+            break;  // 只自动登录第一条记录
+        }
+    }
+}
+
 void AuthWindow::view() {
     static Utils::FontIcons font_icon =  Utils::FontIcons().update();
     QApplication::setWindowIcon(font_icon.icon.profile);
+    // 新用户从注册页面直接登陆时又点击了记住密码，此时需要重置页面为登陆页面及加载登陆配置，然后才能显示
+    m_ui->auth_stacked->setCurrentWidget(m_ui->page_signin);
+    reload_login_config(false);
     show();
 }
 
@@ -237,9 +273,7 @@ bool AuthWindow::handle_signin_successd(const signin_params& params_signin, cons
         auth_opt->password   = params_signin->requestUserAuth().password();
     }
 
-    const TaoTieChat::AuthRequest auth = (params_signin && params_signin->hasRequestUserAuth())
-                                         ? params_signin->requestUserAuth()
-                                         : TaoTieChat::AuthRequest();
+    const auto auth = (params_signin && params_signin->hasRequestUserAuth()) ? params_signin->requestUserAuth() : AuthRequest();
 
     // 将用户信息保存到全局状态中
     std::shared_ptr<ContactInfo> contact_info = std::make_shared<ContactInfo>();

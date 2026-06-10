@@ -30,6 +30,8 @@ ContactWindow::ContactWindow(QWidget *parent) : QWidget(parent), m_ui(std::make_
     int avatar_pixmap_size = qMin(size_right.width(), size_right.height());
     m_ui->button_avatar->setFixedSize      (avatar_pixmap_size, avatar_pixmap_size);
     // m_ui->button_avatar->setFixedSize      (64, 64);
+    m_ui->button_avatar->setText           ("");
+    m_ui->button_avatar->setWindowIconText ("");
     m_ui->button_avatar->setToolButtonStyle(Qt::ToolButtonIconOnly);
     m_ui->button_avatar->setIconSize       (QSize(m_ui->button_avatar->size()));
     m_action_edit  ->setText  (tr("edit"  ));

@@ -10,27 +10,47 @@
                 "rhs": "Windows"
             },
             "hidden": true,
-            "generator": "Visual Studio 17 2022",
+            "generator": "Ninja",
             "binaryDir": "${sourceDir}/out/build/${presetName}",
             "installDir": "${sourceDir}/out/install/${presetName}",
             "toolchainFile": "$env{VCPKG_ROOT}/scripts/buildsystems/vcpkg.cmake",
-            "architecture": "x64",
             "cmakeExecutable": "C:/app/dev/Qt/Tools/CMake_64/bin/cmake.exe",
             "toolset": {
                 "strategy": "external",
                 "value": "C:/app/dev/Qt/Tools/CMake_64"
             },
             "environment": {
-                "VCPKG_ROOT": "C:/app/dev/vcpkg",
                 "QT_ROOT": "C:/app/dev/Qt/6.10.3/msvc2022_64",
-                "PATH": "C:/app/dev/Qt/6.10.3/msvc2022_64/bin;$penv{PATH}",
-                "VCINSTALLDIR": "C:/app/dev/msvs/2022/enterprise/VC/"
+                "QT_ENV_PATH": "$env{QT_ROOT}/bin;$penv{PATH}",
+                "VCINSTALLDIR": "C:/app/dev/msvs/2022/enterprise/VC/",
+                "VCPKG_ROOT": "C:/app/dev/vcpkg",
+                "WINDOWS_SDK_ROOT"     : "C:/Windows Kits/10",
+                "WINDOWS_SDK_VERSION"  : "10.0.26100.0",
+                "BUILD_ARCH":"x64",
+                "WINDOWS_SDK_BIN_PATH"    : "$env{WINDOWS_SDK_ROOT}/bin/$env{WINDOWS_SDK_VERSION}/",
+                "WINDOWS_SDK_INCLUDE_PATH": "$env{WINDOWS_SDK_ROOT}/Include/$env{WINDOWS_SDK_VERSION}",
+                "WINDOWS_SDK_LIB_PATH"    : "$env{WINDOWS_SDK_ROOT}/Lib/$env{WINDOWS_SDK_VERSION}",
+                "WINDOWS_SDK_ENV_PATH"    : "$env{WINDOWS_SDK_BIN_PATH}/$env{BUILD_ARCH}",
+                "WINDOWS_SDK_ENV_INCLUDE" : "$env{WINDOWS_SDK_INCLUDE_PATH}/ucrt;$env{WINDOWS_SDK_INCLUDE_PATH}/um;$env{WINDOWS_SDK_INCLUDE_PATH}/shared;$env{WINDOWS_SDK_INCLUDE_PATH}/winrt",
+                "WINDOWS_SDK_ENV_LIB"     : "$env{WINDOWS_SDK_LIB_PATH}/ucrt/$env{BUILD_ARCH};$env{WINDOWS_SDK_LIB_PATH}/um/$env{BUILD_ARCH}",
+                "WINDOWS_VC_ROOT" :"C:/app/dev/msvs/2022/enterprise/VC/Tools/MSVC/14.44.35207",
+                "WINDOWS_VC_ENV_PATH"    : "$env{WINDOWS_VC_ROOT}/bin/HostX64/$env{BUILD_ARCH}",
+                "WINDOWS_VC_ENV_INCLUDE" : "$env{WINDOWS_VC_ROOT}/include",
+                "WINDOWS_VC_ENV_LIB"     : "$env{WINDOWS_VC_ROOT}/lib/$env{BUILD_ARCH}",
+                "PATH"   : "$env{WINDOWS_VC_ENV_PATH};$env{WINDOWS_SDK_ENV_PATH};C:/app/dev/ninja;$env{QT_ENV_PATH};$penv{PATH}",
+                "INCLUDE": "$env{WINDOWS_VC_ENV_INCLUDE};$env{WINDOWS_SDK_ENV_INCLUDE};$penv{INCLUDE}",
+                "LIB"    : "$env{WINDOWS_VC_ENV_LIB};$env{WINDOWS_SDK_ENV_LIB};$penv{LIB}",
+                "HTTP_PROXY": "http://127.0.0.1:2080",
+                "HTTPS_PROXY": "http://127.0.0.1:2080"
             },
             "cacheVariables": {
                 "CMAKE_INSTALL_PREFIX": "${sourceDir}/out/install/${presetName}",
                 "CMAKE_TOOLCHAIN_FILE": "$env{VCPKG_ROOT}/scripts/buildsystems/vcpkg.cmake",
                 "CMAKE_PREFIX_PATH": "C:/app/dev/Qt/6.10.3/msvc2022_64/",
-                "BUILD_TESTING": "ON"
+                "BUILD_TESTING": "ON",
+                "CMAKE_EXPORT_COMPILE_COMMANDS": "ON",
+                "CMAKE_CXX_COMPILER": "$env{WINDOWS_VC_ENV_PATH}/cl.exe",
+                "CMAKE_MAKE_PROGRAM": "C:/app/dev/ninja/ninja.exe"
             }
         },
         {
@@ -80,11 +100,7 @@
             "description": "Local adaptive parallel strategy: use host logical core count",
             "environment": {
                 "CMAKE_BUILD_PARALLEL_LEVEL": "$penv{NUMBER_OF_PROCESSORS}"
-            },
-            "nativeToolOptions": [
-                "/m",
-                "/p:CL_MPCount=$penv{NUMBER_OF_PROCESSORS}"
-            ]
+            }
         },
         {
             "name": "base-msvs2022x64-parallel-ci-safe",
@@ -99,11 +115,7 @@
             "description": "CI conservative parallel strategy",
             "environment": {
                 "CMAKE_BUILD_PARALLEL_LEVEL": "8"
-            },
-            "nativeToolOptions": [
-                "/m:8",
-                "/p:CL_MPCount=8"
-            ]
+            }
         },
         {
             "name": "msvs2022x64_vcpkg_qt6103_debug",

@@ -37,6 +37,10 @@ private:
     void status_signin_unblock(bool unblock = true);
     void status_signup_unblock(bool unblock = true);
 
+    void clear_login_info();
+    // 重新读取配置并设置到页面  // auto_login 是否执行自动登陆
+    void reload_login_config(bool auto_login = true);
+
 private:
     std::shared_ptr<Ui::AuthWindow   > m_ui     ;
     std::unique_ptr<Client           > m_client ;

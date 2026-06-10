@@ -9,29 +9,6 @@ namespace Ui {
 class ContactWindow;
 }
 
-// class Wrapper : private Wrapper::Power { // 1. 改为私有继承
-// private: // 将内部类声明移到私有区（可选）
-//     class Power {
-//     public:
-//         void init() {}
-//         void reset() {}
-//         void func1() {}
-//         void func2() {}
-//         void func3() {}
-//     };
-//
-// public:
-//     // 2. 此时可以直接使用 using 将基类函数导出为公有
-//     using Power::func1;
-//     using Power::func2;
-//     using Power::func3;
-//
-//     Wrapper() {
-//         // 3. 继承关系下直接调用基类方法，不需要 p.init()
-//         init();
-//     }
-// };
-
 class Database{
     // Q_OBJECT
 private:
@@ -127,7 +104,7 @@ public:
             // 如果命中则直接返回
             if(file_id  .isEmpty()) { break; }
             file_path = m_file_id_path_map.get_local_file_id_path(file_id);
-            if(!file_path.isEmpty()) { break; }
+            if(!file_path.isEmpty() && QFile::exists(file_path)) { break; }
 
             // 没有直接命中则尝试转换
             // uuid-xxx-uuid;size:128*128

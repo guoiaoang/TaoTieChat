@@ -362,22 +362,6 @@ QString get_new_uuid_string() {
     return QUuid::createUuid().toString(QUuid::Id128);
 }
 
-// 获取错误信息
-QString to_string(SuccessCode code) {
-    static const QMap<SuccessCode, QString> map_codes = {
-        {SuccessCode::SUCCESS       , "Success"},
-        {SuccessCode::STATUS_SUCCESS, "Success"},
-        {SuccessCode::STATUS_RUNNING, "Running"},
-        {SuccessCode::STATUS_ONLINE , "Online"},
-    };
-
-    if (map_codes.contains(code)) {
-        return map_codes[code];
-    }
-
-    return "Unknown Success Code";
-}
-
 // 内存中展开布局器 In-Memory Layout Expander  // 窗口不需要显示即可应用实际布局
 void in_memory_layout_expander(const QWidget*widget) {
     if(!widget) { return; }
@@ -409,6 +393,71 @@ void widget_raise(QWidget*widget) {
     // 4. 最后确保获取焦点和激活
     widget->raise();
     widget->activateWindow();
+}
+
+void set(Result&result, const SuccessCode&success_code) {
+    result.setSuccessCode(success_code);
+    result.setMessage(Utils::Transform::to_string(success_code));
+}
+
+void set(Result&result, const ErrorCode&error_code) {
+    result.setErrorCode(error_code);
+    result.setMessage(Utils::Transform::to_string(error_code));
+}
+
+// ====================================================================== //
+
+// 查找指定 id 的好友
+std::shared_ptr<ContactInfo> get_contact_info(const std::shared_ptr<ContactInfos>&contact_infos, const QString& contact_account_id) {
+    if(contact_infos) {
+        for(const auto &contact_info : contact_infos->contactInfos()) {
+            if(contact_info.baseInfo().accountId() == contact_account_id) {
+                return std::make_shared<ContactInfo>(contact_info);
+            }
+        }
+    }
+    return std::make_shared<ContactInfo>();
+}
+
+// 从好友列表中获取第 index 个好友
+std::shared_ptr<ContactInfo> get_contact_info(const std::shared_ptr<ContactInfos>&contact_infos, int index) {
+    if(contact_infos && index >= 0 && index < contact_infos->contactInfos().size()) {
+        return std::make_shared<ContactInfo>(contact_infos->contactInfos().at(index));
+    }
+    return std::make_shared<ContactInfo>();
+}
+
+}
+
+namespace Utils::Transform {
+QString to_string(const QProtobufMessage * msg) {
+    if(msg == nullptr) {
+        qDebug() << "[nullptr]";
+        return QString();
+    }
+
+    // 1. 实例化 JSON 序列化器
+    QProtobufJsonSerializer serializer;
+
+    // 2. 将消息序列化为 QByteArray
+    QByteArray jsonData = serializer.serialize(msg);
+
+    // 3. 使用 QString::fromUtf8 保证中文不乱码
+    return QString::fromUtf8(jsonData);
+}
+
+// 获取错误信息
+QString to_string(SuccessCode code) {
+    static const QMap<SuccessCode, QString> map_codes = {
+        {SuccessCode::SUCCESS       , "Success"},
+        {SuccessCode::STATUS_SUCCESS, "Success"},
+        {SuccessCode::STATUS_RUNNING, "Running"},
+        {SuccessCode::STATUS_ONLINE , "Online"},
+    };
+    if (map_codes.contains(code)) {
+        return map_codes[code];
+    }
+    return "Unknown Success Code";
 }
 
 // 获取错误信息
@@ -452,63 +501,36 @@ QString to_string(ErrorCode code) {
         {ErrorCode::DUPLICATE_MESSAGE_ID       , "Duplicate message ID"            },
         {ErrorCode::FRIEND_REQUEST_NOT_FOUND   , "Friend request not found"        },
     };
-
     if (map_codes.contains(code)) {
         return map_codes[code];
     }
-
     return "Unknown Error Code";
 }
 
-void set(TaoTieChat::Result&result, const ::TaoTieChat::SuccessCodeGadget::SuccessCode&success_code) {
-    result.setSuccessCode(success_code);
-    result.setMessage(to_string(success_code));
-}
-
-void set(TaoTieChat::Result&result, const ::TaoTieChat::ErrorCodeGadget::ErrorCode&error_code) {
-    result.setErrorCode(error_code);
-    result.setMessage(to_string(error_code));
-}
-
-// ====================================================================== //
-
-// 查找指定 id 的好友
-std::shared_ptr<ContactInfo> get_contact_info(const std::shared_ptr<ContactInfos>&contact_infos, const QString& contact_account_id) {
-    if(contact_infos) {
-        for(const auto &contact_info : contact_infos->contactInfos()) {
-            if(contact_info.baseInfo().accountId() == contact_account_id) {
-                return std::make_shared<ContactInfo>(contact_info);
-            }
-        }
+QString to_string(FileStatusCode file_status_code) {
+    static std::map<FileStatusCode, QString> map_file_status_strings = {
+        { FileStatusCode::FILE_STATUS_NONE     , "FILE_STATUS_NONE"      },
+        { FileStatusCode::FILE_STATUS_UPLOADED , "FILE_STATUS_UPLOADED"  },
+        { FileStatusCode::FILE_STATUS_UPLOADING, "FILE_STATUS_UPLOADING" },
+        { FileStatusCode::FILE_STATUS_NOT_FOUND, "FILE_STATUS_NOT_FOUND" },
+    };
+    if(map_file_status_strings.contains(file_status_code)) {
+        return map_file_status_strings.at(file_status_code);
     }
-    return std::make_shared<ContactInfo>();
+    return 0;
 }
 
-// 从好友列表中获取第 index 个好友
-std::shared_ptr<ContactInfo> get_contact_info(const std::shared_ptr<ContactInfos>&contact_infos, int index) {
-    if(contact_infos && index >= 0 && index < contact_infos->contactInfos().size()) {
-        return std::make_shared<ContactInfo>(contact_infos->contactInfos().at(index));
+int to_int(const FileStatusCode& file_status_code) {
+    static std::map<FileStatusCode, int> map_file_status_codes = {
+        { FileStatusCode::FILE_STATUS_NONE     , 0 },
+        { FileStatusCode::FILE_STATUS_UPLOADED , 1 },
+        { FileStatusCode::FILE_STATUS_UPLOADING, 2 },
+        { FileStatusCode::FILE_STATUS_NOT_FOUND, 3 },
+    };
+    if(map_file_status_codes.contains(file_status_code)) {
+        return map_file_status_codes.at(file_status_code);
     }
-    return std::make_shared<ContactInfo>();
-}
-
-}
-
-namespace Utils::Transform {
-QString to_string(const QProtobufMessage * msg) {
-    if(msg == nullptr) {
-        qDebug() << "[nullptr]";
-        return QString();
-    }
-
-    // 1. 实例化 JSON 序列化器
-    QProtobufJsonSerializer serializer;
-
-    // 2. 将消息序列化为 QByteArray
-    QByteArray jsonData = serializer.serialize(msg);
-
-    // 3. 使用 QString::fromUtf8 保证中文不乱码
-    return QString::fromUtf8(jsonData);
+    return 0;
 }
 
 }
@@ -757,9 +779,7 @@ QDebug operator<<(QDebug debug, const SignUpReply &rep) {
 // login
 QDebug operator<<(QDebug debug, const SignInRequest &req) {
     QDebugStateSaver saver(debug); // 保持输出格式一致性
-    const TaoTieChat::AuthRequest auth = req.hasRequestUserAuth()
-                                         ? req.requestUserAuth()
-                                         : TaoTieChat::AuthRequest();
+    const AuthRequest auth = req.hasRequestUserAuth() ? req.requestUserAuth() : AuthRequest();
     debug.nospace() << "SignInRequest{"
                     << "userId:"   << (auth.hasUserId  () ? auth.userId  () : QString()) << ", "
                     << "password:" << (auth.hasPassword() ? auth.password() : QString()) << ", "
@@ -852,5 +872,66 @@ QDebug operator<<(QDebug debug, const SearchUserReply& rep) {
                     << "result:"   << rep.result  () << ", "
                     << "contacts.size:" << rep.contactInfo()
                     << ")";
+    return debug;
+}
+
+QDebug operator<<(QDebug debug, const SyncTag&tag) {
+    QDebugStateSaver saver(debug); // 保持输出格式一致性
+    debug.nospace() << "SyncTag("
+                    << "SyncType:" << tag.type   () << ", "
+                    << "id_start:" << tag.idStart() << ", "
+                    << "id_end:"   << tag.idEnd  () << ", "
+                    << "count:"    << tag.count  ()
+                    << ")";
+    return debug;
+}
+
+// rpc Sync(stream SyncRequest) returns (stream SyncReply) {}
+QDebug operator<<(QDebug debug, const SyncRequest&req) {
+    QDebugStateSaver saver(debug); // 保持输出格式一致性
+    debug.nospace() << "SyncRequest("
+                    << "request:"  << req.requestUserAuth() << ", "
+                    << "sync_tag:" << req.syncTag        ()
+                    << ")";
+    return debug;
+}
+
+QDebug operator<<(QDebug debug, const SyncReplyHeader&header) {
+    QDebugStateSaver saver(debug); // 保持输出格式一致性
+    debug.nospace() << "SyncReplyHeader("
+                    << "request:" << header.request() << ", "
+                    << "result:"  << header.result ()
+                    << ")";
+    return debug;
+}
+
+using TaoTieChat::SyncContact;
+QDebug operator<<(QDebug debug, const SyncContact&sync_contact) {
+    QDebugStateSaver saver(debug); // 保持输出格式一致性
+    debug.nospace() << "SyncContact("
+                    << "sub_type:" << sync_contact.subType() << ", ";
+    ;    if(sync_contact.hasUpdate ()) { debug.nospace() << "update:"  << "..."; }
+    else if(sync_contact.hasRequest()) { debug.nospace() << "request:" << "..."; }
+    else if(sync_contact.hasReply  ()) { debug.nospace() << "reply:"   << "..."; }
+    else if(sync_contact.hasShip   ()) { debug.nospace() << "ship:"    << "..."; }
+    debug.nospace() << ")";
+    return debug;
+}
+
+QDebug operator<<(QDebug debug, const SyncReplyBody&body) {
+    QDebugStateSaver saver(debug); // 保持输出格式一致性
+    debug.nospace() << "SyncReplyBody("
+                    << "tag:" << body.tag() << ", ";
+    if(body.hasContacts()) { debug.nospace() << "contacts:" << body.contacts().contact(); }
+    debug.nospace() << ")";
+    return debug;
+}
+
+QDebug operator<<(QDebug debug, const SyncReply&rep) {
+    QDebugStateSaver saver(debug); // 保持输出格式一致性
+    debug.nospace() << "SyncReply(";
+    ;    if(rep.hasHeader()) { debug.nospace() << "header:" << rep.header(); }
+    else if(rep.hasBody  ()) { debug.nospace() << "body:"   << rep.body  (); }
+    debug.nospace() << ")";
     return debug;
 }

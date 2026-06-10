@@ -1,4 +1,5 @@
 #include "SearchWindow.h"
+#include "taotie_chat.qpb.h"
 #include "ui_SearchWindow.h"
 
 SearchWindow::SearchWindow(QWidget *parent)
@@ -112,12 +113,41 @@ bool SearchWindow::search_user(const QString&keyword) {
         // 处理错误
         if(error_code != ErrorCode::ERROR_UNSET) {
             qDebug().noquote().nospace() << "network search users error, code : " << error_code << ", message : " << error_message;
+            // 发生错误时要刷新显示为空列表
+            auto contacts = std::make_shared<ContactInfos>();
+            this->m_users_model->set_contacts(contacts);
             return;
+        }
+
+        qDebug().noquote().nospace() << "search_user reply : " << reply_search_user;
+
+        if(reply_search_user->hasContactInfo() && reply_search_user->contactInfo().hasBaseInfo() && !reply_search_user->contactInfo().baseInfo().avatarId().isEmpty()) {
+            auto file_id   = reply_search_user->contactInfo().baseInfo().avatarId();
+            auto file_path = Database::instance().get_local_file_id_path(file_id);
+            auto file_size = QFileInfo(file_path).size();
+            // 没有本地记录但有头像 ID 时则从服务器下载完成后再显示
+            if(file_id.isEmpty() || file_path.isEmpty() || file_size <= 0) {
+                network_file_io_notify_callback callback_download_avatar_notify = [this, reply_search_user](const NetworkFileIONotify&notify) {
+                    // qDebug().nospace().noquote() << "notify:" << notify;
+                    // 下载时不需要更新界面
+                    if((notify.ok == true && notify.status == FileStatusCode::FILE_STATUS_UPLOADED) || (notify.ok == false)) {
+                        // 刷新显示
+                        auto contacts = std::make_shared<ContactInfos>();
+                        contacts->setContactInfos({reply_search_user->contactInfo()});
+                        this->m_users_model->set_contacts(contacts);
+                    }
+                };
+                NetworkClient::instance().download_file(file_id, file_size, callback_download_avatar_notify);
+                return;
+            }
         }
 
         // 刷新显示
         auto contacts = std::make_shared<ContactInfos>();
-        contacts->setContactInfos({reply_search_user->contactInfo()});
+        // 搜索结果不为空时才添加成员  // 不知道为什么始终不为空
+        if(reply_search_user->hasContactInfo() && reply_search_user->contactInfo().hasBaseInfo() && !reply_search_user->contactInfo().baseInfo().accountId().isEmpty()) {
+            contacts->setContactInfos({ reply_search_user->contactInfo() });
+        }
         this->m_users_model->set_contacts(contacts);
     };
     NetworkClient::instance().search_user(params_search_user, network_search_user_callback);

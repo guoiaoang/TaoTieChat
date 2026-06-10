@@ -2,6 +2,7 @@
 
 #include "headers.h"
 #include "Utils.h"
+#include "taotie_chat.qpb.h"
 
 struct NetworkFileIONotify{
     using Status = FileStatusCode;
@@ -18,6 +19,24 @@ struct NetworkFileIONotify{
     int64_t uploaded_bytes = -1 ;  // 文件已经上传/下载完成的大小
     bool    uploading = false   ;  // 是否是正在上传/下载时的通知消息
 };
+
+inline QDebug operator<<(QDebug debug, const NetworkFileIONotify &notify) {
+    QDebugStateSaver saver(debug); // 保持输出格式一致性
+    debug.nospace() << "NetworkFileIONotify{"
+        << "ok:"              << notify.ok
+        << ",code:"           << (notify.ok ? Utils::Transform::to_string(SuccessCode(notify.code)) : Utils::Transform::to_string(ErrorCode(notify.code)))
+        << ",message:"        << notify.message
+        << ",id:"             << notify.id
+        << ",status:"         << Utils::Transform::to_string(notify.status)
+        << ",path:"           << notify.path
+        << ",name:"           << notify.name
+        << ",size:"           << notify.size
+        << ",md5:"            << notify.md5
+        << ",uploaded_bytes:" << notify.uploaded_bytes
+        << ",uploading:"      << notify.uploading
+        << "}";
+    return debug;
+}
 
 using network_file_io_notify_callback = std::function<void(const NetworkFileIONotify&)>;
 

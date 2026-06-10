@@ -1,4 +1,5 @@
 #include "ContactDelegate.h"
+#include <qicon.h>
 #include "Utils.h"
 #include "DemoContactDelegateItem.h"
 #include "ContactWindow.h"  // Database::instance()
@@ -55,34 +56,31 @@ void ContactDelegate::paint(QPainter *painter, const QStyleOptionViewItem &optio
     std::shared_ptr<UserData> user_data = std::make_shared<UserData>();
     user_data->contact_info = index.data(Qt::UserRole).value<std::shared_ptr<ContactInfo>>();
     user_data->account_id   = user_data->contact_info ? user_data->contact_info->baseInfo().accountId() : QString{};
-    // 实际为 if(contact_info) { ... }
-    while(user_data->contact_info && !user_data->account_id.isEmpty() && !m_cache_account_data.contains(user_data->account_id)) {
+    if(user_data->contact_info && !user_data->account_id.isEmpty() && !m_cache_account_data.contains(user_data->account_id)) {
         user_data->user_id   = user_data->contact_info->baseInfo().userId   ();
         user_data->nickname  = user_data->contact_info->baseInfo().nickname ();
         user_data->signature = user_data->contact_info->baseInfo().signature();
-        user_data->message;  // TODO
         // 更新头像
         if( user_data->avatar_id != user_data->contact_info->baseInfo().avatarId()) {
             user_data->avatar_id  = user_data->contact_info->baseInfo().avatarId();
             auto avatar_file_path = Database::instance().get_local_file_id_path(user_data->avatar_id + ";size:128*128");
             QPixmap pixmap_avatar_source = QPixmap(avatar_file_path);
-            if(pixmap_avatar_source.isNull()) {
-                ; // TODO:网络获取头像
-            }
             user_data->pixmap_avatar = std::make_shared<QPixmap>(Utils::to_round_pixmap(pixmap_avatar_source, style_data->rect_avatar.width() / 2));
         }
         user_data->need_update = false;
-
         m_cache_account_data.emplace(user_data->account_id, user_data);
-        // m_cache_account_data[user_data->account_id] = user_data;
-        break;
     }
-    user_data = m_cache_account_data[user_data->account_id];
+    // 防止置空
+    user_data = m_cache_account_data.contains(user_data->account_id) ? m_cache_account_data[user_data->account_id] : user_data;
+
+    // 用户未设置头像时设置默认头像
+    if(!user_data->pixmap_avatar) {
+        static Utils::FontIcons font_icon =  Utils::FontIcons().update();
+        user_data->pixmap_avatar = std::make_shared<QPixmap>(Utils::to_round_pixmap(font_icon.icon.profile.pixmap(style_data->rect_avatar.size()), style_data->rect_avatar.width() / 2));
+    }
 
     // 绘制头像
-    // if(user_data && user_data->pixmap_avatar && !user_data->pixmap_avatar->isNull()) {
     painter->drawPixmap(style_data->rect_avatar, *user_data->pixmap_avatar.get());  // 圆角头像
-    // }
 
     // 绘制昵称
     {

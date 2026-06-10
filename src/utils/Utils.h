@@ -4,8 +4,6 @@
 #include "taotie_chat.qpb.h"
 #include "taotie_chat_client.grpc.qpb.h"
 
-// using ::TaoTieChat::ResultCodeGadget::ResultCode;
-
 // 文件及路径操作
 namespace Utils {
 QString app_path();
@@ -68,10 +66,8 @@ QString get_new_uuid_string();
 
 // ====================================================================== //
 // 获取错误信息
-QString to_string(::TaoTieChat::SuccessCodeGadget::SuccessCode code);
-QString to_string(::TaoTieChat::ErrorCodeGadget::ErrorCode     code);
-void set(TaoTieChat::Result&result, const ::TaoTieChat::SuccessCodeGadget::SuccessCode&success_code);
-void set(TaoTieChat::Result&result, const ::TaoTieChat::ErrorCodeGadget   ::ErrorCode &error_code  );
+void set(Result&result, const SuccessCode&success_code);
+void set(Result&result, const ErrorCode  &error_code  );
 
 // ====================================================================== //
 // 查找指定 id 的好友
@@ -80,6 +76,253 @@ std::shared_ptr<ContactInfo> get_contact_info(const std::shared_ptr<ContactInfos
 std::shared_ptr<ContactInfo> get_contact_info(const std::shared_ptr<ContactInfos>&contact_infos, int index);
 
 } // namespace Utils
+
+// FontIcons
+namespace Utils {
+// 必须在加载字体后创建该结构体的实例，以确保图标能够正确显示
+struct FontIcons {
+    struct FontIconsSize {
+        QSize avatar;
+        QSize button;
+        FontIconsSize& reset() {
+            avatar = QSize();
+            button = QSize();
+            return *this;
+        }
+        FontIconsSize& update() {
+            if(this->avatar == QSize()) { this->avatar = QSize(48, 48); }
+            if(this->button == QSize()) { this->button = QSize(36, 36); }
+            return *this;
+        }
+    } size;
+    struct FontIconsColor {
+        QColor normal  ;
+        QColor disabled;
+        FontIconsColor& reset() {
+            normal   = QColor();
+            disabled = QColor();
+            return *this;
+        }
+        FontIconsColor& update() {
+            if(this->normal   == QColor()) { this->normal   = QApplication::palette().color(QPalette::Normal  , QPalette::WindowText); }
+            if(this->disabled == QColor()) { this->disabled = QApplication::palette().color(QPalette::Disabled, QPalette::WindowText); }
+            return *this;
+        }
+    } color;
+    struct FontIconsIcons {
+        QIcon  profile           ;
+        QIcon  chat_room_normal  ;
+        QIcon  chat_room_disabled;
+        QIcon  contacts_normal   ;
+        QIcon  contacts_disabled ;
+        QIcon  settings          ;
+        QIcon  chat_room         ;
+        QIcon  contacts          ;
+        // MediaWindow 中的图标
+        QIcon pin            ; //  = Utils::to_icon("󰤱", icon_color);  // icon_nf_md_pin_outline               //
+        QIcon pin_off        ; //  = Utils::to_icon("󰤰", icon_color);  // icon_nf_md_pin_off_outline           //
+        QIcon menu           ; //  = Utils::to_icon("󰍜", icon_color);  // icon_nf_md_menu                      //
+        QIcon menu_open      ; //  = Utils::to_icon("󰮫", icon_color);  // icon_nf_md_menu_open                 //
+        QIcon fullscreen     ; //  = Utils::to_icon("󰊓", icon_color);  // icon_nf_md_fullscreen                //
+        QIcon window_minimize; //  = Utils::to_icon("󰖰", icon_color);  // icon_nf_md_window_minimize           //
+        QIcon window_maximize; //  = Utils::to_icon("󰖯", icon_color);  // icon_nf_md_window_maximize           //
+        QIcon window_restore ; //  = Utils::to_icon("󰖲", icon_color);  // icon_nf_md_window_restore            //
+        QIcon zoom_in        ; //  = Utils::to_icon("", icon_color);  // icon_nf_oct_zoom_in                  //
+        QIcon zoom_out       ; //  = Utils::to_icon("", icon_color);  // icon_nf_oct_zoom_out                 //
+        QIcon folder_open    ; //  = Utils::to_icon("󰷏", icon_color);  // icon_nf_md_folder_open_outline       //
+        QIcon save           ; //  = Utils::to_icon("󰠘", icon_color);  // icon_nf_md_content_save_outline      //
+        QIcon save_edit      ; //  = Utils::to_icon("󰳼", icon_color);  // icon_nf_md_content_save_edit_outlin  //
+        QIcon arrow_right    ; //  = Utils::to_icon("", icon_color);  // icon_nf_fa_arrow_right               //
+        QIcon arrow_left     ; //  = Utils::to_icon("", icon_color);  // icon_nf_fa_arrow_left                //
+        QIcon fit_to_screen  ; //  = Utils::to_icon("󱣵", icon_color);  // icon_nf_md_fit_to_screen_outline     //
+        QIcon restore        ; //  = Utils::to_icon("󰦛", icon_color);  // icon_nf_md_restore                   //
+        QIcon oct_pin        ; //  = Utils::to_icon("", icon_color);  // icon_nf_oct_pin                      // 备用
+        QIcon cod_zoom_in    ; //  = Utils::to_icon("", icon_color);  // icon_nf_cod_zoom_in                  // 备用
+        QIcon cod_zoom_out   ; //  = Utils::to_icon("", icon_color);  // icon_nf_cod_zoom_out                 // 备用
+        FontIconsIcons& reset() {
+            profile            = QIcon();
+            chat_room_normal   = QIcon();
+            chat_room_disabled = QIcon();
+            contacts_normal    = QIcon();
+            contacts_disabled  = QIcon();
+            settings           = QIcon();
+            chat_room          = QIcon();
+            contacts           = QIcon();
+            // MediaWindow 中的图标
+            pin             = QIcon();
+            pin_off         = QIcon();
+            menu            = QIcon();
+            menu_open       = QIcon();
+            fullscreen      = QIcon();
+            window_minimize = QIcon();
+            window_maximize = QIcon();
+            window_restore  = QIcon();
+            zoom_in         = QIcon();
+            zoom_out        = QIcon();
+            folder_open     = QIcon();
+            save            = QIcon();
+            save_edit       = QIcon();
+            arrow_right     = QIcon();
+            arrow_left      = QIcon();
+            fit_to_screen   = QIcon();
+            restore         = QIcon();
+            oct_pin         = QIcon();
+            cod_zoom_in     = QIcon();
+            cod_zoom_out    = QIcon();
+            return *this;
+        }
+        FontIconsIcons& update(const FontIconsSize&size, const FontIconsColor&color) {
+            auto icon_set = [](QIcon &icon, const QString &text_icon, const QColor &color) {
+                if(icon.isNull()) { icon = to_icon(text_icon, color); }
+            };
+            // 生成图标
+            icon_set(profile           , "󰙄", color.normal  );
+            icon_set(chat_room_normal  , "󰻞", color.normal  );
+            icon_set(chat_room_disabled, "󰻞", color.disabled);
+            icon_set(contacts_normal   , "󰖸", color.normal  );
+            icon_set(contacts_disabled , "󰖸", color.disabled);
+            icon_set(settings          , "", color.normal  );
+            if( chat_room.isNull()) {
+                chat_room.addPixmap(chat_room_normal  .pixmap(size.button), QIcon::Normal  , QIcon::Off);
+                chat_room.addPixmap(chat_room_disabled.pixmap(size.button), QIcon::Disabled, QIcon::Off);
+            }
+            if( contacts.isNull()) {
+                contacts.addPixmap(contacts_normal   .pixmap(size.button), QIcon::Normal  , QIcon::Off);
+                contacts.addPixmap(contacts_disabled .pixmap(size.button), QIcon::Disabled, QIcon::Off);
+            }
+            icon_set(pin            , "󰤱", color.normal);
+            icon_set(pin_off        , "󰤰", color.normal);
+            icon_set(menu           , "󰍜", color.normal);
+            icon_set(menu_open      , "󰮫", color.normal);
+            icon_set(fullscreen     , "󰊓", color.normal);
+            icon_set(window_minimize, "󰖰", color.normal);
+            icon_set(window_maximize, "󰖯", color.normal);
+            icon_set(window_restore , "󰖲", color.normal);
+            icon_set(zoom_in        , "", color.normal);
+            icon_set(zoom_out       , "", color.normal);
+            icon_set(folder_open    , "󰷏", color.normal);
+            icon_set(save           , "󰠘", color.normal);
+            icon_set(save_edit      , "󰳼", color.normal);
+            icon_set(arrow_right    , "", color.normal);
+            icon_set(arrow_left     , "", color.normal);
+            icon_set(fit_to_screen  , "󱣵", color.normal);
+            icon_set(restore        , "󰦛", color.normal);
+            icon_set(oct_pin        , "", color.normal);
+            icon_set(cod_zoom_in    , "", color.normal);
+            icon_set(cod_zoom_out   , "", color.normal);
+            return *this;
+        }
+    } icon;
+    // 重置为初始状态，以便完全重新生成
+    FontIcons& reset() {
+        size .reset();
+        color.reset();
+        icon .reset();
+        return *this;
+    }
+    // 根据当前属性生成
+    FontIcons& update() {
+        size .update();
+        color.update();
+        icon .update(size, color);
+        return *this;
+    }
+};
+
+namespace TestFontIcons {
+    static void test() {
+        {
+            FontIcons icons;
+            icons.size.avatar = QSize(64, 64);
+            icons.size.button = QSize(48, 48);
+            icons.color.normal = Qt::blue;
+            icons.color.disabled = Qt::red;
+            icons.update();
+        }
+        {
+            FontIcons icons{
+                .size = {
+                    .avatar = QSize(64, 64),
+                    .button = QSize(48, 48)
+                },
+                .color = {
+                    .normal = Qt::blue,
+                    .disabled = Qt::red
+                }
+            };
+            icons.update();
+        }
+    }
+} // namespace TestFontIcons
+
+} // namespace Utils
+
+// 提供对 grpc 消息的输出支持
+namespace Utils::Transform {
+QString to_string(const QProtobufMessage * msg);
+QString to_string(SuccessCode code);
+QString to_string(ErrorCode   code);
+QString to_string(FileStatusCode file_status_code);
+int to_int(const FileStatusCode& file_status_code);
+}
+
+// 将支持 qDebug() 的对象转换为字符串
+namespace Utils::Transform {
+// C++ 20
+// #include <QDebug>
+// #include <QString>
+// #include <concepts>
+// 1. 定义一个概念：判断类型 T 是否可以输入到 QDebug 中
+template<typename T>
+concept PrintableByQDebug = requires(QDebug dbg, const T& value) {
+    // { dbg << value } -> std::same_as<QDebug&>;  // 严格要求返回类型为 `QDebug&`，与实际 Qt 默认的 `QDebug` 类型不符
+    { dbg << value } -> std::convertible_to<QDebug>;
+};
+// 2. 使用该概念约束模板函数
+template<PrintableByQDebug T>
+QString to_string(const T& value) {
+    QString result;
+    QDebug debug(&result);
+    debug.noquote().nospace() << value;
+    return result;
+}
+// C++ 11/14，利用SFINAE规则对模板参数进行约束
+// #include <QDebug>
+// #include <QString>
+// #include <type_traits>
+// // 模板定义：只有当表达式 "debug << value" 合法时，这个模板才会被编译器启用
+// template<typename T>
+// typename std::enable_if<std::is_same<decltype(std::declval<QDebug&>() << std::declval<const T&>()), QDebug&>::value, QString>::type
+// to_debug_string(const T& value) {
+//     QString result;
+//     QDebug debug(&result);
+//     debug.noquote().nospace() << value;
+//     return result;
+// }
+}
+
+// 支持智能指针及非智能指针的输出
+namespace Utils::Transform {
+    // 支持所有指针/智能指针类型的 to_string 模板函数
+    //   得益于 PointerLike 概念（Concept）的泛型设计，
+    //   它不仅支持 std::shared_ptr，还无缝支持 std::unique_ptr、
+    //   QSharedPointer 以及 C++ 原生的普通裸指针（如 ContactInfo*）。
+template<typename T>
+concept PointerLike = requires(const T& ptr) {
+    {  ptr ? true : false }; // 可以做布尔判断
+    { *ptr };                // 可以解引用
+};
+template<PointerLike T>
+QString to_string(const T& ptr) {
+    // 如果指针为空，直接返回 "[nullptr]"
+    if (!ptr) {
+        return QStringLiteral("[nullptr]");
+    }
+    // 如果不为空，解引用并复用上面的基础 to_string 模板
+    return to_string(*ptr);
+}
+
+}
 
 // 将 protobuf 生成的 ContactInfo 转换为更易用的结构体，方便在 UI 层使用
 namespace Utils::Wrapper {
@@ -122,8 +365,8 @@ struct ResultWrapper {
         // msg
         if(!message.isEmpty()) { result.setMessage(message); }
         else {
-            ;    if(success_code != SuccessCode::SUCCESS_UNSET) { result.setMessage(Utils::to_string(success_code)); }
-            else if(error_code   != ErrorCode  ::ERROR_UNSET  ) { result.setMessage(Utils::to_string(error_code)); }
+            ;    if(success_code != SuccessCode::SUCCESS_UNSET) { result.setMessage(Utils::Transform::to_string(success_code)); }
+            else if(error_code   != ErrorCode  ::ERROR_UNSET  ) { result.setMessage(Utils::Transform::to_string(error_code)); }
         }
         return result;
     }
@@ -312,249 +555,6 @@ struct ContactInfoWrapper{
 
 } // namespace Utils::Wrapper
 
-// FontIcons
-namespace Utils {
-// 必须在加载字体后创建该结构体的实例，以确保图标能够正确显示
-struct FontIcons {
-    struct FontIconsSize {
-        QSize avatar;
-        QSize button;
-        FontIconsSize& reset() {
-            avatar = QSize();
-            button = QSize();
-            return *this;
-        }
-        FontIconsSize& update() {
-            if(this->avatar == QSize()) { this->avatar = QSize(48, 48); }
-            if(this->button == QSize()) { this->button = QSize(36, 36); }
-            return *this;
-        }
-    } size;
-    struct FontIconsColor {
-        QColor normal  ;
-        QColor disabled;
-        FontIconsColor& reset() {
-            normal   = QColor();
-            disabled = QColor();
-            return *this;
-        }
-        FontIconsColor& update() {
-            if(this->normal   == QColor()) { this->normal   = QApplication::palette().color(QPalette::Normal  , QPalette::WindowText); }
-            if(this->disabled == QColor()) { this->disabled = QApplication::palette().color(QPalette::Disabled, QPalette::WindowText); }
-            return *this;
-        }
-    } color;
-    struct FontIconsIcons {
-        QIcon  profile           ;
-        QIcon  chat_room_normal  ;
-        QIcon  chat_room_disabled;
-        QIcon  contacts_normal   ;
-        QIcon  contacts_disabled ;
-        QIcon  settings          ;
-        QIcon  chat_room         ;
-        QIcon  contacts          ;
-        // MediaWindow 中的图标
-        QIcon pin            ; //  = Utils::to_icon("󰤱", icon_color);  // icon_nf_md_pin_outline               //
-        QIcon pin_off        ; //  = Utils::to_icon("󰤰", icon_color);  // icon_nf_md_pin_off_outline           //
-        QIcon menu           ; //  = Utils::to_icon("󰍜", icon_color);  // icon_nf_md_menu                      //
-        QIcon menu_open      ; //  = Utils::to_icon("󰮫", icon_color);  // icon_nf_md_menu_open                 //
-        QIcon fullscreen     ; //  = Utils::to_icon("󰊓", icon_color);  // icon_nf_md_fullscreen                //
-        QIcon window_minimize; //  = Utils::to_icon("󰖰", icon_color);  // icon_nf_md_window_minimize           //
-        QIcon window_maximize; //  = Utils::to_icon("󰖯", icon_color);  // icon_nf_md_window_maximize           //
-        QIcon window_restore ; //  = Utils::to_icon("󰖲", icon_color);  // icon_nf_md_window_restore            //
-        QIcon zoom_in        ; //  = Utils::to_icon("", icon_color);  // icon_nf_oct_zoom_in                  //
-        QIcon zoom_out       ; //  = Utils::to_icon("", icon_color);  // icon_nf_oct_zoom_out                 //
-        QIcon folder_open    ; //  = Utils::to_icon("󰷏", icon_color);  // icon_nf_md_folder_open_outline       //
-        QIcon save           ; //  = Utils::to_icon("󰠘", icon_color);  // icon_nf_md_content_save_outline      //
-        QIcon save_edit      ; //  = Utils::to_icon("󰳼", icon_color);  // icon_nf_md_content_save_edit_outlin  //
-        QIcon arrow_right    ; //  = Utils::to_icon("", icon_color);  // icon_nf_fa_arrow_right               //
-        QIcon arrow_left     ; //  = Utils::to_icon("", icon_color);  // icon_nf_fa_arrow_left                //
-        QIcon fit_to_screen  ; //  = Utils::to_icon("󱣵", icon_color);  // icon_nf_md_fit_to_screen_outline     //
-        QIcon restore        ; //  = Utils::to_icon("󰦛", icon_color);  // icon_nf_md_restore                   //
-        QIcon oct_pin        ; //  = Utils::to_icon("", icon_color);  // icon_nf_oct_pin                      // 备用
-        QIcon cod_zoom_in    ; //  = Utils::to_icon("", icon_color);  // icon_nf_cod_zoom_in                  // 备用
-        QIcon cod_zoom_out   ; //  = Utils::to_icon("", icon_color);  // icon_nf_cod_zoom_out                 // 备用
-        FontIconsIcons& reset() {
-            profile            = QIcon();
-            chat_room_normal   = QIcon();
-            chat_room_disabled = QIcon();
-            contacts_normal    = QIcon();
-            contacts_disabled  = QIcon();
-            settings           = QIcon();
-            chat_room          = QIcon();
-            contacts           = QIcon();
-            // MediaWindow 中的图标
-            pin             = QIcon();
-            pin_off         = QIcon();
-            menu            = QIcon();
-            menu_open       = QIcon();
-            fullscreen      = QIcon();
-            window_minimize = QIcon();
-            window_maximize = QIcon();
-            window_restore  = QIcon();
-            zoom_in         = QIcon();
-            zoom_out        = QIcon();
-            folder_open     = QIcon();
-            save            = QIcon();
-            save_edit       = QIcon();
-            arrow_right     = QIcon();
-            arrow_left      = QIcon();
-            fit_to_screen   = QIcon();
-            restore         = QIcon();
-            oct_pin         = QIcon();
-            cod_zoom_in     = QIcon();
-            cod_zoom_out    = QIcon();
-            return *this;
-        }
-        FontIconsIcons& update(const FontIconsSize&size, const FontIconsColor&color) {
-            auto icon_set = [](QIcon &icon, const QString &text_icon, const QColor &color) {
-                if(icon.isNull()) { icon = to_icon(text_icon, color); }
-            };
-            // 生成图标
-            icon_set(profile           , "󰙄", color.normal  );
-            icon_set(chat_room_normal  , "󰻞", color.normal  );
-            icon_set(chat_room_disabled, "󰻞", color.disabled);
-            icon_set(contacts_normal   , "󰖸", color.normal  );
-            icon_set(contacts_disabled , "󰖸", color.disabled);
-            icon_set(settings          , "", color.normal  );
-            if( chat_room.isNull()) {
-                chat_room.addPixmap(chat_room_normal  .pixmap(size.button), QIcon::Normal  , QIcon::Off);
-                chat_room.addPixmap(chat_room_disabled.pixmap(size.button), QIcon::Disabled, QIcon::Off);
-            }
-            if( contacts.isNull()) {
-                contacts.addPixmap(contacts_normal   .pixmap(size.button), QIcon::Normal  , QIcon::Off);
-                contacts.addPixmap(contacts_disabled .pixmap(size.button), QIcon::Disabled, QIcon::Off);
-            }
-            icon_set(pin            , "󰤱", color.normal);
-            icon_set(pin_off        , "󰤰", color.normal);
-            icon_set(menu           , "󰍜", color.normal);
-            icon_set(menu_open      , "󰮫", color.normal);
-            icon_set(fullscreen     , "󰊓", color.normal);
-            icon_set(window_minimize, "󰖰", color.normal);
-            icon_set(window_maximize, "󰖯", color.normal);
-            icon_set(window_restore , "󰖲", color.normal);
-            icon_set(zoom_in        , "", color.normal);
-            icon_set(zoom_out       , "", color.normal);
-            icon_set(folder_open    , "󰷏", color.normal);
-            icon_set(save           , "󰠘", color.normal);
-            icon_set(save_edit      , "󰳼", color.normal);
-            icon_set(arrow_right    , "", color.normal);
-            icon_set(arrow_left     , "", color.normal);
-            icon_set(fit_to_screen  , "󱣵", color.normal);
-            icon_set(restore        , "󰦛", color.normal);
-            icon_set(oct_pin        , "", color.normal);
-            icon_set(cod_zoom_in    , "", color.normal);
-            icon_set(cod_zoom_out   , "", color.normal);
-            return *this;
-        }
-    } icon;
-    // 重置为初始状态，以便完全重新生成
-    FontIcons& reset() {
-        size .reset();
-        color.reset();
-        icon .reset();
-        return *this;
-    }
-    // 根据当前属性生成
-    FontIcons& update() {
-        size .update();
-        color.update();
-        icon .update(size, color);
-        return *this;
-    }
-};
-
-namespace TestFontIcons {
-    static void test() {
-        {
-            FontIcons icons;
-            icons.size.avatar = QSize(64, 64);
-            icons.size.button = QSize(48, 48);
-            icons.color.normal = Qt::blue;
-            icons.color.disabled = Qt::red;
-            icons.update();
-        }
-        {
-            FontIcons icons{
-                .size = {
-                    .avatar = QSize(64, 64),
-                    .button = QSize(48, 48)
-                },
-                .color = {
-                    .normal = Qt::blue,
-                    .disabled = Qt::red
-                }
-            };
-            icons.update();
-        }
-    }
-} // namespace TestFontIcons
-
-} // namespace Utils
-
-// 提供对 grpc 消息的输出支持
-namespace Utils::Transform {
-QString to_string(const QProtobufMessage * msg);
-}
-
-// 将支持 qDebug() 的对象转换为字符串
-namespace Utils::Transform {
-// C++ 20
-// #include <QDebug>
-// #include <QString>
-// #include <concepts>
-// 1. 定义一个概念：判断类型 T 是否可以输入到 QDebug 中
-template<typename T>
-concept PrintableByQDebug = requires(QDebug dbg, const T& value) {
-    // { dbg << value } -> std::same_as<QDebug&>;  // 严格要求返回类型为 `QDebug&`，与实际 Qt 默认的 `QDebug` 类型不符
-    { dbg << value } -> std::convertible_to<QDebug>;
-};
-// 2. 使用该概念约束模板函数
-template<PrintableByQDebug T>
-QString to_string(const T& value) {
-    QString result;
-    QDebug debug(&result);
-    debug.noquote().nospace() << value;
-    return result;
-}
-// C++ 11/14，利用SFINAE规则对模板参数进行约束
-// #include <QDebug>
-// #include <QString>
-// #include <type_traits>
-// // 模板定义：只有当表达式 "debug << value" 合法时，这个模板才会被编译器启用
-// template<typename T>
-// typename std::enable_if<std::is_same<decltype(std::declval<QDebug&>() << std::declval<const T&>()), QDebug&>::value, QString>::type
-// to_debug_string(const T& value) {
-//     QString result;
-//     QDebug debug(&result);
-//     debug.noquote().nospace() << value;
-//     return result;
-// }
-}
-
-// 支持智能指针及非智能指针的输出
-namespace Utils::Transform {
-    // 支持所有指针/智能指针类型的 to_string 模板函数
-    //   得益于 PointerLike 概念（Concept）的泛型设计，
-    //   它不仅支持 std::shared_ptr，还无缝支持 std::unique_ptr、
-    //   QSharedPointer 以及 C++ 原生的普通裸指针（如 ContactInfo*）。
-template<typename T>
-concept PointerLike = requires(const T& ptr) {
-    {  ptr ? true : false }; // 可以做布尔判断
-    { *ptr };                // 可以解引用
-};
-template<PointerLike T>
-QString to_string(const T& ptr) {
-    // 如果指针为空，直接返回 "[nullptr]"
-    if (!ptr) {
-        return QStringLiteral("[nullptr]");
-    }
-    // 如果不为空，解引用并复用上面的基础 to_string 模板
-    return to_string(*ptr);
-}
-
-}
-
 // 算法相关的工具函数
 namespace Utils::Algorithm {
 // 计算字符串的 MD5 哈希值，返回 32 字符的十六进制字符串
@@ -653,6 +653,14 @@ QDebug operator<<(QDebug debug, const ContactInfoFriend&contact_info_friend);
 // search users
 QDebug operator<<(QDebug debug, const SearchUserRequest&req);
 QDebug operator<<(QDebug debug, const SearchUserReply  &rep);
+// rpc Sync(stream SyncRequest) returns (stream SyncReply) {}
+QDebug operator<<(QDebug debug, const SyncRequest&req);
+QDebug operator<<(QDebug debug, const SyncReply  &rep);
+QDebug operator<<(QDebug debug, const SyncTag&tag);
+QDebug operator<<(QDebug debug, const SyncReplyHeader&header);
+QDebug operator<<(QDebug debug, const SyncContact&sync_contact);
+QDebug operator<<(QDebug debug, const SyncReplyBody&body);
+QDebug operator<<(QDebug debug, const SyncReply&rep);
 
 // auto callback = std::function<void(int error_code, const QString&error_message, ...)>;
 // using ResultInfo             = std::shared_ptr<SignUpReply>;

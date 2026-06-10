@@ -1,6 +1,7 @@
 #include "NetworkClient.h"
 #include "Accounts.h"
 #include "ContactWindow.h"
+#include "taotie_chat.qpb.h"
 
 bool NetworkClient::init() {
     if(m_inited) { return true; }
@@ -821,21 +822,14 @@ bool NetworkClient::download_file(const QString&file_id, qint64 downloaded_size,
             return false;
         }
     }
-    // 计算已有文件的 md5  // 只读取到下载起始位置与实际文件大小中的下限位置处即可
-    int64_t unread_bytes = file_download_args->downloaded_size;
-    while(file_download_args->file_download && unread_bytes > 0 && !file_download_args->file_download->atEnd()) {
-        const size_t chunk_size = 128 * 1024;  // 128KB
-        QByteArray chunk_data = file_download_args->file_download->read(chunk_size);
-        file_download_args->calculated_md5.update(chunk_data);
-        unread_bytes -= chunk_data.size();
-    }
     // 业务逻辑
     do{
         // ===============                                                    //
-        Request reuest;
-        reuest.setRequestUserAuth(*Accounts::instance().get_auth_request().get());
-        reuest.setFileId(file_download_args->notify.id);
-        std::unique_ptr<Stream> reply_conn = m_client_file->FileDownload(reuest, m_grpc_call_options);
+        Request request_download_file_param;
+        request_download_file_param.setRequestUserAuth(*Accounts::instance().get_auth_request().get());
+        request_download_file_param.setFileId(file_download_args->notify.id);
+        request_download_file_param.setDownloadedBytes(file_download_args->downloaded_size);  // 断点续传
+        std::unique_ptr<Stream> reply_conn = m_client_file->FileDownload(request_download_file_param, m_grpc_call_options);
         //                                                    =============== //
         const auto *rep_conn_ptr = reply_conn.get();  // 必须
         if (!rep_conn_ptr) {
@@ -922,7 +916,21 @@ bool NetworkClient::download_file(const QString&file_id, qint64 downloaded_size,
                             return;
                         }
                     }
-                    file_download_args->file_download->seek(file_download_args->downloaded_size);
+
+                    // 文件大小异常时可以跳转到截断位置
+                    int64_t file_offset = file_download_args->header.offset();
+                    // 计算已有文件的 md5  // 只读取到下载起始位置与实际文件大小中的下限位置处即可
+                    int64_t unread_bytes = file_offset;
+                    file_download_args->calculated_md5.reset();
+                    while(file_download_args->file_download && unread_bytes > 0 && !file_download_args->file_download->atEnd()) {
+                        const size_t chunk_size = 128 * 1024;  // 128KB
+                        QByteArray chunk_data = file_download_args->file_download->read(chunk_size);
+                        file_download_args->calculated_md5.update(chunk_data);
+                        unread_bytes -= chunk_data.size();
+                    }
+                    // 截断之后的数据
+                    file_download_args->file_download->resize(file_download_args->file_download->pos());
+
                     file_download_args->initialized  = true ;  // 已经成功初始化
                     file_download_args->error_occued = false;
 
@@ -935,7 +943,7 @@ bool NetworkClient::download_file(const QString&file_id, qint64 downloaded_size,
                     // 服务器最后一次发送消息？？
                     if(reply->hasHeader()) {
                         // 服务器返回的第一个包就是文件信息时，走到这里说明文件信息有问题
-                        file_download_args->error_occued = true;
+                        file_download_args->error_occued   = true;
                         file_download_args->notify.ok      = true;
                         file_download_args->notify.code    = int64_t(SuccessCode::SUCCESS);
                         file_download_args->notify.message = QString("Recv header info, downloaded size: %1, file size : %2")
@@ -975,6 +983,7 @@ bool NetworkClient::download_file(const QString&file_id, qint64 downloaded_size,
                     // file_download_args->error_occued  = false;
                     file_download_args->notify.ok        = true;
                     file_download_args->notify.code      = int64_t(SuccessCode::SUCCESS);
+                    file_download_args->notify.status    = FileStatusCode::FILE_STATUS_UPLOADING;
                     file_download_args->notify.message   = "Write chunk data success.";
                     file_download_args->notify.uploading = true;
                     callback_download_file_notify(file_download_args->notify);
@@ -1022,6 +1031,7 @@ bool NetworkClient::download_file(const QString&file_id, qint64 downloaded_size,
                 file_download_args->error_occued   = false;
                 file_download_args->notify.ok      = true;
                 file_download_args->notify.code    = int64_t(SuccessCode::SUCCESS);
+                file_download_args->notify.status  = FileStatusCode::FILE_STATUS_UPLOADED;
                 file_download_args->notify.message = tr("Download completed: %1").arg(file_download_args->notify.path);
                 callback_download_file_notify(file_download_args->notify);
             }

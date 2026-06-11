@@ -9,9 +9,9 @@ SearchWindow::SearchWindow(QWidget *parent)
     // new
     m_action_search  = std::make_unique<QAction>(this);
     // model/view
-    m_users_model    = std::make_unique<ContactModel   >();
-    m_users_delegate = std::make_unique<ContactDelegate>();
-    m_user_window    = std::make_unique<ContactWindow  >();
+    m_users_model    = std::make_unique<ListModel    >();
+    m_users_delegate = std::make_unique<ListDelegate >();
+    m_user_window    = std::make_unique<ContactWindow>();
 
     // connect
     connect(m_ui->searchpage_lineedit_key     , &QLineEdit::textChanged, this, [this](){

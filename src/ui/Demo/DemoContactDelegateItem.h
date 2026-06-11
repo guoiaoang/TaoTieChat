@@ -7,7 +7,7 @@ namespace Ui {
 class DemoContactDelegateItem;
 }
 
-class ContactDelegate;
+class ListDelegate;
 
 class DemoContactDelegateItem : public QWidget {
     Q_OBJECT

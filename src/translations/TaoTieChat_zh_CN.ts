@@ -164,7 +164,7 @@
     </message>
     <message>
         <location filename="../ui/ChatWindow/ChatWindow.ui" line="142"/>
-        <location filename="../ui/ChatWindow/ChatWindow.cpp" line="174"/>
+        <location filename="../ui/ChatWindow/ChatWindow.cpp" line="168"/>
         <source>Settings</source>
         <translation>设置</translation>
     </message>
@@ -179,12 +179,12 @@
         <translation></translation>
     </message>
     <message>
-        <location filename="../ui/ChatWindow/ChatWindow.cpp" line="168"/>
+        <location filename="../ui/ChatWindow/ChatWindow.cpp" line="162"/>
         <source>Rember password</source>
         <translation>记住密码</translation>
     </message>
     <message>
-        <location filename="../ui/ChatWindow/ChatWindow.cpp" line="171"/>
+        <location filename="../ui/ChatWindow/ChatWindow.cpp" line="165"/>
         <source>Auto login</source>
         <translation>自动登陆</translation>
     </message>
@@ -193,22 +193,22 @@
         <translation type="vanished">设置</translation>
     </message>
     <message>
-        <location filename="../ui/ChatWindow/ChatWindow.cpp" line="176"/>
+        <location filename="../ui/ChatWindow/ChatWindow.cpp" line="170"/>
         <source>Signout</source>
         <translation>退出登陆</translation>
     </message>
     <message>
-        <location filename="../ui/ChatWindow/ChatWindow.cpp" line="177"/>
+        <location filename="../ui/ChatWindow/ChatWindow.cpp" line="171"/>
         <source>Exit</source>
         <translation>退出程序</translation>
     </message>
     <message>
-        <location filename="../ui/ChatWindow/ChatWindow.cpp" line="187"/>
+        <location filename="../ui/ChatWindow/ChatWindow.cpp" line="181"/>
         <source>Add as a friend or join a group</source>
         <translation>添加好友或群组</translation>
     </message>
     <message>
-        <location filename="../ui/ChatWindow/ChatWindow.cpp" line="188"/>
+        <location filename="../ui/ChatWindow/ChatWindow.cpp" line="182"/>
         <source>Create a group</source>
         <translation>创建群</translation>
     </message>

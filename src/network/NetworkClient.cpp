@@ -516,7 +516,7 @@ bool NetworkClient::sync(const sync_params& params, const sync_callback& callbac
             // 读取服务器推过来的长连接通知
             std::optional<Reply> reply = raw_stream_ptr->read<Reply>();
             if (reply && callback) {
-                // 将数据异步回调给外面（PtsSync）
+                // 将数据异步回调给外面
                 callback(params, reply);
             }
         });

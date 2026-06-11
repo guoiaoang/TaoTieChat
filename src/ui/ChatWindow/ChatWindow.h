@@ -2,8 +2,8 @@
 
 #include "Utils.h"
 #include "MessageWindow.h"
-#include "ContactModel.h"
-#include "ContactDelegate.h"
+#include "ListModel.h"
+#include "ListDelegate.h"
 #include "ContactWindow.h"
 #include "SearchWindow.h"
 
@@ -74,26 +74,25 @@ protected:
     bool eventFilter(QObject *obj, QEvent *event) override;
 
 private:
-    std::shared_ptr<Ui::ChatWindow > m_ui              ;
+    std::shared_ptr<Ui::ChatWindow > m_ui;
     // 主窗口菜单
     // 记住密码与自动登陆
-    std::shared_ptr<QMenu          > m_menu_settings   ;
-    std::shared_ptr<QAction        > m_action_settings ;
-    std::shared_ptr<QAction        > m_action_rember_password;
-    std::shared_ptr<QAction        > m_action_auto_login     ;
-    std::shared_ptr<QAction        > m_action_signout  ;
-    std::shared_ptr<QAction        > m_action_exit     ;
+    std::shared_ptr<QMenu  > m_menu_settings   ;
+    std::shared_ptr<QAction> m_action_settings ;
+    std::shared_ptr<QAction> m_action_rember_password;
+    std::shared_ptr<QAction> m_action_auto_login     ;
+    std::shared_ptr<QAction> m_action_signout  ;
+    std::shared_ptr<QAction> m_action_exit     ;
     // 搜索按钮
-    std::shared_ptr<QMenu          > m_menu_add        ;
-    std::shared_ptr<QAction        > m_action_add      ;
-    std::shared_ptr<QAction        > m_action_create   ;
+    std::shared_ptr<QMenu  > m_menu_add        ;
+    std::shared_ptr<QAction> m_action_add      ;
+    std::shared_ptr<QAction> m_action_create   ;
     // model/view/delegate
-    std::shared_ptr<ContactModel   > m_contact_model   ;
-    std::shared_ptr<ContactDelegate> m_contact_delegate;
-    std::shared_ptr<SearchWindow   > m_search_window   ;
-    std::shared_ptr<ContactWindow  > m_contact_window  ;  // 当前显示的联系人详情窗口
+    std::shared_ptr<ListModel    > m_contact_model   ;
+    std::shared_ptr<ListDelegate > m_contact_delegate;
+    std::shared_ptr<SearchWindow > m_search_window   ;
+    std::shared_ptr<ContactWindow> m_contact_window  ;  // 当前显示的联系人详情窗口
     //
-    std::shared_ptr<ContactInfo    > m_cache_self_info  ;
-    std::shared_ptr<QPixmap        > m_cache_self_avatar;
-    std::shared_ptr<PtsSync        > m_ptr_sync         ;  // 消息同步
+    std::shared_ptr<ContactInfo> m_cache_self_info  ;
+    std::shared_ptr<QPixmap    > m_cache_self_avatar;
 };

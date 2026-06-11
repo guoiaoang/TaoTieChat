@@ -167,11 +167,11 @@ if(ENABLE_CLIENT)
         ${PROJECT_DIR_SOURCE}/ui/ChatWindow/MessageWindow.cpp
         ${PROJECT_DIR_SOURCE}/ui/ChatWindow/MessageWindow.ui
         # 聊天窗口的联系人列表 model/view 实现
-        ${PROJECT_DIR_SOURCE}/ui/ChatWindow/ContactModel.h
-        ${PROJECT_DIR_SOURCE}/ui/ChatWindow/ContactModel.cpp
-        ${PROJECT_DIR_SOURCE}/ui/ChatWindow/ContactDelegate.h
-        ${PROJECT_DIR_SOURCE}/ui/ChatWindow/ContactDelegate.cpp
-        # 联系人信息页面，与 ContactModel/ContactDelegate 无关
+        ${PROJECT_DIR_SOURCE}/ui/MVC/ListModel.h
+        ${PROJECT_DIR_SOURCE}/ui/MVC/ListModel.cpp
+        ${PROJECT_DIR_SOURCE}/ui/MVC/ListDelegate.h
+        ${PROJECT_DIR_SOURCE}/ui/MVC/ListDelegate.cpp
+        # 联系人信息页面，与 ListModel/ListDelegate 无关
         ${PROJECT_DIR_SOURCE}/ui/ChatWindow/ContactWindow.h
         ${PROJECT_DIR_SOURCE}/ui/ChatWindow/ContactWindow.cpp
         ${PROJECT_DIR_SOURCE}/ui/ChatWindow/ContactWindow.ui
@@ -253,6 +253,7 @@ if(ENABLE_CLIENT)
     include_directories(${PROJECT_DIR_SOURCE}/ui/ChatWindow)
     include_directories(${PROJECT_DIR_SOURCE}/ui/PluginsWindow)
     include_directories(${PROJECT_DIR_SOURCE}/ui/SearchWindow)
+    include_directories(${PROJECT_DIR_SOURCE}/ui/MVC)
     include_directories(${PROJECT_DIR_SOURCE}/ui/Demo)
     # 将生成的头文件目录添加到 include 路径中，以便在代码中引用生成的 .pb.h 文件
     include_directories(${PROJECT_DIR_PROTO_HEADERS})

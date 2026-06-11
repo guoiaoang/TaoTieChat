@@ -36,8 +36,6 @@ void ChatWindow::release_resources() {
     //
     if(m_cache_self_info       ) { m_cache_self_info       .reset(); }
     if(m_cache_self_avatar     ) { m_cache_self_avatar     .reset(); }
-    //
-    if(m_ptr_sync              ) { m_ptr_sync              .reset(); }
 }
 
 void ChatWindow::init() {
@@ -56,12 +54,8 @@ void ChatWindow::init() {
     m_action_add       = std::make_shared<QAction>();
     m_action_create    = std::make_shared<QAction>();
     // model/view
-    m_contact_model    = std::make_shared<ContactModel   >();
-    m_contact_delegate = std::make_shared<ContactDelegate>();
-    //
-    m_ptr_sync         = std::make_shared<PtsSync        >();
-    // search
-    // m_search_window = std::make_shared<SearchWindow>();  // 需要时再创建
+    m_contact_model    = std::make_shared<ListModel   >();
+    m_contact_delegate = std::make_shared<ListDelegate>();
 
     // 连接消息
     connect(m_ui->navigate_button_avatar   , &QToolButton::clicked, this, &ChatWindow::slot_button_navigate_avatar ); // 点击了头像按钮
@@ -307,6 +301,9 @@ void ChatWindow::init() {
                                 auto request_time    = sync_contact_request.time();
                                 auto request_message = sync_contact_request.message();
                                 qDebug().noquote().nospace() << "Get sync contact request. form : " << request_contact << ", time : " << request_time << ", message : " << request_message;
+                                // 添加到联系人列表中，但标记为申请好友（放入申请分组）
+                                add_contact(std::make_shared<ContactInfo>(request_contact));
+                                // m_contact_model->add_contact_request(std::make_shared<ContactInfo>(request_contact));
                             }
                             else if(sync_contact.subType() == SyncSubTypeContact::SYNC_CONTACT_REPLY) {
                                 auto sync_contact_reply = sync_contact.reply();

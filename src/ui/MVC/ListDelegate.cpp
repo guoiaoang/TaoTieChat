@@ -1,19 +1,17 @@
-#include "ContactDelegate.h"
-#include <qicon.h>
-#include "Utils.h"
+#include "ListDelegate.h"
 #include "DemoContactDelegateItem.h"
 #include "ContactWindow.h"  // Database::instance()
 
-ContactDelegate::ContactDelegate(QObject *parent)
+ListDelegate::ListDelegate(QObject *parent)
     : QStyledItemDelegate(parent) {
     m_demo_contact_delegate_item = std::make_shared<DemoContactDelegateItem>();
     set_height(m_demo_contact_delegate_item->size().height());
 }
 
-ContactDelegate::~ContactDelegate() {
+ListDelegate::~ListDelegate() {
 }
 
-void ContactDelegate::paint(QPainter *painter, const QStyleOptionViewItem &option, const QModelIndex &index) const {
+void ListDelegate::paint(QPainter *painter, const QStyleOptionViewItem &option, const QModelIndex &index) const {
     if (!index.isValid()) { return; }
 
     // 调整大小
@@ -107,6 +105,6 @@ void ContactDelegate::paint(QPainter *painter, const QStyleOptionViewItem &optio
     painter->restore();
 }
 
-QSize ContactDelegate::sizeHint(const QStyleOptionViewItem &option, const QModelIndex &index) const {
+QSize ListDelegate::sizeHint(const QStyleOptionViewItem &option, const QModelIndex &index) const {
     return QSize(option.rect.width(), get_height());
 }

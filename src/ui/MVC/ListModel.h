@@ -3,12 +3,12 @@
 #include "headers.h"
 #include "Utils.h"
 
-class ContactModel : public QAbstractListModel {
+class ListModel : public QAbstractListModel {
     Q_OBJECT
 
 public:
-    explicit ContactModel(QObject *parent = nullptr);
-    explicit ContactModel(const std::shared_ptr<ContactInfos>&contact_infos, QObject *parent = nullptr);
+    explicit ListModel(QObject *parent = nullptr);
+    explicit ListModel(const std::shared_ptr<ContactInfos>&contact_infos, QObject *parent = nullptr);
 
     // Basic functionality:
     int rowCount(const QModelIndex &parent = QModelIndex()) const override;

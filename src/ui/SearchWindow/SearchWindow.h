@@ -3,8 +3,8 @@
 #include "headers.h"
 #include "Utils.h"
 #include "NetworkClient.h"
-#include "ContactModel.h"
-#include "ContactDelegate.h"
+#include "ListModel.h"
+#include "ListDelegate.h"
 #include "ContactWindow.h"
 
 namespace Ui {
@@ -33,7 +33,7 @@ private:
     std::unique_ptr<Ui::SearchWindow> m_ui            ;
     std::unique_ptr<QAction         > m_action_search ;
     // model/view/delegate
-    std::unique_ptr<ContactModel    > m_users_model   ;
-    std::unique_ptr<ContactDelegate > m_users_delegate;
-    std::unique_ptr<ContactWindow   > m_user_window   ;
+    std::unique_ptr<ListModel    > m_users_model   ;
+    std::unique_ptr<ListDelegate > m_users_delegate;
+    std::unique_ptr<ContactWindow> m_user_window   ;
 };

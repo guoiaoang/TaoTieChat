@@ -4,11 +4,11 @@
 #include "Utils.h"
 
 class DemoContactDelegateItem;
-class ContactDelegate : public QStyledItemDelegate {
+class ListDelegate : public QStyledItemDelegate {
     Q_OBJECT
 public:
-    explicit ContactDelegate(QObject *parent = nullptr);
-    ~ContactDelegate();
+    explicit ListDelegate(QObject *parent = nullptr);
+    ~ListDelegate();
 
 public:
     void paint(QPainter *painter, const QStyleOptionViewItem &option, const QModelIndex &index) const override;

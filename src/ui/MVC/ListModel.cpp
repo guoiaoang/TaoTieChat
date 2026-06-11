@@ -1,14 +1,14 @@
-#include "ContactModel.h"
+#include "ListModel.h"
 
-ContactModel::ContactModel(QObject *parent)
-    : ContactModel(std::make_shared<ContactInfos>(), parent) {
+ListModel::ListModel(QObject *parent)
+    : ListModel(std::make_shared<ContactInfos>(), parent) {
 }
 
-ContactModel::ContactModel(const std::shared_ptr<ContactInfos>&contact_infos, QObject *parent)
+ListModel::ListModel(const std::shared_ptr<ContactInfos>&contact_infos, QObject *parent)
     : QAbstractListModel(parent), m_contact_infos(contact_infos ? contact_infos : std::make_shared<ContactInfos>()) {
 }
 
-int ContactModel::rowCount(const QModelIndex &parent) const {
+int ListModel::rowCount(const QModelIndex &parent) const {
     // For list models only the root node (an invalid parent) should return the list's size. For all
     // other (valid) parents, rowCount() should return 0 so that it does not become a tree model.
     if (parent.isValid()) {
@@ -18,7 +18,7 @@ int ContactModel::rowCount(const QModelIndex &parent) const {
 }
 
 // 从内部变量中获取数据
-QVariant ContactModel::data(const QModelIndex &index, int role) const {
+QVariant ListModel::data(const QModelIndex &index, int role) const {
     if(!m_contact_infos) {
         return QVariant();
     }
@@ -37,7 +37,7 @@ QVariant ContactModel::data(const QModelIndex &index, int role) const {
     return QVariant();
 }
 
-void ContactModel::clean() {
+void ListModel::clean() {
     beginResetModel();
     if(!m_contact_infos) {
         m_contact_infos = std::make_shared<ContactInfos>();
@@ -46,7 +46,7 @@ void ContactModel::clean() {
     endResetModel();
 }
 
-void ContactModel::add_contact(const std::shared_ptr<ContactInfo>&contact_info) {
+void ListModel::add_contact(const std::shared_ptr<ContactInfo>&contact_info) {
     if(!contact_info) {
         return;
     }
@@ -65,7 +65,7 @@ void ContactModel::add_contact(const std::shared_ptr<ContactInfo>&contact_info) 
     endInsertRows();
 }
 
-void ContactModel::remove_contact(const std::shared_ptr<ContactInfo>&contact_info) {
+void ListModel::remove_contact(const std::shared_ptr<ContactInfo>&contact_info) {
     if(!contact_info || !m_contact_infos) {
         return;
     }
@@ -82,17 +82,17 @@ void ContactModel::remove_contact(const std::shared_ptr<ContactInfo>&contact_inf
     }
 }
 
-void ContactModel::set_contacts(const std::shared_ptr<ContactInfos>&contact_infos) {
+void ListModel::set_contacts(const std::shared_ptr<ContactInfos>&contact_infos) {
     beginResetModel();
     m_contact_infos = contact_infos ? contact_infos : std::make_shared<ContactInfos>();
     endResetModel();
 }
 
-int ContactModel::contacts_size() const {
+int ListModel::contacts_size() const {
     return m_contact_infos ? m_contact_infos->contactInfos().size() : 0;
 }
 
-std::shared_ptr<ContactInfo> ContactModel::get_contact(const QModelIndex &index) const {
+std::shared_ptr<ContactInfo> ListModel::get_contact(const QModelIndex &index) const {
     if(!m_contact_infos) {
         return nullptr;
     }

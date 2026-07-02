@@ -82,7 +82,7 @@
 #include <iosfwd>
 #include <iostream>
 #include <istream>
-#include <iterator>
+#include <iterator>  // std::distance(...)
 #include <limits>
 #include <list>
 #include <locale>
@@ -294,6 +294,8 @@ using stm = std::tm;
 #include <QSplitter>
 #include <QSslCipher>
 #include <QStackedWidget>
+#include <QStandardItem>
+#include <QStandardItemModel>
 #include <QStandardPaths>
 #include <QStatusBar>
 #include <QString>

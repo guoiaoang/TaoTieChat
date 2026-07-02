@@ -135,7 +135,7 @@ bool ImageViewer::loadFile(const QString &fileName) {
         fitToWindow();
     }
 
-    const QString message = tr("Opened \"%1\", %2x%3, Depth: %4")
+    const QString message = tr(R"(Opened "%1", %2x%3, Depth: %4)")
         .arg(QDir::toNativeSeparators(fileName)).arg(image.width()).arg(image.height()).arg(image.depth());
     statusBar()->showMessage(message);
     return true;
@@ -181,7 +181,7 @@ bool ImageViewer::saveFile(const QString &fileName) {
                                  .arg(writer.errorString()));
         return false;
     }
-    const QString message = tr("Wrote \"%1\"").arg(QDir::toNativeSeparators(fileName));
+    const QString message = tr(R"(Wrote "%1")").arg(QDir::toNativeSeparators(fileName));
     statusBar()->showMessage(message);
     return true;
 }

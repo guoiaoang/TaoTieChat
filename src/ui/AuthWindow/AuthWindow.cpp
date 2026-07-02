@@ -1,6 +1,9 @@
 #include "AuthWindow.h"
 #include "ui_AuthWindow.h"
-#include "ContactWindow.h"
+
+#include "NetworkClient.h"
+#include "Accounts.h"
+#include "Database.h"
 
 AuthWindow::AuthWindow(QWidget *parent)
     : QDialog(parent), m_ui(std::make_shared<Ui::AuthWindow>()) {
@@ -94,7 +97,6 @@ AuthWindow::AuthWindow(QWidget *parent)
 }
 
 AuthWindow::~AuthWindow() {
-    if(m_ui) { m_ui.reset(); }
 }
 
 void AuthWindow::clear_login_info() {

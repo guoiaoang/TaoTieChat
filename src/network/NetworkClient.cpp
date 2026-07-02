@@ -1,7 +1,6 @@
 #include "NetworkClient.h"
 #include "Accounts.h"
-#include "ContactWindow.h"
-#include "taotie_chat.qpb.h"
+#include "Database.h"
 
 bool NetworkClient::init() {
     if(m_inited) { return true; }

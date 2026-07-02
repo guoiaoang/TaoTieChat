@@ -234,7 +234,7 @@ bool load_font(const QString&font_path) {
     // int font_id = QFontDatabase::addApplicationFallbackFontFamily(font_path);
     if (font_id != -1) {
         QString font_family = QFontDatabase::applicationFontFamilies(font_id).at(0);
-        qDebug().noquote().nospace() << QString("load font \"%1\" with path \"%2\" successed!").arg(font_family).arg(font_path);
+        qDebug().noquote().nospace() << QString(R"(load font "%1" with path "%2" successed!)").arg(font_family).arg(font_path);
         // 图标资源，不要设置为显示的字体
         // QFont icon_font(font_family);
         // QApplication::setFont(icon_font);
@@ -243,7 +243,7 @@ bool load_font(const QString&font_path) {
         return true;
     }
     else {
-        qDebug().noquote().nospace() << QString("load font with path \"%2\" error!").arg(font_path);
+        qDebug().noquote().nospace() << QString(R"(load font with path "%2" error!)").arg(font_path);
     }
     return false;
 }

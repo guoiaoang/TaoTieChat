@@ -1,8 +1,13 @@
 #include "ChatWindow.h"
-#include "Accounts.h"
-#include "NetworkClient.h"
-#include "taotie_chat.qpb.h"
 #include "ui_ChatWindow.h"
+
+#include "NetworkClient.h"
+#include "Accounts.h"
+#include "Database.h"
+#include "ContactWindow.h"
+#include "SearchWindow.h"
+#include "ItemModel.h"
+#include "ItemDelegate.h"
 
 ChatWindow::ChatWindow(QWidget *parent) : QMainWindow(parent) {}
 
@@ -16,26 +21,6 @@ void ChatWindow::reinit() {
 }
 
 void ChatWindow::release_resources() {
-    if(m_ui                    ) { m_ui                    .reset(); }
-    // 主窗口菜单
-    if(m_menu_settings         ) { m_menu_settings         .reset(); }
-    if(m_action_settings       ) { m_action_settings       .reset(); }
-    if(m_action_rember_password) { m_action_rember_password.reset(); }
-    if(m_action_auto_login     ) { m_action_auto_login     .reset(); }
-    if(m_action_signout        ) { m_action_signout        .reset(); }
-    if(m_action_exit           ) { m_action_exit           .reset(); }
-    // 搜索按钮
-    if(m_menu_add              ) { m_menu_add              .reset(); }
-    if(m_action_add            ) { m_action_add            .reset(); }
-    if(m_action_create         ) { m_action_create         .reset(); }
-    // model/view/delegate
-    if(m_contact_model         ) { m_contact_model         .reset(); }
-    if(m_contact_delegate      ) { m_contact_delegate      .reset(); }
-    if(m_search_window         ) { m_search_window         .reset(); }
-    if(m_contact_window        ) { m_contact_window        .reset(); }
-    //
-    if(m_cache_self_info       ) { m_cache_self_info       .reset(); }
-    if(m_cache_self_avatar     ) { m_cache_self_avatar     .reset(); }
 }
 
 void ChatWindow::init() {
@@ -54,8 +39,8 @@ void ChatWindow::init() {
     m_action_add       = std::make_shared<QAction>();
     m_action_create    = std::make_shared<QAction>();
     // model/view
-    m_contact_model    = std::make_shared<ListModel   >();
-    m_contact_delegate = std::make_shared<ListDelegate>();
+    m_contact_model    = std::make_shared<ItemModel   >();
+    m_contact_delegate = std::make_shared<ItemDelegate>();
 
     // 连接消息
     connect(m_ui->navigate_button_avatar   , &QToolButton::clicked, this, &ChatWindow::slot_button_navigate_avatar ); // 点击了头像按钮
@@ -186,10 +171,16 @@ void ChatWindow::init() {
     m_action_create->setEnabled(false); // TODO:功能未实现，暂时禁用
 
     // 设置列表属性
-    m_ui->page_list_chat_room->setSpacing(0);
+    // m_ui->page_list_chat_room->setSpacing(0);
     // 设置按像素滚动列表内容
-    m_ui->page_list_chat_room->setVerticalScrollMode(QAbstractItemView::ScrollPerPixel);
-    m_ui->page_list_contact  ->setVerticalScrollMode(QAbstractItemView::ScrollPerPixel);
+    m_ui->page_list_chat_room->setVerticalScrollMode(QListView::ScrollPerPixel);
+    m_ui->page_list_contact  ->setVerticalScrollMode(QListView::ScrollPerPixel);
+    // 禁用水平滚动条，防止由于局部测宽抖动引发滚动条乱闪
+    m_ui->page_list_chat_room->setHorizontalScrollBarPolicy(Qt::ScrollBarAlwaysOff);
+    m_ui->page_list_contact  ->setHorizontalScrollBarPolicy(Qt::ScrollBarAlwaysOff);
+    // // 设置视图尺寸变更模式为实时重新包裹自适应大小
+    // m_ui->page_list_chat_room->setResizeMode(QListView::Adjust);
+    // m_ui->page_list_contact  ->setResizeMode(QListView::Adjust);
     // m_split_contact->setSizes(QList<int>{100, 100});
     m_ui->widget_contact_list->resize(300, m_ui->widget_contact_list->height());
 
@@ -197,10 +188,32 @@ void ChatWindow::init() {
     // m_ui->stacked_contact_list->setMinimumWidth(ItemChat().minimumWidth() + m_ui->page_list_chat->verticalScrollBar()->sizeHint().width());
 
     // contact view/model/delegate
-    m_ui->page_list_contact->setModel       (m_contact_model   .get());
+    m_ui->page_list_contact->setModel(m_contact_model.get());
+    m_ui->page_list_contact->setIndentation(0);  // 设置分组缩进
+    m_ui->page_list_contact->setHeaderHidden(true); // 隐藏表头，看起来更像 QQ 列表
     m_ui->page_list_contact->setItemDelegate(m_contact_delegate.get());
     // 使用 currentChanged 信号支持键盘上下键导航和鼠标点击
     connect(m_ui->page_list_contact->selectionModel(), &QItemSelectionModel::currentChanged, this, &ChatWindow::handle_contact_selection_changed);
+    // 设置最小折叠宽度
+    m_ui->page_list_contact      ->setMinimumWidth(200);  // 有效  // 建议
+    // m_ui->stacked_contact_list->setMinimumWidth(300);  // 有效
+    // m_ui->widget_contact_list ->setMinimumWidth(400);  // 有效
+
+    // 添加好友分组
+    m_contact_model->add(std::make_shared<ItemDelegateSpacer>(tr("New Friends")));
+    m_contact_model->add(std::make_shared<ItemDelegateSpacer>(tr("Contacts")));
+
+#ifdef _DEBUG
+    {
+        for(int i = 0; i <= 10000; ++i) {
+            // m_contact_model->add(std::make_shared<ItemDelegateSpacer>(QString("Contacts_%1").arg(i, 5, 10, '0')));
+            std::shared_ptr<ItemDelegateSpacer> item_spacer_contacts = std::make_shared<ItemDelegateSpacer>();
+            item_spacer_contacts->data().group_name    = tr("Contacts_%1").arg(i, 5, 10, '0');
+            item_spacer_contacts->data().members_count = i;
+            m_contact_model->add(item_spacer_contacts);
+        }
+    }
+#endif // __DEBUG
 
     //
     // m_search_window->setWindowFlag(Qt::Window);
@@ -210,6 +223,7 @@ void ChatWindow::init() {
 
     // 点击编辑框时使用弹窗替代
     m_ui->edit_search->installEventFilter(this);
+    m_ui->page_list_contact->installEventFilter(this);  // debug
 
     // 设置要初始化显示的页面
     m_ui->navigate_button_chat_room->click();  // 初始化状态
@@ -370,47 +384,64 @@ void ChatWindow::show_chat_room_messages(const std::shared_ptr<ContactInfo>&cont
     // qDebug() << "contact : " << ContactManager(contact).get_nick_name();
 }
 
-void ChatWindow::add_contact(const std::shared_ptr<ContactInfo>&contact_info) {
-    // qDebug() << "contact : " << ContactManager(contact).get_nick_name();
-    m_contact_model->add_contact(contact_info);
+void ChatWindow::add_contact(const std::shared_ptr<ContactInfo>&contact_info, const ENUMS::ItemGroupType&group_type) {
+    m_contact_model->add(std::make_shared<ItemDelegateContact>(contact_info, group_type));
+    // TODO:判断群组
+    // for(int row = 0; row < m_contact_model->rowCount(); ++row) {
+    //     auto provider = m_contact_model->get(row);
+    //     if(auto provider_contact = dynamic_pointer_cast<ItemDelegateContact>(provider)) {
+    //         // TODO:群组与账号 ID 一致即认为是同一条目
+    //         // if(provider_contact->is_member(group_type) && provider_contact.)
+    //     }
+    // }
 }
 
 void ChatWindow::handle_contact_selection_changed(const QModelIndex &current, const QModelIndex &previous) {
     // 索引值需要有效
-    if (!current.isValid()) {
-        return;
-    }
+    if (!current.isValid()) { return; }
     // 能够获取到有效的联系人信息
-    const std::shared_ptr<ContactInfo>&contact_info = m_contact_model->get_contact(current);
-    if (!contact_info) {
-        return;
-    }
-    // 查找是否已经添加
-    ContactWindow *contact_window_update = nullptr;  // 需要更新的窗口
-    for(int idx = 0; idx < m_ui->stacked_contact_detail->count(); ++idx) {
-        ContactWindow*contact_window_already = dynamic_cast<ContactWindow*>(m_ui->stacked_contact_detail->widget(idx));
-        if(!contact_window_already) {
-            break;
+    auto item_provider = m_contact_model->get(current.row());
+    if(item_provider->type() == "contact") {
+        // 1. 智能指针要使用 dynamic_pointer_cast
+        // 2. <...> 中不必写 std::shared_ptr
+        auto item_provider_contact = std::dynamic_pointer_cast<ItemDelegateContact>(item_provider);
+        if(!item_provider_contact) { return; }
+        const std::shared_ptr<ContactInfo>&contact_info = item_provider_contact->get_contact_info();
+        if (!contact_info) { return; }
+        // 查找是否已经添加
+        ContactWindow *contact_window_update = nullptr;  // 需要更新的窗口
+        for(int idx = 0; idx < m_ui->stacked_contact_detail->count(); ++idx) {
+            ContactWindow*contact_window_already = dynamic_cast<ContactWindow*>(m_ui->stacked_contact_detail->widget(idx));
+            if(!contact_window_already) {
+                break;
+            }
+            const std::shared_ptr<ContactInfo>&contact_info_already = contact_window_already->get_cache_contact_info();
+            if(contact_info->baseInfo().accountId() == contact_info_already->baseInfo().accountId() &&
+            contact_info->baseInfo().userId   () == contact_info_already->baseInfo().userId   ()) {
+                contact_window_update = contact_window_already;  // 找到需要更新的窗口
+                break;
+            }
         }
-        const std::shared_ptr<ContactInfo>&contact_info_already = contact_window_already->get_cache_contact_info();
-        if(contact_info->baseInfo().accountId() == contact_info_already->baseInfo().accountId() &&
-           contact_info->baseInfo().userId   () == contact_info_already->baseInfo().userId   ()) {
-            contact_window_update = contact_window_already;  // 找到需要更新的窗口
-            break;
+        // 如果已经添加则更新信息
+        if(contact_window_update) {
+            contact_window_update->show_contact(contact_info);
         }
+        // 如果没有则添加
+        else {
+            contact_window_update = new ContactWindow(this);
+            contact_window_update->show_contact(contact_info);
+            m_ui->stacked_contact_detail->addWidget(contact_window_update);
+        }
+        // 显示
+        m_ui->stacked_contact_detail->setCurrentWidget(contact_window_update);
     }
-    // 如果已经添加则更新信息
-    if(contact_window_update) {
-        contact_window_update->show_contact(contact_info);
-    }
-    // 如果没有则添加
-    else {
-        contact_window_update = new ContactWindow(this);
-        contact_window_update->show_contact(contact_info);
-        m_ui->stacked_contact_detail->addWidget(contact_window_update);
-    }
-    // 显示
-    m_ui->stacked_contact_detail->setCurrentWidget(contact_window_update);
+    // 展开折叠不在这个事件里面，在 editorEvent 中
+    // else if(item_provider->type() == "spacer") {
+    //     auto item_provider_spacer = std::dynamic_pointer_cast<ItemDelegateSpacer>(item_provider);
+    //     if(!item_provider_spacer) { return; }
+    //     item_provider_spacer->is_expand() ? item_provider_spacer->collapse() : item_provider_spacer->expand();
+    //     m_ui->page_list_contact->update(current);
+    // }
 }
 
 // 账号当前用户信息被修改时触发
@@ -457,6 +488,9 @@ bool ChatWindow::eventFilter(QObject *obj, QEvent *event) {
             return true;
         }
     }
+    // else if (obj == m_ui->page_list_contact) {
+    //     qDebug().nospace().noquote() << "Event type : " << QMetaEnum::fromType<QEvent::Type>().valueToKey(event->type());
+    // }
     return QMainWindow::eventFilter(obj, event);
 }
 

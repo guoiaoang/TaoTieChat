@@ -1,8 +1,6 @@
 #pragma once
 
 #include "headers.h"
-#include "taotie_chat.qpb.h"
-#include "taotie_chat_client.grpc.qpb.h"
 
 // 文件及路径操作
 namespace Utils {
@@ -139,6 +137,9 @@ struct FontIcons {
         QIcon oct_pin        ; //  = Utils::to_icon("", icon_color);  // icon_nf_oct_pin                      // 备用
         QIcon cod_zoom_in    ; //  = Utils::to_icon("", icon_color);  // icon_nf_cod_zoom_in                  // 备用
         QIcon cod_zoom_out   ; //  = Utils::to_icon("", icon_color);  // icon_nf_cod_zoom_out                 // 备用
+        // collapse
+        QIcon collapse;
+        QIcon expand  ;
         FontIconsIcons& reset() {
             profile            = QIcon();
             chat_room_normal   = QIcon();
@@ -169,6 +170,9 @@ struct FontIcons {
             oct_pin         = QIcon();
             cod_zoom_in     = QIcon();
             cod_zoom_out    = QIcon();
+            // collapse
+            collapse        = QIcon();
+            expand          = QIcon();
             return *this;
         }
         FontIconsIcons& update(const FontIconsSize&size, const FontIconsColor&color) {
@@ -210,6 +214,9 @@ struct FontIcons {
             icon_set(oct_pin        , "", color.normal);
             icon_set(cod_zoom_in    , "", color.normal);
             icon_set(cod_zoom_out   , "", color.normal);
+            // collapse
+            icon_set(collapse       , "", color.normal);
+            icon_set(expand         , "", color.normal);
             return *this;
         }
     } icon;
@@ -246,7 +253,7 @@ namespace TestFontIcons {
                     .button = QSize(48, 48)
                 },
                 .color = {
-                    .normal = Qt::blue,
+                    .normal   = Qt::blue,
                     .disabled = Qt::red
                 }
             };
@@ -661,64 +668,3 @@ QDebug operator<<(QDebug debug, const SyncReplyHeader&header);
 QDebug operator<<(QDebug debug, const SyncContact&sync_contact);
 QDebug operator<<(QDebug debug, const SyncReplyBody&body);
 QDebug operator<<(QDebug debug, const SyncReply&rep);
-
-// auto callback = std::function<void(int error_code, const QString&error_message, ...)>;
-// using ResultInfo             = std::shared_ptr<SignUpReply>;
-// user register
-// rpc SignUp(SignUpRequest) returns (SignUpReply) {}
-using signup_params   = std::shared_ptr<SignUpRequest>;
-using signup_reply    = std::optional  <SignUpReply  >;
-using signup_callback = std::function  <void(const signup_params&, const signup_reply&)>;
-// user login
-// rpc SignIn(SignInRequest) returns (SignInReply) {}
-using signin_params   = std::shared_ptr<SignInRequest>;
-using signin_reply    = std::optional  <SignInReply  >;
-using signin_callback = std::function  <void(const signin_params&, const signin_reply&)>;
-// search users
-// rpc SearchUser(SearchUserRequest) returns (SearchUserReply) {}
-using search_user_params   = std::shared_ptr<SearchUserRequest>;
-using search_user_reply    = std::optional  <SearchUserReply  >;
-using search_user_callback = std::function  <void(const search_user_params&, const search_user_reply&)>;
-// update profile
-// rpc UpdateProfile(UpdateProfileRequest) returns (UpdateProfileReply) {}
-using update_profile_params   = std::shared_ptr<UpdateProfileRequest>;
-using update_profile_reply    = std::optional  <UpdateProfileReply  >;
-using update_profile_callback = std::function  <void(const update_profile_params&, const update_profile_reply&)>;
-// get file upload id
-// rpc GetFileID(GetFileIDRequest) returns (GetFileIDReply) {}
-using get_file_id_params   = std::shared_ptr<GetFileIDRequest>;
-using get_file_id_reply    = std::optional  <GetFileIDReply  >;
-using get_file_id_callback = std::function  <void(const get_file_id_params&, const get_file_id_reply&)>;
-// file upload
-// rpc FileUpload(stream FileUploadRequest) returns (stream FileUploadReply);
-using file_upload_params   = std::shared_ptr<FileUploadRequest>;
-using file_upload_reply    = std::optional  <FileUploadReply  >;
-using file_upload_callback = std::function  <void(const file_upload_params&, const file_upload_reply&)>;
-// file download
-// rpc FileDownload(FileDownloadRequest) returns (stream FileDownloadReply);
-using file_download_params   = std::shared_ptr<FileDownloadRequest>;
-using file_download_reply    = std::optional  <FileDownloadReply  >;
-using file_download_callback = std::function  <void(const file_download_params&, const file_download_reply&)>;
-// ContactRequest 好友申请
-// rpc ContactRequest(ContactRequestRequest) returns (ContactRequestReply) {}
-using contact_request_params   = std::shared_ptr<ContactRequestRequest>;
-using contact_request_reply    = std::optional  <ContactRequestReply  >;
-using contact_request_callback = std::function  <void(const contact_request_params&, const contact_request_reply&)>;
-// 添加联系人的回复
-// rpc ContactReply(ContactReplyRequest) returns (ContactReplyReply) {}
-using contact_reply_params   = std::shared_ptr<ContactReplyRequest>;
-using contact_reply_reply    = std::optional  <ContactReplyReply  >;
-using contact_reply_callback = std::function  <void(const contact_reply_params&, const contact_reply_reply&)>;
-// 获取添加联系人申请的列表
-// rpc GetContactRequests(AuthRequest) returns (GetContactRequestsReply) {}
-using get_contact_request_params   = std::shared_ptr<AuthRequest            >;
-using get_contact_request_reply    = std::optional  <GetContactRequestsReply>;
-using get_contact_request_callback = std::function  <void(const get_contact_request_params&, const get_contact_request_reply&)>;
-// rpc GetLastID(AuthRequest) returns (GetLastIDReply) {}
-using get_last_id_params   = std::shared_ptr<AuthRequest   >;
-using get_last_id_reply    = std::optional  <GetLastIDReply>;
-using get_last_id_callback = std::function  <void(const get_last_id_params&, const get_last_id_reply&)>;
-// rpc Sync(stream SyncRequest) returns (stream SyncReply) {}
-using sync_params   = std::shared_ptr<SyncRequest>;
-using sync_reply    = std::optional  <SyncReply  >;
-using sync_callback = std::function  <void(const sync_params&, const sync_reply&)>;

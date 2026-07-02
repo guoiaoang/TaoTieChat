@@ -1,11 +1,14 @@
 #pragma once
 
+#include "headers.h"
 #include "Utils.h"
-#include "MessageWindow.h"
-#include "ListModel.h"
-#include "ListDelegate.h"
-#include "ContactWindow.h"
-#include "SearchWindow.h"
+#include "Defines.h"
+
+class ItemModel;
+class ItemDelegate;
+class SearchWindow;
+class ContactWindow;
+class ContactInfo;
 
 namespace Ui {
 class ChatWindow;
@@ -51,7 +54,7 @@ public Q_SLOTS:
 
     // // 联系人管理
     // 添加到联系人列表
-    void add_contact(const std::shared_ptr<ContactInfo>&contact_info);
+    void add_contact(const std::shared_ptr<ContactInfo>&contact_info, const ENUMS::ItemGroupType&group_type = ENUMS::ItemGroupType::NONE);
     // model/view 模式下的选择
     void handle_contact_selection_changed(const QModelIndex &current, const QModelIndex &previous);
 
@@ -88,8 +91,8 @@ private:
     std::shared_ptr<QAction> m_action_add      ;
     std::shared_ptr<QAction> m_action_create   ;
     // model/view/delegate
-    std::shared_ptr<ListModel    > m_contact_model   ;
-    std::shared_ptr<ListDelegate > m_contact_delegate;
+    std::shared_ptr<ItemModel    > m_contact_model   ;
+    std::shared_ptr<ItemDelegate > m_contact_delegate;
     std::shared_ptr<SearchWindow > m_search_window   ;
     std::shared_ptr<ContactWindow> m_contact_window  ;  // 当前显示的联系人详情窗口
     //

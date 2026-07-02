@@ -2,6 +2,7 @@
 
 #include "headers.h"
 #include "Utils.h"
+#include "Defines.h"
 
 struct AuthOpt;
 

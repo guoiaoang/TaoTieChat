@@ -35,8 +35,6 @@ MessageWindow::MessageWindow(QWidget *parent) {
 // }
 
 MessageWindow::~MessageWindow() {
-    if(m_splitter) { m_splitter.reset(); }
-    if(m_ui      ) { m_ui      .reset(); }
 }
 
 void MessageWindow::update_contacts(const std::shared_ptr<ContactInfo>&contact_info ) {

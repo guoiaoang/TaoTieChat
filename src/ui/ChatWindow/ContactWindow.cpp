@@ -1,7 +1,12 @@
 #include "ContactWindow.h"
 #include "ui_ContactWindow.h"
+
 #include "NetworkClient.h"
 #include "ChatWindow.h"
+#include "Database.h"
+#include "MediaWindow.h"
+#include "Accounts.h"
+#include "Database.h"
 
 ContactWindow::ContactWindow(QWidget *parent) : QWidget(parent), m_ui(std::make_shared<Ui::ContactWindow>()) {
     m_ui->setupUi(this);
@@ -53,11 +58,6 @@ ContactWindow::ContactWindow(QWidget *parent) : QWidget(parent), m_ui(std::make_
 }
 
 ContactWindow::~ContactWindow() {
-    if(m_menu_manager      ) { m_menu_manager       .reset(); }
-    if(m_action_edit       ) { m_action_edit        .reset(); }
-    if(m_action_remove     ) { m_action_remove      .reset(); }
-    if(m_cache_contact_info) { m_cache_contact_info .reset(); }
-    if(m_ui                ) { m_ui                 .reset(); }
 }
 
 const std::shared_ptr<ContactInfo>&ContactWindow::get_cache_contact_info() const {

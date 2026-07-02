@@ -2,12 +2,13 @@
 
 #include "headers.h"
 #include "Utils.h"
+#include "Defines.h"
 
 namespace Ui {
 class DemoContactDelegateItem;
 }
 
-class ListDelegate;
+class ItemDelegate;
 
 class DemoContactDelegateItem : public QWidget {
     Q_OBJECT

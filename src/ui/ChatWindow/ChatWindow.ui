@@ -227,7 +227,7 @@ QToolButton#navigate_button_avatar:pressed {
              <number>0</number>
             </property>
             <item row="0" column="0">
-             <widget class="QListView" name="page_list_chat_room"/>
+             <widget class="QTreeView" name="page_list_chat_room"/>
             </item>
            </layout>
           </widget>
@@ -246,7 +246,7 @@ QToolButton#navigate_button_avatar:pressed {
              <number>0</number>
             </property>
             <item row="0" column="0">
-             <widget class="QListView" name="page_list_contact"/>
+             <widget class="QTreeView" name="page_list_contact"/>
             </item>
            </layout>
           </widget>
@@ -276,7 +276,7 @@ QToolButton#navigate_button_avatar:pressed {
           <number>0</number>
          </property>
          <item row="0" column="0">
-          <widget class="QListView" name="page_list_detail"/>
+          <widget class="QTreeView" name="page_list_detail"/>
          </item>
         </layout>
        </widget>

@@ -129,21 +129,6 @@ MediaWindow::MediaWindow(QWidget *parent)
 }
 
 MediaWindow::~MediaWindow() {
-    if (m_toolbar                  ) { m_toolbar                  .reset(); }
-    if (m_menu_save                ) { m_menu_save                .reset(); }
-    if (m_actions_scale            ) { m_actions_scale            .reset(); }
-    if (m_action_media_open        ) { m_action_media_open        .reset(); }
-    if (m_action_media_save        ) { m_action_media_save        .reset(); }
-    if (m_action_media_save_as     ) { m_action_media_save_as     .reset(); }
-    if (m_action_media_prev        ) { m_action_media_prev        .reset(); }
-    if (m_action_media_next        ) { m_action_media_next        .reset(); }
-    if (m_action_media_fit         ) { m_action_media_fit         .reset(); }
-    if (m_action_media_zoom_in     ) { m_action_media_zoom_in     .reset(); }
-    if (m_action_media_zoom_out    ) { m_action_media_zoom_out    .reset(); }
-    if (m_action_media_normal_size ) { m_action_media_normal_size .reset(); }
-    if (m_action_window_full_screen) { m_action_window_full_screen.reset(); }
-    if (m_action_window_pin        ) { m_action_window_pin        .reset(); }
-    if (m_ui                       ) { m_ui                       .reset(); }
 }
 
 // TODO: 简化，同源文件缩放
@@ -260,7 +245,7 @@ void MediaWindow::on_media_open() {
 
         set_play_list({ std::make_shared<MediaInfo>(MediaInfo{.media_path = fileName})});
 
-        const QString message = tr("Opened \"%1\", %2x%3, Depth: %4").arg(QDir::toNativeSeparators(fileName)).arg(pixmap.width()).arg(pixmap.height()).arg(pixmap.depth());
+        const QString message = tr(R"(Opened "%1", %2x%3, Depth: %4)").arg(QDir::toNativeSeparators(fileName)).arg(pixmap.width()).arg(pixmap.height()).arg(pixmap.depth());
         statusBar()->showMessage(message);
         return true;
     };
@@ -303,7 +288,7 @@ void MediaWindow::on_media_save_as() {
             QMessageBox::information(this, QGuiApplication::applicationDisplayName(), tr("Cannot write %1").arg(QDir::toNativeSeparators(fileName)));
             return false;
         }
-        const QString message = tr("Wrote \"%1\"").arg(QDir::toNativeSeparators(fileName));
+        const QString message = tr(R"(Wrote "%1")").arg(QDir::toNativeSeparators(fileName));
         statusBar()->showMessage(message);
         return true;
     };

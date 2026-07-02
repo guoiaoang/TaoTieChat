@@ -1,6 +1,8 @@
 #pragma once
 
+#include "headers.h"
 #include "Utils.h"
+#include "Defines.h"
 
 namespace Ui {
 class MediaWindow;

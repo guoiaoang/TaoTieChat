@@ -2,7 +2,7 @@
 
 #include "headers.h"
 #include "Utils.h"
-#include "taotie_chat.qpb.h"
+#include "Defines.h"
 
 struct NetworkFileIONotify{
     using Status = FileStatusCode;

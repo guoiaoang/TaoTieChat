@@ -1,6 +1,10 @@
 #include "SearchWindow.h"
-#include "taotie_chat.qpb.h"
 #include "ui_SearchWindow.h"
+
+#include "NetworkClient.h"
+#include "ItemModel.h"
+#include "ItemDelegate.h"
+#include "ContactWindow.h"
 
 SearchWindow::SearchWindow(QWidget *parent)
     : QScrollArea(parent) , m_ui(std::make_unique<Ui::SearchWindow>()) {
@@ -9,8 +13,8 @@ SearchWindow::SearchWindow(QWidget *parent)
     // new
     m_action_search  = std::make_unique<QAction>(this);
     // model/view
-    m_users_model    = std::make_unique<ListModel    >();
-    m_users_delegate = std::make_unique<ListDelegate >();
+    m_users_model    = std::make_unique<ItemModel    >();
+    m_users_delegate = std::make_unique<ItemDelegate >();
     m_user_window    = std::make_unique<ContactWindow>();
 
     // connect
@@ -43,11 +47,24 @@ SearchWindow::SearchWindow(QWidget *parent)
     // connect(ui->page_list_users->selectionModel(), &QItemSelectionModel::currentChanged, this, &ChatWindow::handle_contact_selection_changed);
     // 响应双击事件
     connect(m_ui->page_list_users, &QListView::doubleClicked, this, [this](const QModelIndex &index) {
-        if(!index.isValid()) { return; }
-        const std::shared_ptr<ContactInfo>&contact_info = index.data(Qt::UserRole).value<std::shared_ptr<ContactInfo>>();
-        if (!contact_info || !m_user_window) { return; }
-        this->m_user_window->show_contact(contact_info);
-        Utils::widget_raise(this->m_user_window.get());
+        do{
+            if(!index.isValid()) { break; }
+
+            auto index_data = index.data(Qt::UserRole + 1);
+            if(!index_data.canConvert<std::shared_ptr<ItemDelegate>>()) { break; }
+            // if(!index_data.canConvert<std::shared_ptr<ItemDelegateSpacer>>()) { break; }
+            if(!index_data.canConvert<std::shared_ptr<ItemDelegateContact>>()) { break; }
+
+            auto item_provider = index_data.value<std::shared_ptr<ItemDelegateContact>>();
+            if(!item_provider) { break; }
+
+            const std::shared_ptr<ContactInfo>&contact_info = item_provider->get_contact_info();
+            if (!contact_info || !m_user_window) { return; }
+            this->m_user_window->show_contact(contact_info);
+            Utils::widget_raise(this->m_user_window.get());
+            return;
+        } while(false);
+        qDebug() << "canConvert error.";
     });
 
     // TODO:群组功能当前未实现
@@ -59,11 +76,6 @@ SearchWindow::SearchWindow(QWidget *parent)
 }
 
 SearchWindow::~SearchWindow() {
-    if(m_action_search ) { m_action_search .reset(); }
-    if(m_users_model   ) { m_users_model   .reset(); }
-    if(m_users_delegate) { m_users_delegate.reset(); }
-    if(m_user_window   ) { m_user_window   .reset(); }
-    if(m_ui            ) { m_ui            .reset(); }
 }
 
 bool SearchWindow::do_search(const QString&keyword) {
@@ -114,8 +126,7 @@ bool SearchWindow::search_user(const QString&keyword) {
         if(error_code != ErrorCode::ERROR_UNSET) {
             qDebug().noquote().nospace() << "network search users error, code : " << error_code << ", message : " << error_message;
             // 发生错误时要刷新显示为空列表
-            auto contacts = std::make_shared<ContactInfos>();
-            this->m_users_model->set_contacts(contacts);
+            this->m_users_model.reset();
             return;
         }
 
@@ -134,7 +145,12 @@ bool SearchWindow::search_user(const QString&keyword) {
                         // 刷新显示
                         auto contacts = std::make_shared<ContactInfos>();
                         contacts->setContactInfos({reply_search_user->contactInfo()});
-                        this->m_users_model->set_contacts(contacts);
+                        // 转换
+                        std::vector<std::shared_ptr<ItemDelegate>> item_providers;
+                        for(auto&ite : contacts->contactInfos()) {
+                            item_providers.emplace_back(std::make_shared<ItemDelegateContact>(std::make_shared<ContactInfo>(ite), ENUMS::ItemGroupType::NONE));
+                        }
+                        this->m_users_model->reset(item_providers);
                     }
                 };
                 NetworkClient::instance().download_file(file_id, file_size, callback_download_avatar_notify);
@@ -148,7 +164,15 @@ bool SearchWindow::search_user(const QString&keyword) {
         if(reply_search_user->hasContactInfo() && reply_search_user->contactInfo().hasBaseInfo() && !reply_search_user->contactInfo().baseInfo().accountId().isEmpty()) {
             contacts->setContactInfos({ reply_search_user->contactInfo() });
         }
-        this->m_users_model->set_contacts(contacts);
+        // this->m_users_model->set_contacts(contacts);
+        {
+            // 转换
+            std::vector<std::shared_ptr<ItemDelegate>> item_providers;
+            for(auto&ite : contacts->contactInfos()) {
+                item_providers.emplace_back(std::make_shared<ItemDelegateContact>(std::make_shared<ContactInfo>(ite), ENUMS::ItemGroupType::NONE));
+            }
+            this->m_users_model->reset(item_providers);
+        }
     };
     NetworkClient::instance().search_user(params_search_user, network_search_user_callback);
     return false;

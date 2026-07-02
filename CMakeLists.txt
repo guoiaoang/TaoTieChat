@@ -152,8 +152,11 @@ if(ENABLE_CLIENT)
         ${PROJECT_DIR_SOURCE}/utils/Headers.h
         ${PROJECT_DIR_SOURCE}/utils/Utils.h
         ${PROJECT_DIR_SOURCE}/utils/Utils.cpp
+        ${PROJECT_DIR_SOURCE}/utils/Defines.h
         ${PROJECT_DIR_SOURCE}/data/Accounts.h
         ${PROJECT_DIR_SOURCE}/data/Accounts.cpp
+        ${PROJECT_DIR_SOURCE}/data/Database.h
+        ${PROJECT_DIR_SOURCE}/data/Database.cpp
         # 登录/认证窗口
         ${PROJECT_DIR_SOURCE}/ui/AuthWindow/AuthWindow.h
         ${PROJECT_DIR_SOURCE}/ui/AuthWindow/AuthWindow.cpp
@@ -167,11 +170,11 @@ if(ENABLE_CLIENT)
         ${PROJECT_DIR_SOURCE}/ui/ChatWindow/MessageWindow.cpp
         ${PROJECT_DIR_SOURCE}/ui/ChatWindow/MessageWindow.ui
         # 聊天窗口的联系人列表 model/view 实现
-        ${PROJECT_DIR_SOURCE}/ui/MVC/ListModel.h
-        ${PROJECT_DIR_SOURCE}/ui/MVC/ListModel.cpp
-        ${PROJECT_DIR_SOURCE}/ui/MVC/ListDelegate.h
-        ${PROJECT_DIR_SOURCE}/ui/MVC/ListDelegate.cpp
-        # 联系人信息页面，与 ListModel/ListDelegate 无关
+        ${PROJECT_DIR_SOURCE}/ui/MVC/ItemModel.h
+        ${PROJECT_DIR_SOURCE}/ui/MVC/ItemModel.cpp
+        ${PROJECT_DIR_SOURCE}/ui/MVC/ItemDelegate.h
+        ${PROJECT_DIR_SOURCE}/ui/MVC/ItemDelegate.cpp
+        # 联系人信息页面，与 ItemModel/ItemDelegate 无关
         ${PROJECT_DIR_SOURCE}/ui/ChatWindow/ContactWindow.h
         ${PROJECT_DIR_SOURCE}/ui/ChatWindow/ContactWindow.cpp
         ${PROJECT_DIR_SOURCE}/ui/ChatWindow/ContactWindow.ui

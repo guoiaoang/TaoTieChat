@@ -150,7 +150,7 @@ bool SearchWindow::search_user(const QString&keyword) {
                         for(auto&ite : contacts->contactInfos()) {
                             item_providers.emplace_back(std::make_shared<ItemDelegateContact>(std::make_shared<ContactInfo>(ite), ENUMS::ItemGroupType::NONE));
                         }
-                        this->m_users_model->reset(item_providers);
+                        // this->m_users_model->reset(item_providers);
                     }
                 };
                 NetworkClient::instance().download_file(file_id, file_size, callback_download_avatar_notify);
@@ -171,7 +171,7 @@ bool SearchWindow::search_user(const QString&keyword) {
             for(auto&ite : contacts->contactInfos()) {
                 item_providers.emplace_back(std::make_shared<ItemDelegateContact>(std::make_shared<ContactInfo>(ite), ENUMS::ItemGroupType::NONE));
             }
-            this->m_users_model->reset(item_providers);
+            // this->m_users_model->reset(item_providers);
         }
     };
     NetworkClient::instance().search_user(params_search_user, network_search_user_callback);

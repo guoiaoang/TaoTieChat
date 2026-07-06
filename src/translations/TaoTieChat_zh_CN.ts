@@ -213,21 +213,6 @@
         <translation>创建群</translation>
     </message>
     <message>
-        <location filename="../ui/ChatWindow/ChatWindow.cpp" line="203"/>
-        <source>New Friends</source>
-        <translation type="unfinished"></translation>
-    </message>
-    <message>
-        <location filename="../ui/ChatWindow/ChatWindow.cpp" line="204"/>
-        <source>Contacts</source>
-        <translation type="unfinished"></translation>
-    </message>
-    <message>
-        <location filename="../ui/ChatWindow/ChatWindow.cpp" line="211"/>
-        <source>Contacts_%1</source>
-        <translation type="unfinished"></translation>
-    </message>
-    <message>
         <source>Failed to download avatar.</source>
         <translation type="vanished">头像图片下载失败。</translation>
     </message>

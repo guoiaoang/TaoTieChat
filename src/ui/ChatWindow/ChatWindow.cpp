@@ -189,9 +189,9 @@ void ChatWindow::init() {
 
     // contact view/model/delegate
     m_ui->page_list_contact->setModel(m_contact_model.get());
-    m_ui->page_list_contact->setIndentation(m_ui->page_list_contact->indentation() / 2);  // 设置分组缩进
-    // m_ui->page_list_contact->setHeaderHidden(true); // 隐藏表头，看起来更像 QQ 列表
-    // m_ui->page_list_contact->setItemDelegate(m_contact_delegate.get());
+    m_ui->page_list_contact->setIndentation(0); // m_ui->page_list_contact->indentation() / 2);  // 设置分组缩进
+    m_ui->page_list_contact->setHeaderHidden(true); // 隐藏表头，看起来更像 QQ 列表
+    m_ui->page_list_contact->setItemDelegate(m_contact_delegate.get());
     m_ui->page_list_contact->expandAll();
     // 使用 currentChanged 信号支持键盘上下键导航和鼠标点击
     connect(m_ui->page_list_contact->selectionModel(), &QItemSelectionModel::currentChanged, this, &ChatWindow::handle_contact_selection_changed);
@@ -200,21 +200,19 @@ void ChatWindow::init() {
     // m_ui->stacked_contact_list->setMinimumWidth(300);  // 有效
     // m_ui->widget_contact_list ->setMinimumWidth(400);  // 有效
 
-//     // 添加好友分组
-//     m_contact_model->add(std::make_shared<ItemDelegateSpacer>(tr("New Friends")));
-//     m_contact_model->add(std::make_shared<ItemDelegateSpacer>(tr("Contacts")));
-//
-// #ifdef _DEBUG
-//     if(0) {
-//         for(int i = 0; i <= 10000; ++i) {
-//             // m_contact_model->add(std::make_shared<ItemDelegateSpacer>(QString("Contacts_%1").arg(i, 5, 10, '0')));
-//             std::shared_ptr<ItemDelegateSpacer> item_spacer_contacts = std::make_shared<ItemDelegateSpacer>();
-//             item_spacer_contacts->data().group_name    = tr("Contacts_%1").arg(i, 5, 10, '0');
-//             item_spacer_contacts->data().members_count = i;
-//             m_contact_model->add(item_spacer_contacts);
-//         }
-//     }
-// #endif // __DEBUG
+    // 添加好友分组
+    m_contact_model->add_group(ENUMS::ItemGroupType::REQUEST);
+    m_contact_model->add_group(ENUMS::ItemGroupType::FRIENDS);
+
+#ifdef _DEBUG
+    if(1) {
+        for(int i = 0; i <= 10000; ++i) {
+            auto contact = std::make_shared<ContactInfo>();
+            contact->mutBaseInfo().setAccountId(QString("Contact:Account ID %1 (%2)").arg(i, 5, 10, '0').arg(QDateTime::currentDateTimeUtc().toString(Qt::ISODate)));
+            m_contact_model->add_member(ENUMS::ItemGroupType::REQUEST, contact);
+        }
+    }
+#endif // __DEBUG
 
     //
     // m_search_window->setWindowFlag(Qt::Window);

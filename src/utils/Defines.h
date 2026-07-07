@@ -18,6 +18,35 @@ namespace ENUMS {
     // 声明标志 // Flags::A|Flags::B
     // Q_DECLARE_FLAGS(ItemGroupType, ItemGroupType)
     // Q_DECLARE_OPERATORS_FOR_FLAGS(ItemGroupType)
+
+    enum class ItemDataType : int {
+        UNSET,
+        NONE ,
+        GROUP  ,  // 分组
+        CONTACT,  // 联系人信息
+        MESSAGE,  // 消息
+    };
+    Q_ENUM_NS(ItemDataType)
+    static int role_item_type() { return Qt::UserRole + 1; }
+    static int role_item_data() { return Qt::UserRole + 2; }
+}
+
+namespace Utils::Transform {
+// 获取错误信息
+static QString to_string(ENUMS::ItemGroupType group_type) {
+    static const QMap<ENUMS::ItemGroupType, QString> map_groups = {
+        // {ENUMS::ItemGroupType::UNSET  , "UNSET"},
+        // {ENUMS::ItemGroupType::NONE   , "NONE"},
+        {ENUMS::ItemGroupType::REQUEST, QObject::tr("Contact Request")},
+        {ENUMS::ItemGroupType::FRIENDS, QObject::tr("Friends"        )},
+    };
+    if (map_groups.contains(group_type)) {
+        return map_groups[group_type];
+    }
+    int i = static_cast<int>(group_type);
+    auto m = QMetaEnum::fromType<ENUMS::ItemGroupType>();
+    return QObject::tr("[ENUMS::ItemGroupType::%1]").arg(m.value(i));
+}
 }
 
 #ifdef _DEBUG

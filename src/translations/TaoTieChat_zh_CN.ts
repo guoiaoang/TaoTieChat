@@ -664,6 +664,24 @@ message : %2</source>
     </message>
 </context>
 <context>
+    <name>QObject</name>
+    <message>
+        <location filename="../utils/Defines.h" line="40"/>
+        <source>Contact Request</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location filename="../utils/Defines.h" line="41"/>
+        <source>Friends</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <location filename="../utils/Defines.h" line="48"/>
+        <source>[ENUMS::ItemGroupType::%1]</source>
+        <translation type="unfinished"></translation>
+    </message>
+</context>
+<context>
     <name>SearchWindow</name>
     <message>
         <location filename="../ui/SearchWindow/SearchWindow.ui" line="14"/>

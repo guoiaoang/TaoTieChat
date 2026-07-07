@@ -224,39 +224,39 @@ public:
 class ContactModel : public TreeModel {
 public:
     using TreeModel::TreeModel;
-#ifdef _DEBUG
-    ContactModel() {
-        if(0) {
-            {
-                auto item_group = data_root()->add_child(new TreeItemData({{Qt::DisplayRole, QVariant("hello world! group!")}, {Qt::EditRole, QVariant("how are you? group!")}}));
-                auto item_member = item_group->add_child(new TreeItemData({{Qt::DisplayRole, QVariant("hello world! member!")}, {Qt::EditRole, QVariant("how are you? member!")}}));
-                item_member->add_child(new TreeItemData({{Qt::DisplayRole, QVariant("hello world! infos!")}, {Qt::EditRole, QVariant("how are you? infos!")}}));
-            }
-            {
-                auto item_group = data_root()->add_child(new TreeItemData({{Qt::DisplayRole, QVariant("hello world! group!")}, {Qt::EditRole, QVariant("how are you? group!")}}));
-                auto item_member = item_group->add_child(new TreeItemData({{Qt::DisplayRole, QVariant("hello world! member!")}, {Qt::EditRole, QVariant("how are you? member!")}}));
-                item_member->add_child(new TreeItemData({{Qt::DisplayRole, QVariant("hello world! infos!")}, {Qt::EditRole, QVariant("how are you? infos!")}}));
-            }
-        }
-        for(int i = 0; i <= 10000; ++i) {
-            auto contact = std::make_shared<ContactInfo>();
-            contact->mutBaseInfo().setAccountId(QString("Contact:Account ID %1 (%2)").arg(i, 5, 10, '0').arg(QDateTime::currentDateTimeUtc().toString(Qt::ISODate)));
-            add_member(ENUMS::ItemGroupType::REQUEST, contact);
-            // add_member(ENUMS::ItemGroupType::FRIENDS, std::shared_ptr<ContactInfo>());
-        }
-    }
-#endif // __DEBUG
+// #ifdef _DEBUG
+//     ContactModel() {
+//         if(0) {
+//             {
+//                 auto item_group = data_root()->add_child(new TreeItemData({{Qt::DisplayRole, QVariant("hello world! group!")}, {Qt::EditRole, QVariant("how are you? group!")}}));
+//                 auto item_member = item_group->add_child(new TreeItemData({{Qt::DisplayRole, QVariant("hello world! member!")}, {Qt::EditRole, QVariant("how are you? member!")}}));
+//                 item_member->add_child(new TreeItemData({{Qt::DisplayRole, QVariant("hello world! infos!")}, {Qt::EditRole, QVariant("how are you? infos!")}}));
+//             }
+//             {
+//                 auto item_group = data_root()->add_child(new TreeItemData({{Qt::DisplayRole, QVariant("hello world! group!")}, {Qt::EditRole, QVariant("how are you? group!")}}));
+//                 auto item_member = item_group->add_child(new TreeItemData({{Qt::DisplayRole, QVariant("hello world! member!")}, {Qt::EditRole, QVariant("how are you? member!")}}));
+//                 item_member->add_child(new TreeItemData({{Qt::DisplayRole, QVariant("hello world! infos!")}, {Qt::EditRole, QVariant("how are you? infos!")}}));
+//             }
+//         }
+//         for(int i = 0; i <= 10000; ++i) {
+//             auto contact = std::make_shared<ContactInfo>();
+//             contact->mutBaseInfo().setAccountId(QString("Contact:Account ID %1 (%2)").arg(i, 5, 10, '0').arg(QDateTime::currentDateTimeUtc().toString(Qt::ISODate)));
+//             add_member(ENUMS::ItemGroupType::REQUEST, contact);
+//             // add_member(ENUMS::ItemGroupType::FRIENDS, std::shared_ptr<ContactInfo>());
+//         }
+//     }
+// #endif // __DEBUG
 
 public:
 
     // 返回添加的分组节点  // 分组不重复
     auto add_group(ENUMS::ItemGroupType group_type) -> TreeItemData* {
-        // return data_root()->add_child(new TreeItemData(0, role_data(), QVariant::fromValue<ENUMS::ItemGroupType>(group_type)));
+        // return data_root()->add_child(new TreeItemData(0, ENUMS::role_item_data(), QVariant::fromValue<ENUMS::ItemGroupType>(group_type)));
         if(0) {
             auto item_group = new TreeItemData;
             // std::vector<std::map<int, QVariant>> data_column;
             std::map<int, QVariant> data_item;
-            data_item[role_data()     ] = QVariant::fromValue<ENUMS::ItemGroupType>(group_type);
+            data_item[ENUMS::role_item_data()] = QVariant::fromValue<ENUMS::ItemGroupType>(group_type);
             data_item[Qt::DisplayRole ] = QVariant("hello world! group DisplayRole!");
             data_item[Qt::EditRole    ] = QVariant("hello world! group EditRole!");
             // data_column.push_back(data_item);
@@ -267,13 +267,18 @@ public:
         auto column_index = 0;
         auto text_diaplay = QMetaEnum::fromType<ENUMS::ItemGroupType>().valueToKey(static_cast<int>(group_type));
         std::map<int, QVariant> var_item;
-        var_item[role_data()      ] = QVariant::fromValue<ENUMS::ItemGroupType>(group_type);
+        var_item[ENUMS::role_item_type()] = QVariant::fromValue<ENUMS::ItemDataType>(ENUMS::ItemDataType::GROUP);
+        var_item[ENUMS::role_item_data()] = QVariant::fromValue<ENUMS::ItemGroupType>(group_type);
         // 设置一些默认显示的数据，防止未设置 delegete 显示为空
         var_item[Qt::DisplayRole  ] = text_diaplay;
         var_item[Qt::EditRole     ] = text_diaplay;
         var_item[Qt::ToolTipRole  ] = text_diaplay;
-        // var_item[Qt::StatusTipRole] = text_diaplay;
+        // var_item[Qt::StatusTipRole] = text_diaplay;  // 效果不好
         var_item[Qt::WhatsThisRole] = text_diaplay;
+        // 为了展示不同类型，给群组设置背景颜色
+        var_item[Qt::BackgroundRole] = QVariant::fromValue<QColor>(Qt::darkCyan);
+        var_item[Qt::ForegroundRole] = QVariant::fromValue<QColor>(Qt::darkMagenta);
+        var_item[Qt::DecorationRole] = icon_init(); // 设置默认图标样式
         auto item_group = data_root()->add_child(new TreeItemData(column_index, var_item));
         return item_group;
     }
@@ -294,9 +299,9 @@ public:
                 //
                 for(auto&data_column : data_columns) {
                     // 不是目标数据
-                    if(!data_column.contains(role_data())) { continue; }
+                    if(!data_column.contains(ENUMS::role_item_data())) { continue; }
                     // 获取目标数据容器
-                    const QVariant&var_column = data_column.at(role_data());
+                    const QVariant&var_column = data_column.at(ENUMS::role_item_data());
                     if(!var_column.canConvert<ENUMS::ItemGroupType>()) { continue; }
                     // 对比目标数据容器内数据
                     if(var_column.value<ENUMS::ItemGroupType>() == group_type) {
@@ -311,17 +316,17 @@ public:
             //     item_group = add_group(group_type);
             // }
             return item_group;
-            // return item_group->add_child(new TreeItemData(0, role_data(), QVariant::fromValue<std::shared_ptr<ContactInfo>>(contact)));
+            // return item_group->add_child(new TreeItemData(0, ENUMS::role_item_data(), QVariant::fromValue<std::shared_ptr<ContactInfo>>(contact)));
         };
         Q_UNUSED(get_item_group_cxx11);
 
         // 2.C++ 20 std::views::filter 写法
-        auto func_get_item_check_by_ranger = [this, group_type](const std::map<int, QVariant>&data_column) {
+        auto func_get_item_check_by_ranger = [group_type](const std::map<int, QVariant>&data_column) {
             using T = ENUMS::ItemGroupType;
             // 不是目标数据
-            if(!data_column.contains(role_data())) { return false; }
+            if(!data_column.contains(ENUMS::role_item_data())) { return false; }
             // 获取目标数据容器
-            const QVariant&var_column = data_column.at(role_data());
+            const QVariant&var_column = data_column.at(ENUMS::role_item_data());
             if(!var_column.canConvert<T>()) { return false; }
             // 对比目标数据容器内数据
             T val = var_column.value<T>();
@@ -351,8 +356,8 @@ public:
         Q_UNUSED(func_get_item_by_ranger);
 
         // 3.std::ranges::find_if + std::views::filter 写法
-        auto func_get_item_check_by_findif = [this, group_type](const std::map<int, QVariant>&data_column) {
-            return data_column.contains(role_data()) && data_column.at(role_data()).value<ENUMS::ItemGroupType>() == group_type;
+        auto func_get_item_check_by_findif = [group_type](const std::map<int, QVariant>&data_column) {
+            return data_column.contains(ENUMS::role_item_data()) && data_column.at(ENUMS::role_item_data()).value<ENUMS::ItemGroupType>() == group_type;
         };
         auto func_get_item_cmp_by_findif = [func_get_item_check_by_findif](const TreeItemData* item_ite) {
             if(!item_ite) { return false; }
@@ -376,12 +381,12 @@ public:
             return nullptr;
         }
 
-        auto func_check_dupe = [this, account_id](const std::map<int, QVariant>&data_column) {
+        auto func_check_dupe = [account_id](const std::map<int, QVariant>&data_column) {
             using T = std::shared_ptr<ContactInfo>;
             // 不是目标数据
-            if(!data_column.contains(role_data())) { return false; }
+            if(!data_column.contains(ENUMS::role_item_data())) { return false; }
             // 获取目标数据容器
-            const QVariant&var_column = data_column.at(role_data());
+            const QVariant&var_column = data_column.at(ENUMS::role_item_data());
             if(!var_column.canConvert<T>()) { return false; }
             // 对比目标数据容器内数据
             T val = var_column.value<T>();
@@ -392,7 +397,7 @@ public:
             // if(account_id.isEmpty()) { return false; }
             if(account_id == account_id_text) { return true; }
             return false;
-            // return col.contains(role_data()) && col.at(role_data()).value<ENUMS::ItemGroupType>() == group_type;
+            // return col.contains(ENUMS::role_item_data()) && col.at(ENUMS::role_item_data()).value<ENUMS::ItemGroupType>() == group_type;
         };
         auto func_cmp_dupe = [contact, func_check_dupe](const TreeItemData* item_ite) {
             if(!item_ite) { return false; }
@@ -431,23 +436,25 @@ public:
         auto column_index = 0;
         auto text_diaplay = account_id;
         std::map<int, QVariant> var_item;
-        var_item[role_data()      ] = QVariant::fromValue<std::shared_ptr<ContactInfo>>(contact);
+        var_item[ENUMS::role_item_type()] = QVariant::fromValue<ENUMS::ItemDataType>(ENUMS::ItemDataType::CONTACT);
+        var_item[ENUMS::role_item_data()] = QVariant::fromValue<std::shared_ptr<ContactInfo>>(contact);
         // 设置一些默认显示的数据，防止未设置 delegete 显示为空
         var_item[Qt::DisplayRole  ] = text_diaplay;
         var_item[Qt::EditRole     ] = text_diaplay;
         var_item[Qt::ToolTipRole  ] = text_diaplay;
-        // var_item[Qt::StatusTipRole] = text_diaplay;
+        // var_item[Qt::StatusTipRole] = text_diaplay;  // 效果不好
         var_item[Qt::WhatsThisRole] = text_diaplay;
+        var_item[Qt::DecorationRole] = icon_init(); // 设置默认图标样式，实际不使用
         auto item_member = item_group->add_child(new TreeItemData(column_index, var_item));
         return item_member;
 
-        // auto item_member = item_group->add_child(new TreeItemData(0, role_data(), QVariant::fromValue<std::shared_ptr<ContactInfo>>(contact)));
+        // auto item_member = item_group->add_child(new TreeItemData(0, ENUMS::role_item_data(), QVariant::fromValue<std::shared_ptr<ContactInfo>>(contact)));
         // return item_member;
     }
 
     bool has_group(ENUMS::ItemGroupType group_type) {
-        auto func_get_item_check_by_findif = [this, group_type](const std::map<int, QVariant>&data_column) {
-            return data_column.contains(role_data()) && data_column.at(role_data()).value<ENUMS::ItemGroupType>() == group_type;
+        auto func_get_item_check_by_findif = [group_type](const std::map<int, QVariant>&data_column) {
+            return data_column.contains(ENUMS::role_item_data()) && data_column.at(ENUMS::role_item_data()).value<ENUMS::ItemGroupType>() == group_type;
         };
         auto func_get_item_cmp_by_findif = [func_get_item_check_by_findif](const TreeItemData* item_ite) {
             if(!item_ite) { return false; }
@@ -464,6 +471,9 @@ public:
         return func_get_item_by_findif(group_type) != nullptr;
     }
 
-private:
-    int role_data() const { return Qt::UserRole + 1; }
+    // 生成一个占位图标，否则获取图标大小会异常
+    QIcon icon_init() const {
+        static auto icons = Utils::FontIcons().update();
+        return icons.icon.contacts;
+    }
 };

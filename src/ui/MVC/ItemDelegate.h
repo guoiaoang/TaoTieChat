@@ -23,6 +23,13 @@ public:
 protected:
     // 获取点击事件  // false: 未处理，可交由其他对象处理
     virtual bool editorEvent(QEvent *event, QAbstractItemModel *model, const QStyleOptionViewItem &option, const QModelIndex &index) override;
+
+private:
+    bool paint_group(QPainter *painter, const QStyleOptionViewItem &option, const QModelIndex &index) const;
+    bool paint_contact(QPainter *painter, const QStyleOptionViewItem &option, const QModelIndex &index) const;
+private:
+    // 显示群组时高度和图标的缩放倍数
+    double group_height_scale() const { return double(3) / 2; }
 };
 Q_DECLARE_METATYPE(std::shared_ptr<ItemDelegate>)  // 确保向 QVariant 提供支持
 // 在程序初始化时注册（如果涉及到跨类型转换）

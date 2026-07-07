@@ -17,14 +17,24 @@ public:
         }
     }
 
+    // 单列表，每单元格默认保存显示角色的数据
+    TreeItemData(const QVariant& data_column) {
+        TreeItemData(std::map<int, QVariant>{{Qt::DisplayRole, data_column}});  // 添加一列数据
+    }
+
     // 单列表，每单元格可保存多种角色的数据
     TreeItemData(const std::map<int, QVariant>& data_column) {
         set_data_columns(std::vector<std::map<int, QVariant>>{{data_column}});
     }
 
     // 单列表，每单元格默认保存显示角色的数据
-    TreeItemData(const QVariant& data_column) {
-        TreeItemData(std::map<int, QVariant>{{Qt::DisplayRole, data_column}});  // 添加一列数据
+    TreeItemData(int column, const std::map<int, QVariant>& colum_data) {
+        set_column_data(column, colum_data);
+    }
+
+    // 单列表，每单元格默认保存显示角色的数据
+    TreeItemData(int column, int role, const QVariant&data) {
+        set_column_data(column, role, data);
     }
 
     // 析构函数：递归释放子节点内存，防止内存泄漏
@@ -70,16 +80,34 @@ public:
         return true;
     }
 
-    // 设置指定单元格的数据，可同时设置多种角色的数据  // 不新增列，单元格不存在则失败
+    std::map<int, QVariant> get_column_data(int column) {
+        if(column >= get_data_columns().size()) { return std::map<int, QVariant>{}; }
+        return get_data_columns()[column];
+    }
+
+    // 设置指定单元格的数据，可同时设置多种角色的数据  // 会重置 colum_data
     bool set_column_data(int column, const std::map<int, QVariant>& colum_data) {
-        if(column < 0 || column > get_data_columns().size()) { return false; }
+        // if(column < 0 || column > get_data_columns().size()) { return false; }
+        if(column > get_data_columns().size() + 1) {
+            rw_data_columns().reserve(column + 1);
+        }
+        for(size_t idx = get_data_columns().size(); idx <= column; ++idx) {
+            rw_data_columns().emplace_back(std::map<int, QVariant>());
+        }
         rw_data_columns().at(column) = colum_data;
         return true;
     }
 
-    // 设置指定单元格的数据，一次仅设置一种角色的数据  // 不新增列，单元格不存在则失败
+    // 设置指定单元格的数据，一次仅设置一种角色的数据  // 仅重置 role 的 data
     bool set_column_data(int column, int role, const QVariant&data) {
-        std::map<int, QVariant> column_data;
+        if(column > get_data_columns().size() + 1) {
+            rw_data_columns().reserve(column + 1);
+        }
+        for(size_t idx = get_data_columns().size(); idx <= column; ++idx) {
+            rw_data_columns().emplace_back(std::map<int, QVariant>());
+        }
+        // 先读取已经存在的记录再修改
+        std::map<int, QVariant> column_data = get_column_data(column);
         column_data[role] = data;
         return set_column_data(column, column_data);
     }
@@ -190,4 +218,252 @@ public:
 // private:
 //     // 修改数据频繁，建议使用 vector 而不是 list
 //     std::vector<std::shared_ptr<ItemDelegate>> m_items;
+};
+
+// 联系人列表
+class ContactModel : public TreeModel {
+public:
+    using TreeModel::TreeModel;
+#ifdef _DEBUG
+    ContactModel() {
+        if(0) {
+            {
+                auto item_group = data_root()->add_child(new TreeItemData({{Qt::DisplayRole, QVariant("hello world! group!")}, {Qt::EditRole, QVariant("how are you? group!")}}));
+                auto item_member = item_group->add_child(new TreeItemData({{Qt::DisplayRole, QVariant("hello world! member!")}, {Qt::EditRole, QVariant("how are you? member!")}}));
+                item_member->add_child(new TreeItemData({{Qt::DisplayRole, QVariant("hello world! infos!")}, {Qt::EditRole, QVariant("how are you? infos!")}}));
+            }
+            {
+                auto item_group = data_root()->add_child(new TreeItemData({{Qt::DisplayRole, QVariant("hello world! group!")}, {Qt::EditRole, QVariant("how are you? group!")}}));
+                auto item_member = item_group->add_child(new TreeItemData({{Qt::DisplayRole, QVariant("hello world! member!")}, {Qt::EditRole, QVariant("how are you? member!")}}));
+                item_member->add_child(new TreeItemData({{Qt::DisplayRole, QVariant("hello world! infos!")}, {Qt::EditRole, QVariant("how are you? infos!")}}));
+            }
+        }
+        for(int i = 0; i <= 10000; ++i) {
+            auto contact = std::make_shared<ContactInfo>();
+            contact->mutBaseInfo().setAccountId(QString("Contact:Account ID %1 (%2)").arg(i, 5, 10, '0').arg(QDateTime::currentDateTimeUtc().toString(Qt::ISODate)));
+            add_member(ENUMS::ItemGroupType::REQUEST, contact);
+            // add_member(ENUMS::ItemGroupType::FRIENDS, std::shared_ptr<ContactInfo>());
+        }
+    }
+#endif // __DEBUG
+
+public:
+
+    // 返回添加的分组节点  // 分组不重复
+    auto add_group(ENUMS::ItemGroupType group_type) -> TreeItemData* {
+        // return data_root()->add_child(new TreeItemData(0, role_data(), QVariant::fromValue<ENUMS::ItemGroupType>(group_type)));
+        if(0) {
+            auto item_group = new TreeItemData;
+            // std::vector<std::map<int, QVariant>> data_column;
+            std::map<int, QVariant> data_item;
+            data_item[role_data()     ] = QVariant::fromValue<ENUMS::ItemGroupType>(group_type);
+            data_item[Qt::DisplayRole ] = QVariant("hello world! group DisplayRole!");
+            data_item[Qt::EditRole    ] = QVariant("hello world! group EditRole!");
+            // data_column.push_back(data_item);
+            item_group->set_column_data(0, data_item);
+            data_root()->add_child(item_group);
+            // return item_group;
+        }
+        auto column_index = 0;
+        auto text_diaplay = QMetaEnum::fromType<ENUMS::ItemGroupType>().valueToKey(static_cast<int>(group_type));
+        std::map<int, QVariant> var_item;
+        var_item[role_data()      ] = QVariant::fromValue<ENUMS::ItemGroupType>(group_type);
+        // 设置一些默认显示的数据，防止未设置 delegete 显示为空
+        var_item[Qt::DisplayRole  ] = text_diaplay;
+        var_item[Qt::EditRole     ] = text_diaplay;
+        var_item[Qt::ToolTipRole  ] = text_diaplay;
+        // var_item[Qt::StatusTipRole] = text_diaplay;
+        var_item[Qt::WhatsThisRole] = text_diaplay;
+        auto item_group = data_root()->add_child(new TreeItemData(column_index, var_item));
+        return item_group;
+    }
+
+    // 返回添加的成员节点  // 1.分组不重复；2.contact 必须有 account_id 且同样不允许重复
+    auto add_member(ENUMS::ItemGroupType group_type, const std::shared_ptr<ContactInfo> contact) -> TreeItemData* {
+        // ========================== 查找群组节点 ========================== //
+
+        // 1.C++ 11 基础写法
+        auto get_item_group_cxx11 = [this](ENUMS::ItemGroupType group_type){
+            TreeItemData*item_group = nullptr;
+            for(auto*item_ite : data_root()->get_item_childs()) {
+                // 无效节点
+                if(!item_ite) { continue; }
+                // 无数据节点
+                auto data_columns = item_ite->get_data_columns();
+                if(data_columns.size() <= 0) { continue; }
+                //
+                for(auto&data_column : data_columns) {
+                    // 不是目标数据
+                    if(!data_column.contains(role_data())) { continue; }
+                    // 获取目标数据容器
+                    const QVariant&var_column = data_column.at(role_data());
+                    if(!var_column.canConvert<ENUMS::ItemGroupType>()) { continue; }
+                    // 对比目标数据容器内数据
+                    if(var_column.value<ENUMS::ItemGroupType>() == group_type) {
+                        item_group = item_ite;
+                        break;
+                    }
+                }
+                if(item_group) { break; }
+            }
+            // // 添加分组
+            // if(!item_group) {
+            //     item_group = add_group(group_type);
+            // }
+            return item_group;
+            // return item_group->add_child(new TreeItemData(0, role_data(), QVariant::fromValue<std::shared_ptr<ContactInfo>>(contact)));
+        };
+        Q_UNUSED(get_item_group_cxx11);
+
+        // 2.C++ 20 std::views::filter 写法
+        auto func_get_item_check_by_ranger = [this, group_type](const std::map<int, QVariant>&data_column) {
+            using T = ENUMS::ItemGroupType;
+            // 不是目标数据
+            if(!data_column.contains(role_data())) { return false; }
+            // 获取目标数据容器
+            const QVariant&var_column = data_column.at(role_data());
+            if(!var_column.canConvert<T>()) { return false; }
+            // 对比目标数据容器内数据
+            T val = var_column.value<T>();
+            if(val == group_type) { return true; }
+            return false;
+        };
+        auto func_get_item_cmp_by_ranger = [func_get_item_check_by_ranger](const TreeItemData* item_ite) -> bool {
+            // 无效节点
+            if(!item_ite) { return false; }
+            // 无数据节点
+            auto data_columns = item_ite->get_data_columns();
+            if(data_columns.empty()) { return false; }
+            // 验证数据
+            auto vec_filter = data_columns | std::views::filter(func_get_item_check_by_ranger);
+
+            // size() 可能需要完整遍历
+            // if(vec_filter.size() > 0) { return true; }
+
+            // empty() 具备隐式短路特性：找到第一个匹配项就会停下。
+            return !vec_filter.empty();
+        };
+        auto func_get_item_by_ranger = [this, func_get_item_cmp_by_ranger](ENUMS::ItemGroupType group_type) {
+            Q_UNUSED(group_type);
+            auto vec_item_groups = data_root()->get_item_childs() | std::views::filter(func_get_item_cmp_by_ranger);
+            return vec_item_groups.empty() ? nullptr : vec_item_groups.front();
+        };
+        Q_UNUSED(func_get_item_by_ranger);
+
+        // 3.std::ranges::find_if + std::views::filter 写法
+        auto func_get_item_check_by_findif = [this, group_type](const std::map<int, QVariant>&data_column) {
+            return data_column.contains(role_data()) && data_column.at(role_data()).value<ENUMS::ItemGroupType>() == group_type;
+        };
+        auto func_get_item_cmp_by_findif = [func_get_item_check_by_findif](const TreeItemData* item_ite) {
+            if(!item_ite) { return false; }
+            auto vec_filter = item_ite->get_data_columns() | std::views::filter(func_get_item_check_by_findif);
+            return !vec_filter.empty();
+        };
+        auto func_get_item_by_findif = [this, func_get_item_cmp_by_findif](ENUMS::ItemGroupType group_type) {
+            Q_UNUSED(group_type);
+            auto& childs = data_root()->get_item_childs();
+            auto it = std::ranges::find_if(childs, func_get_item_cmp_by_findif);
+            return (it == childs.end()) ? nullptr : *it;
+        };
+        Q_UNUSED(func_get_item_by_findif);
+
+        // ============================ 过滤重复 ============================ //
+
+        // 获取账号 ID 作为重复判断条件
+        auto account_id = (contact && contact->hasBaseInfo() && !contact->baseInfo().accountId().isEmpty()) ? contact->baseInfo().accountId() : "";
+        if(account_id.isEmpty()) {
+            qWarning() << "Contact account id is EMPTY!";
+            return nullptr;
+        }
+
+        auto func_check_dupe = [this, account_id](const std::map<int, QVariant>&data_column) {
+            using T = std::shared_ptr<ContactInfo>;
+            // 不是目标数据
+            if(!data_column.contains(role_data())) { return false; }
+            // 获取目标数据容器
+            const QVariant&var_column = data_column.at(role_data());
+            if(!var_column.canConvert<T>()) { return false; }
+            // 对比目标数据容器内数据
+            T val = var_column.value<T>();
+            // if(var_column.value<T>() == group_type) { return true; }
+            if(!val->hasBaseInfo()) { return false; }
+            auto&base_info = val->baseInfo();
+            auto&account_id_text = base_info.accountId();
+            // if(account_id.isEmpty()) { return false; }
+            if(account_id == account_id_text) { return true; }
+            return false;
+            // return col.contains(role_data()) && col.at(role_data()).value<ENUMS::ItemGroupType>() == group_type;
+        };
+        auto func_cmp_dupe = [contact, func_check_dupe](const TreeItemData* item_ite) {
+            if(!item_ite) { return false; }
+            auto vec_filter = item_ite->get_data_columns() | std::views::filter(func_check_dupe);
+            return !vec_filter.empty();
+            return false;
+        };
+        auto func_has_dupe = [this, func_cmp_dupe]() {
+            auto& childs = data_root()->get_item_childs();
+            auto it = std::ranges::find_if(childs, func_cmp_dupe);
+            return it != childs.end();
+        };
+        Q_UNUSED(func_has_dupe);
+
+        if(func_has_dupe()) { return nullptr; }
+
+        // // 支持空信息的添加，如果不是空信息时才校验重复
+        // if(account_id.isEmpty()) {
+        //     qWarning() << "Contact account id is EMPTY!";
+        //     account_id = contact ? tr("Account ID is EMPTY!") : tr("[Contact is EMPTY!]");
+        // }
+        // else {
+        //     if(func_has_dupe()) { return nullptr; }
+        // }
+
+        // ============================ 添加成员 ============================ //
+
+        // 获取分组节点
+        TreeItemData*item_group = func_get_item_by_findif(group_type);
+        // 没有该分组时添加该分组节点
+        if(!item_group) {
+            item_group = add_group(group_type);
+        }
+
+        // 分组节点添加成员  // 未校验重复
+        auto column_index = 0;
+        auto text_diaplay = account_id;
+        std::map<int, QVariant> var_item;
+        var_item[role_data()      ] = QVariant::fromValue<std::shared_ptr<ContactInfo>>(contact);
+        // 设置一些默认显示的数据，防止未设置 delegete 显示为空
+        var_item[Qt::DisplayRole  ] = text_diaplay;
+        var_item[Qt::EditRole     ] = text_diaplay;
+        var_item[Qt::ToolTipRole  ] = text_diaplay;
+        // var_item[Qt::StatusTipRole] = text_diaplay;
+        var_item[Qt::WhatsThisRole] = text_diaplay;
+        auto item_member = item_group->add_child(new TreeItemData(column_index, var_item));
+        return item_member;
+
+        // auto item_member = item_group->add_child(new TreeItemData(0, role_data(), QVariant::fromValue<std::shared_ptr<ContactInfo>>(contact)));
+        // return item_member;
+    }
+
+    bool has_group(ENUMS::ItemGroupType group_type) {
+        auto func_get_item_check_by_findif = [this, group_type](const std::map<int, QVariant>&data_column) {
+            return data_column.contains(role_data()) && data_column.at(role_data()).value<ENUMS::ItemGroupType>() == group_type;
+        };
+        auto func_get_item_cmp_by_findif = [func_get_item_check_by_findif](const TreeItemData* item_ite) {
+            if(!item_ite) { return false; }
+            auto vec_filter = item_ite->get_data_columns() | std::views::filter(func_get_item_check_by_findif);
+            return !vec_filter.empty();
+        };
+        auto func_get_item_by_findif = [this, func_get_item_cmp_by_findif](ENUMS::ItemGroupType group_type) {
+            Q_UNUSED(group_type);
+            auto& childs = data_root()->get_item_childs();
+            auto it = std::ranges::find_if(childs, func_get_item_cmp_by_findif);
+            return (it == childs.end()) ? nullptr : *it;
+        };
+        Q_UNUSED(func_get_item_by_findif);
+        return func_get_item_by_findif(group_type) != nullptr;
+    }
+
+private:
+    int role_data() const { return Qt::UserRole + 1; }
 };

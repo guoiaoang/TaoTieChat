@@ -5,6 +5,7 @@
 #include "Defines.h"
 
 class ItemModel;
+class ContactModel;
 class ItemDelegate;
 class SearchWindow;
 class ContactWindow;
@@ -91,7 +92,7 @@ private:
     std::shared_ptr<QAction> m_action_add      ;
     std::shared_ptr<QAction> m_action_create   ;
     // model/view/delegate
-    std::shared_ptr<ItemModel    > m_contact_model   ;
+    std::shared_ptr<ContactModel > m_contact_model   ;
     std::shared_ptr<ItemDelegate > m_contact_delegate;
     std::shared_ptr<SearchWindow > m_search_window   ;
     std::shared_ptr<ContactWindow> m_contact_window  ;  // 当前显示的联系人详情窗口

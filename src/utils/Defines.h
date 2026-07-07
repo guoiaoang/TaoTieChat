@@ -2,7 +2,9 @@
 
 #include "headers.h"
 
+// 名字空间中声明 enum
 namespace ENUMS {
+    Q_NAMESPACE // 告诉 Qt 这是一个有元数据的命名空间
     // 分组
     enum class ItemGroupType : int {
         UNSET  ,
@@ -10,7 +12,32 @@ namespace ENUMS {
         REQUEST,  // 好友申请
         FRIENDS,  // 联系人
     };
+    Q_ENUM_NS(ItemGroupType)
+    // qRegisterMetaType<ENUMS::ItemGroupType>("ENUMS::ItemGroupType");
+
+    // 声明标志 // Flags::A|Flags::B
+    // Q_DECLARE_FLAGS(ItemGroupType, ItemGroupType)
+    // Q_DECLARE_OPERATORS_FOR_FLAGS(ItemGroupType)
 }
+
+#ifdef _DEBUG
+// QObject 类中声明 enum
+class MyEnums : public QObject {
+    Q_OBJECT
+
+public:
+    // 1. 声明强类型枚举
+    enum class ItemGroupType : int {
+        UNSET  ,
+        NONE   ,  // 没有分组标签
+        REQUEST,  // 好友申请
+        FRIENDS,  // 联系人
+    };
+
+    // 2. 关键：向 Qt 元对象系统注册该枚举
+    Q_ENUM(ItemGroupType)
+};
+#endif // _DEBUG
 
 // auto callback = std::function<void(int error_code, const QString&error_message, ...)>;
 // using ResultInfo             = std::shared_ptr<SignUpReply>;

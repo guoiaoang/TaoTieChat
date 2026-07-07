@@ -39,7 +39,7 @@ void ChatWindow::init() {
     m_action_add       = std::make_shared<QAction>();
     m_action_create    = std::make_shared<QAction>();
     // model/view
-    m_contact_model    = std::make_shared<ItemModel   >();
+    m_contact_model    = std::make_shared<ContactModel>();
     m_contact_delegate = std::make_shared<ItemDelegate>();
 
     // 连接消息

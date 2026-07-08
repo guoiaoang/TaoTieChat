@@ -20,7 +20,7 @@ bool ItemDelegate::paint_group(QPainter *painter, const QStyleOptionViewItem &op
     // 绘制背景
     {
         // 绘制背景（处理选中、悬停状态）
-        opt.backgroundBrush = QBrush((option.state & QStyle::State_Selected) ? QColor(Qt::darkCyan) : opt.backgroundBrush);
+        opt.backgroundBrush = QBrush((option.state & QStyle::State_Selected) ? opt.palette.color(QPalette::Highlight) : opt.backgroundBrush);
         opt.widget->style()->drawPrimitive(QStyle::PE_PanelItemViewItem, &opt, painter, opt.widget);
     }
 
@@ -112,7 +112,7 @@ bool ItemDelegate::paint_contact(QPainter *painter, const QStyleOptionViewItem &
     // 绘制背景
     {
         // 绘制背景（处理选中、悬停状态）
-        opt.backgroundBrush = QBrush((option.state & QStyle::State_Selected) ? QColor(Qt::darkCyan) : opt.backgroundBrush);
+        opt.backgroundBrush = QBrush((option.state & QStyle::State_Selected) ? opt.palette.color(QPalette::Highlight) : opt.backgroundBrush);
         opt.widget->style()->drawPrimitive(QStyle::PE_PanelItemViewItem, &opt, painter, opt.widget);
     }
 

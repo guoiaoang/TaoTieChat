@@ -192,7 +192,12 @@ void ChatWindow::init() {
     m_ui->page_list_contact->setIndentation(0); // m_ui->page_list_contact->indentation() / 2);  // 设置分组缩进
     m_ui->page_list_contact->setHeaderHidden(true); // 隐藏表头，看起来更像 QQ 列表
     m_ui->page_list_contact->setItemDelegate(m_contact_delegate.get());
+    m_ui->page_list_contact->setAnimated(false);  // 禁用展开/折叠动画，加速加载
+    m_ui->page_list_contact->setExpandsOnDoubleClick(false);  // 改成单击展开
+    // m_ui->page_list_contact->setUniformRowHeights(true);  // 统一行高，避免逐行计算高度
     // m_ui->page_list_contact->expandAll();  // 添加数据后才能展开
+    // 支持单击展开群组
+    connect(m_ui->page_list_contact, &QTreeView::clicked, this, &ChatWindow::handle_contact_item_clicked);
     // 使用 currentChanged 信号支持键盘上下键导航和鼠标点击
     connect(m_ui->page_list_contact->selectionModel(), &QItemSelectionModel::currentChanged, this, &ChatWindow::handle_contact_selection_changed);
     // 设置最小折叠宽度
@@ -203,12 +208,17 @@ void ChatWindow::init() {
     // 添加好友分组
     m_contact_model->add_group(ENUMS::ItemGroupType::REQUEST);
     m_contact_model->add_group(ENUMS::ItemGroupType::FRIENDS);
+    // 联系人群组初始化时始终展开
+    auto index_group = m_contact_model->index_group(ENUMS::ItemGroupType::FRIENDS);
+    if(index_group.isValid() && index_group.model()->hasChildren(index_group)) {
+        m_ui->page_list_contact->expand(index_group);
+    }
 
 #ifdef _DEBUG
-    if(1) {
+    if(0) {
         // m_contact_model->add_member(ENUMS::ItemGroupType::REQUEST, Accounts::instance().get_current_account());
         // m_contact_model->add_member(ENUMS::ItemGroupType::FRIENDS, Accounts::instance().get_current_account());
-        for(int i = 0; i <= 10000; ++i) {
+        for(int i = 0; i <= 300; ++i) {
             auto contact = std::make_shared<ContactInfo>();
             auto num = QString("%1").arg(i, 5, 10, '0');
             auto time = QDateTime::currentDateTimeUtc().toString(Qt::ISODate);
@@ -333,8 +343,7 @@ void ChatWindow::init() {
                                 auto request_message = sync_contact_request.message();
                                 qDebug().noquote().nospace() << "Get sync contact request. form : " << request_contact << ", time : " << request_time << ", message : " << request_message;
                                 // 添加到联系人列表中，但标记为申请好友（放入申请分组）
-                                add_contact(std::make_shared<ContactInfo>(request_contact));
-                                // m_contact_model->add_contact_request(std::make_shared<ContactInfo>(request_contact));
+                                add_contact(std::make_shared<ContactInfo>(request_contact), ENUMS::ItemGroupType::REQUEST);
                             }
                             else if(sync_contact.subType() == SyncSubTypeContact::SYNC_CONTACT_REPLY) {
                                 auto sync_contact_reply = sync_contact.reply();
@@ -402,15 +411,7 @@ void ChatWindow::show_chat_room_messages(const std::shared_ptr<ContactInfo>&cont
 }
 
 void ChatWindow::add_contact(const std::shared_ptr<ContactInfo>&contact_info, const ENUMS::ItemGroupType&group_type) {
-    // m_contact_model->add(std::make_shared<ItemDelegateContact>(contact_info, group_type));
-    // TODO:判断群组
-    // for(int row = 0; row < m_contact_model->rowCount(); ++row) {
-    //     auto provider = m_contact_model->get(row);
-    //     if(auto provider_contact = dynamic_pointer_cast<ItemDelegateContact>(provider)) {
-    //         // TODO:群组与账号 ID 一致即认为是同一条目
-    //         // if(provider_contact->is_member(group_type) && provider_contact.)
-    //     }
-    // }
+    m_contact_model->add_member(group_type, contact_info);
 }
 
 void ChatWindow::handle_contact_selection_changed(const QModelIndex &current, const QModelIndex &previous) {
@@ -459,6 +460,20 @@ void ChatWindow::handle_contact_selection_changed(const QModelIndex &current, co
     //     item_provider_spacer->is_expand() ? item_provider_spacer->collapse() : item_provider_spacer->expand();
     //     m_ui->page_list_contact->update(current);
     // }
+}
+
+// 支持单击动作
+void ChatWindow::handle_contact_item_clicked(const QModelIndex &index) {
+    if (!index.isValid()) { return; }
+    QVariant var_type = index.data(ENUMS::role_item_type());
+    if (var_type.isValid() && var_type.canConvert<ENUMS::ItemDataType>()) {
+        auto item_type = var_type.value<ENUMS::ItemDataType>();
+        if (item_type == ENUMS::ItemDataType::GROUP) {
+            const bool expanded = m_ui->page_list_contact->isExpanded(index);
+            m_ui->page_list_contact->setExpanded(index, !expanded);
+            return;
+        }
+    }
 }
 
 // 账号当前用户信息被修改时触发

@@ -668,17 +668,12 @@ message : %2</source>
     <message>
         <location filename="../utils/Defines.h" line="40"/>
         <source>Contact Request</source>
-        <translation type="unfinished"></translation>
+        <translation>好友申请</translation>
     </message>
     <message>
         <location filename="../utils/Defines.h" line="41"/>
         <source>Friends</source>
-        <translation type="unfinished"></translation>
-    </message>
-    <message>
-        <location filename="../utils/Defines.h" line="48"/>
-        <source>[ENUMS::ItemGroupType::%1]</source>
-        <translation type="unfinished"></translation>
+        <translation>联系人</translation>
     </message>
 </context>
 <context>
@@ -709,7 +704,7 @@ message : %2</source>
         <translation>群组</translation>
     </message>
     <message>
-        <location filename="../ui/SearchWindow/SearchWindow.cpp" line="106"/>
+        <location filename="../ui/SearchWindow/SearchWindow.cpp" line="102"/>
         <source>network_search_user recv failed.</source>
         <translation>数据接收错误。</translation>
     </message>

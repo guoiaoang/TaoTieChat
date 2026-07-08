@@ -45,7 +45,7 @@ static QString to_string(ENUMS::ItemGroupType group_type) {
     }
     int i = static_cast<int>(group_type);
     auto m = QMetaEnum::fromType<ENUMS::ItemGroupType>();
-    return QObject::tr("[ENUMS::ItemGroupType::%1]").arg(m.value(i));
+    return QString("[ENUMS::ItemGroupType::%1]").arg(m.value(i));
 }
 }
 

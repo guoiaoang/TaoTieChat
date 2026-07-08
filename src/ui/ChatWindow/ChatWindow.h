@@ -58,6 +58,8 @@ public Q_SLOTS:
     void add_contact(const std::shared_ptr<ContactInfo>&contact_info, const ENUMS::ItemGroupType&group_type = ENUMS::ItemGroupType::NONE);
     // model/view 模式下的选择
     void handle_contact_selection_changed(const QModelIndex &current, const QModelIndex &previous);
+    // 单击联系人/群组
+    void handle_contact_item_clicked(const QModelIndex &index);
 
     // 更新联系人信息，可能是头像、昵称、状态等
     void current_accounut_info_changed();

@@ -115,10 +115,16 @@ public:
     // 删除指定值的元素，并返回删除的数量  // 不释放子节点的资源
     int remove_child(const TreeItemData*item_child) {
         if (!item_child) { return 0; }
-        // 删除指定值的元素
-        return static_cast<int>(std::erase(rw_item_childs(), item_child));
-        // 删除指定条件的元素
-        return static_cast<int>(std::erase_if(rw_item_childs(), [item_child](const TreeItemData* item_ite) { return item_ite == item_child; }));
+        auto it = std::find(rw_item_childs().begin(), rw_item_childs().end(), item_child);
+        if (it == rw_item_childs().end()) { return 0; }
+        // 父节点要置空，否则父节点删除但节点指针未更新
+        const_cast<TreeItemData*>(item_child)->set_item_parent(nullptr);
+        rw_item_childs().erase(it);
+        return 1;
+        // // 删除指定值的元素
+        // return static_cast<int>(std::erase(rw_item_childs(), item_child));
+        // // 删除指定条件的元素
+        // return static_cast<int>(std::erase_if(rw_item_childs(), [item_child](const TreeItemData* item_ite) { return item_ite == item_child; }));
     }
 
 public:
@@ -161,6 +167,7 @@ protected:
 
 public:
     const TreeItemData* data_root() const { return m_data_root; }
+    void clean() { delete m_data_root; m_data_root = new TreeItemData; }
 protected:
     TreeItemData* data_root() { return m_data_root; }
 private:
@@ -226,23 +233,15 @@ public:
     using TreeModel::TreeModel;
 // #ifdef _DEBUG
 //     ContactModel() {
-//         if(0) {
-//             {
-//                 auto item_group = data_root()->add_child(new TreeItemData({{Qt::DisplayRole, QVariant("hello world! group!")}, {Qt::EditRole, QVariant("how are you? group!")}}));
-//                 auto item_member = item_group->add_child(new TreeItemData({{Qt::DisplayRole, QVariant("hello world! member!")}, {Qt::EditRole, QVariant("how are you? member!")}}));
-//                 item_member->add_child(new TreeItemData({{Qt::DisplayRole, QVariant("hello world! infos!")}, {Qt::EditRole, QVariant("how are you? infos!")}}));
-//             }
-//             {
-//                 auto item_group = data_root()->add_child(new TreeItemData({{Qt::DisplayRole, QVariant("hello world! group!")}, {Qt::EditRole, QVariant("how are you? group!")}}));
-//                 auto item_member = item_group->add_child(new TreeItemData({{Qt::DisplayRole, QVariant("hello world! member!")}, {Qt::EditRole, QVariant("how are you? member!")}}));
-//                 item_member->add_child(new TreeItemData({{Qt::DisplayRole, QVariant("hello world! infos!")}, {Qt::EditRole, QVariant("how are you? infos!")}}));
-//             }
-//         }
-//         for(int i = 0; i <= 10000; ++i) {
+//         for(int i = 0; i <= 300; ++i) {
 //             auto contact = std::make_shared<ContactInfo>();
-//             contact->mutBaseInfo().setAccountId(QString("Contact:Account ID %1 (%2)").arg(i, 5, 10, '0').arg(QDateTime::currentDateTimeUtc().toString(Qt::ISODate)));
+//             auto num = QString("%1").arg(i, 5, 10, '0');
+//             auto time = QDateTime::currentDateTimeUtc().toString(Qt::ISODate);
+//             contact->mutBaseInfo().setAccountId(QString("Account ID : %1 (%2)").arg(num).arg(time));
+//             contact->mutBaseInfo().setUserId   (QString("User ID    : %1 (%2)").arg(num).arg(time));
+//             contact->mutBaseInfo().setNickname (QString("Nickname   : %1 (%2)").arg(num).arg(time));
+//             contact->mutBaseInfo().setSignature(QString("Signature  : %1 (%2)").arg(num).arg(time));
 //             add_member(ENUMS::ItemGroupType::REQUEST, contact);
-//             // add_member(ENUMS::ItemGroupType::FRIENDS, std::shared_ptr<ContactInfo>());
 //         }
 //     }
 // #endif // __DEBUG
@@ -279,7 +278,10 @@ public:
         // var_item[Qt::BackgroundRole] = QVariant::fromValue<QColor>(Qt::darkCyan);
         // var_item[Qt::ForegroundRole] = QVariant::fromValue<QColor>(Qt::darkMagenta);
         var_item[Qt::DecorationRole] = icon_init(); // 设置默认图标样式
+        auto row = static_cast<int>(data_root()->get_item_childs().size());
+        beginInsertRows(QModelIndex(), row, row);
         auto item_group = data_root()->add_child(new TreeItemData(column_index, var_item));
+        endInsertRows();
         return item_group;
     }
 
@@ -445,7 +447,11 @@ public:
         // var_item[Qt::StatusTipRole] = text_diaplay;  // 效果不好
         var_item[Qt::WhatsThisRole] = text_diaplay;
         var_item[Qt::DecorationRole] = icon_init(); // 设置默认图标样式，实际不使用
+        auto row = static_cast<int>(item_group->get_item_childs().size());
+        const QModelIndex parent_index = index_group(group_type);
+        beginInsertRows(parent_index, row, row);
         auto item_member = item_group->add_child(new TreeItemData(column_index, var_item));
+        endInsertRows();
         return item_member;
 
         // auto item_member = item_group->add_child(new TreeItemData(0, ENUMS::role_item_data(), QVariant::fromValue<std::shared_ptr<ContactInfo>>(contact)));
@@ -456,6 +462,20 @@ public:
         auto row = row_group(group_type);
         return row == -1 ? QModelIndex() : createIndex(row, 0, data_root()->get_item_childs().at(row));
         return QModelIndex();
+    }
+
+    // 用于支持群组节点无子节点时展开
+    bool hasChildren(const QModelIndex &parent = QModelIndex()) const override {
+        if (!parent.isValid()) {
+            return rowCount(parent) > 0;
+        }
+        QVariant var_type = parent.data(ENUMS::role_item_type());
+        if (var_type.isValid() && var_type.canConvert<ENUMS::ItemDataType>()) {
+            if (var_type.value<ENUMS::ItemDataType>() == ENUMS::ItemDataType::GROUP) {
+                return true;
+            }
+        }
+        return rowCount(parent) > 0;
     }
 
     int row_group(ENUMS::ItemGroupType group_type) {
@@ -480,6 +500,103 @@ public:
 
     bool has_group(ENUMS::ItemGroupType group_type) {
         return row_group(group_type) != -1;
+    }
+
+    // 生成一个占位图标，否则获取图标大小会异常
+    QIcon icon_init() const {
+        static auto icons = Utils::FontIcons().update();
+        return icons.icon.contacts;
+    }
+};
+
+// 搜索结果
+class SearchModel : public TreeModel {
+public:
+    using TreeModel::TreeModel;
+// #ifdef _DEBUG
+//     SearchModel() {
+//         for(int i = 0; i <= 300; ++i) {
+//             auto contact = std::make_shared<ContactInfo>();
+//             auto num = QString("%1").arg(i, 5, 10, '0');
+//             auto time = QDateTime::currentDateTimeUtc().toString(Qt::ISODate);
+//             contact->mutBaseInfo().setAccountId(QString("Account ID : %1 (%2)").arg(num).arg(time));
+//             contact->mutBaseInfo().setUserId   (QString("User ID    : %1 (%2)").arg(num).arg(time));
+//             contact->mutBaseInfo().setNickname (QString("Nickname   : %1 (%2)").arg(num).arg(time));
+//             contact->mutBaseInfo().setSignature(QString("Signature  : %1 (%2)").arg(num).arg(time));
+//             add_member(contact);
+//         }
+//     }
+// #endif // __DEBUG
+
+public:
+
+    // 返回添加的成员节点  // 1.分组不重复；2.contact 必须有 account_id 且同样不允许重复
+    auto add_member(const std::shared_ptr<ContactInfo> contact) -> TreeItemData* {
+        // ============================ 过滤重复 ============================ //
+
+        // 获取账号 ID 作为重复判断条件
+        auto account_id = (contact && contact->hasBaseInfo() && !contact->baseInfo().accountId().isEmpty()) ? contact->baseInfo().accountId() : "";
+        if(account_id.isEmpty()) {
+            qWarning() << "Contact account id is EMPTY!";
+            return nullptr;
+        }
+
+        auto func_check_dupe = [account_id](const std::map<int, QVariant>&data_column) {
+            using T = std::shared_ptr<ContactInfo>;
+            // 不是目标数据
+            if(!data_column.contains(ENUMS::role_item_data())) { return false; }
+            // 获取目标数据容器
+            const QVariant&var_column = data_column.at(ENUMS::role_item_data());
+            if(!var_column.canConvert<T>()) { return false; }
+            // 对比目标数据容器内数据
+            T val = var_column.value<T>();
+            // if(var_column.value<T>() == group_type) { return true; }
+            if(!val->hasBaseInfo()) { return false; }
+            auto&base_info = val->baseInfo();
+            auto&account_id_text = base_info.accountId();
+            // if(account_id.isEmpty()) { return false; }
+            if(account_id == account_id_text) { return true; }
+            return false;
+            // return col.contains(ENUMS::role_item_data()) && col.at(ENUMS::role_item_data()).value<ENUMS::ItemGroupType>() == group_type;
+        };
+        auto func_cmp_dupe = [contact, func_check_dupe](const TreeItemData* item_ite) {
+            if(!item_ite) { return false; }
+            auto vec_filter = item_ite->get_data_columns() | std::views::filter(func_check_dupe);
+            return !vec_filter.empty();
+            return false;
+        };
+        auto func_has_dupe = [this, func_cmp_dupe]() {
+            auto& childs = data_root()->get_item_childs();
+            auto it = std::ranges::find_if(childs, func_cmp_dupe);
+            return it != childs.end();
+        };
+        Q_UNUSED(func_has_dupe);
+
+        if(func_has_dupe()) { return nullptr; }
+
+        // ============================ 添加成员 ============================ //
+
+        // 获取分组节点
+        TreeItemData*item_group = data_root();
+
+        // 分组节点添加成员  // 未校验重复
+        auto column_index = 0;
+        auto text_diaplay = account_id;
+        std::map<int, QVariant> var_item;
+        var_item[ENUMS::role_item_type()] = QVariant::fromValue<ENUMS::ItemDataType>(ENUMS::ItemDataType::CONTACT);
+        var_item[ENUMS::role_item_data()] = QVariant::fromValue<std::shared_ptr<ContactInfo>>(contact);
+        // 设置一些默认显示的数据，防止未设置 delegete 显示为空
+        var_item[Qt::DisplayRole  ] = text_diaplay;
+        var_item[Qt::EditRole     ] = text_diaplay;
+        var_item[Qt::ToolTipRole  ] = text_diaplay;
+        // var_item[Qt::StatusTipRole] = text_diaplay;  // 效果不好
+        var_item[Qt::WhatsThisRole] = text_diaplay;
+        var_item[Qt::DecorationRole] = icon_init(); // 设置默认图标样式，实际不使用
+        auto row = static_cast<int>(item_group->get_item_childs().size());
+        beginInsertRows(QModelIndex(), row, row);
+        auto item_member = item_group->add_child(new TreeItemData(column_index, var_item));
+        endInsertRows();
+        return item_member;
     }
 
     // 生成一个占位图标，否则获取图标大小会异常

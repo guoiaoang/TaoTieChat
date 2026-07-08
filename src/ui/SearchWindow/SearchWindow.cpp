@@ -13,7 +13,7 @@ SearchWindow::SearchWindow(QWidget *parent)
     // new
     m_action_search  = std::make_unique<QAction>(this);
     // model/view
-    m_users_model    = std::make_unique<ItemModel    >();
+    m_users_model    = std::make_unique<SearchModel  >();
     m_users_delegate = std::make_unique<ItemDelegate >();
     m_user_window    = std::make_unique<ContactWindow>();
 
@@ -50,16 +50,12 @@ SearchWindow::SearchWindow(QWidget *parent)
         do{
             if(!index.isValid()) { break; }
 
-            auto index_data = index.data(Qt::UserRole + 1);
-            if(!index_data.canConvert<std::shared_ptr<ItemDelegate>>()) { break; }
-            // if(!index_data.canConvert<std::shared_ptr<ItemDelegateSpacer>>()) { break; }
-            if(!index_data.canConvert<std::shared_ptr<ItemDelegateContact>>()) { break; }
+            auto index_data = index.data(ENUMS::role_item_data());
+            if(!index_data.canConvert<std::shared_ptr<ContactInfo>>()) { break; }
 
-            auto item_provider = index_data.value<std::shared_ptr<ItemDelegateContact>>();
-            if(!item_provider) { break; }
+            auto contact_info = index_data.value<std::shared_ptr<ContactInfo>>();
+            if(!contact_info) { break; }
 
-            const std::shared_ptr<ContactInfo>&contact_info = item_provider->get_contact_info();
-            if (!contact_info || !m_user_window) { return; }
             this->m_user_window->show_contact(contact_info);
             Utils::widget_raise(this->m_user_window.get());
             return;
@@ -142,15 +138,18 @@ bool SearchWindow::search_user(const QString&keyword) {
                     // qDebug().nospace().noquote() << "notify:" << notify;
                     // 下载时不需要更新界面
                     if((notify.ok == true && notify.status == FileStatusCode::FILE_STATUS_UPLOADED) || (notify.ok == false)) {
-                        // 刷新显示
-                        auto contacts = std::make_shared<ContactInfos>();
-                        contacts->setContactInfos({reply_search_user->contactInfo()});
-                        // 转换
-                        std::vector<std::shared_ptr<ItemDelegate>> item_providers;
-                        for(auto&ite : contacts->contactInfos()) {
-                            item_providers.emplace_back(std::make_shared<ItemDelegateContact>(std::make_shared<ContactInfo>(ite), ENUMS::ItemGroupType::NONE));
-                        }
-                        // this->m_users_model->reset(item_providers);
+                        // this->m_users_model->clean();
+                        // this->m_users_model->add_member(std::make_shared<ContactInfo>(reply_search_user->contactInfo()));
+
+                        // TODO:由于资源释放问题，暂时采用销毁及重建 model 和 delegate 的方式
+                        this->m_users_model   .reset();
+                        this->m_users_delegate.reset();
+                        this->m_users_model    = std::make_unique<SearchModel >();
+                        this->m_users_delegate = std::make_unique<ItemDelegate>();
+                        this->m_users_model->clean();
+                        this->m_users_model->add_member(std::make_shared<ContactInfo>(reply_search_user->contactInfo()));
+                        m_ui->page_list_users->setModel(m_users_model.get());
+                        m_ui->page_list_users->setItemDelegate(m_users_delegate.get());
                     }
                 };
                 NetworkClient::instance().download_file(file_id, file_size, callback_download_avatar_notify);
@@ -158,20 +157,21 @@ bool SearchWindow::search_user(const QString&keyword) {
             }
         }
 
-        // 刷新显示
-        auto contacts = std::make_shared<ContactInfos>();
+        // 有头像时直接添加显示即可
         // 搜索结果不为空时才添加成员  // 不知道为什么始终不为空
         if(reply_search_user->hasContactInfo() && reply_search_user->contactInfo().hasBaseInfo() && !reply_search_user->contactInfo().baseInfo().accountId().isEmpty()) {
-            contacts->setContactInfos({ reply_search_user->contactInfo() });
-        }
-        // this->m_users_model->set_contacts(contacts);
-        {
-            // 转换
-            std::vector<std::shared_ptr<ItemDelegate>> item_providers;
-            for(auto&ite : contacts->contactInfos()) {
-                item_providers.emplace_back(std::make_shared<ItemDelegateContact>(std::make_shared<ContactInfo>(ite), ENUMS::ItemGroupType::NONE));
-            }
-            // this->m_users_model->reset(item_providers);
+            // this->m_users_model->clean();
+            // this->m_users_model->add_member(std::make_shared<ContactInfo>(reply_search_user->contactInfo()));
+
+            // TODO:由于资源释放问题，暂时采用销毁及重建 model 和 delegate 的方式
+            this->m_users_model   .reset();
+            this->m_users_delegate.reset();
+            this->m_users_model    = std::make_unique<SearchModel >();
+            this->m_users_delegate = std::make_unique<ItemDelegate>();
+            this->m_users_model->clean();
+            this->m_users_model->add_member(std::make_shared<ContactInfo>(reply_search_user->contactInfo()));
+            m_ui->page_list_users->setModel(m_users_model.get());
+            m_ui->page_list_users->setItemDelegate(m_users_delegate.get());
         }
     };
     NetworkClient::instance().search_user(params_search_user, network_search_user_callback);

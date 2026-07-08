@@ -10,8 +10,17 @@ QModelIndex TreeModel::index(int row, int column, const QModelIndex &parent) con
 
 QModelIndex TreeModel::parent(const QModelIndex &child) const {
     if (!child.isValid()) { return QModelIndex(); }
-    auto data_parent = static_cast<TreeItemData*>(child.internalPointer())->get_item_parent();
-    return (data_parent != m_data_root && data_parent != nullptr) ? createIndex(data_parent->row_index(), 0, data_parent) : QModelIndex();
+
+    // auto data_parent = static_cast<TreeItemData*>(child.internalPointer())->get_item_parent();
+    // return (data_parent != m_data_root && data_parent != nullptr) ? createIndex(data_parent->row_index(), 0, data_parent) : QModelIndex();
+
+    auto child_item = static_cast<TreeItemData*>(child.internalPointer());
+    if (!child_item) { return QModelIndex(); }
+
+    auto data_parent = child_item->get_item_parent();
+    if (!data_parent || data_parent == m_data_root) { return QModelIndex(); }
+
+    return createIndex(data_parent->row_index(), 0, data_parent);
 }
 
 // 获取 parent 的子列数

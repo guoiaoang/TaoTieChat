@@ -59,9 +59,10 @@ bool ItemDelegate::paint_group(QPainter *painter, const QStyleOptionViewItem &op
             QString str_group_name = Utils::Transform::to_string(data_group_type);
             opt.text = str_group_name;
         }
-#ifdef _DEBUG
-        opt.text += " aaabbbcccdddeeefffggghhhiiijjjkkklllmmmnnnooopppqqqrrrssstttuuuvvvwwwxxxyyyzzz";
-#endif // _DEBUG
+
+// #ifdef _DEBUG
+//         opt.text += " aaabbbcccdddeeefffggghhhiiijjjkkklllmmmnnnooopppqqqrrrssstttuuuvvvwwwxxxyyyzzz";
+// #endif // _DEBUG
 
         // 获取总的绘制区域 // 拿到扣除图标、复选框后，真正属于文本的矩形区域
         QRect rect_text = opt.widget->style()->subElementRect(QStyle::SE_ItemViewItemText, &opt, opt.widget);
@@ -166,13 +167,19 @@ bool ItemDelegate::paint_contact(QPainter *painter, const QStyleOptionViewItem &
         // 头像
         auto pixmap_avatar = map_cacha_avatar[avatar_id];
         // 昵称
-        auto nickname = contact_info->baseInfo().nickname() + " aaabbbcccdddeeefffggghhhiiijjjkkklllmmmnnnooopppqqqrrrssstttuuuvvvwwwxxxyyyzzz";
+        auto nickname = contact_info->baseInfo().nickname();
         QFontMetrics metrics_nickname(style_data->font_nickname);
         QString elided_nickname = metrics_nickname.elidedText(nickname, Qt::ElideRight, style_data->rect_nickname.width());
         // 签名
-        auto signature = contact_info->baseInfo().signature() + " aaabbbcccdddeeefffggghhhiiijjjkkklllmmmnnnooopppqqqrrrssstttuuuvvvwwwxxxyyyzzz";
+        auto signature = contact_info->baseInfo().signature();
         QFontMetrics metrics_signature(style_data->font_signature);
         QString elided_signature = metrics_signature.elidedText(signature, Qt::ElideRight, style_data->rect_message.width());
+
+// #ifdef _DEBUG
+//         QString deebug_suffix = " aaabbbcccdddeeefffggghhhiiijjjkkklllmmmnnnooopppqqqrrrssstttuuuvvvwwwxxxyyyzzz";
+//         nickname  += deebug_suffix;
+//         signature += deebug_suffix;
+// #endif // _DEBUG
 
         painter->save();
         painter->translate(option.rect.topLeft()); // 将画布原点移到 (x, y)

@@ -5,6 +5,7 @@
 #include "Defines.h"
 
 class ItemModel;
+class SearchModel;
 class ItemDelegate;
 class ContactWindow;
 
@@ -34,7 +35,7 @@ private:
     std::unique_ptr<Ui::SearchWindow> m_ui            ;
     std::unique_ptr<QAction         > m_action_search ;
     // model/view/delegate
-    std::unique_ptr<ItemModel    > m_users_model   ;
+    std::unique_ptr<SearchModel  > m_users_model   ;
     std::unique_ptr<ItemDelegate > m_users_delegate;
     std::unique_ptr<ContactWindow> m_user_window   ;
 };

@@ -52,21 +52,21 @@ public slots:
 private:
     // UI 组件
     std::shared_ptr<Ui::MediaWindow> m_ui           ;
-    std::shared_ptr<QToolBar       > m_toolbar      ;
-    std::shared_ptr<QMenu          > m_menu_save    ;  // 另存为
-    std::shared_ptr<QActionGroup   > m_actions_scale;
-    // 菜单和工具栏的动作
-    std::shared_ptr<QAction> m_action_media_open        ;  // 打开
-    std::shared_ptr<QAction> m_action_media_save        ;  // 保存
-    std::shared_ptr<QAction> m_action_media_save_as     ;  // 另存为
-    std::shared_ptr<QAction> m_action_media_prev        ;  // 上一个
-    std::shared_ptr<QAction> m_action_media_next        ;  // 下一个
-    std::shared_ptr<QAction> m_action_media_fit         ;  // 适应窗口
-    std::shared_ptr<QAction> m_action_media_zoom_in     ;  // 放大
-    std::shared_ptr<QAction> m_action_media_zoom_out    ;  // 缩小
-    std::shared_ptr<QAction> m_action_media_normal_size ;  // 原始大小
-    std::shared_ptr<QAction> m_action_window_full_screen;  // 全屏显示
-    std::shared_ptr<QAction> m_action_window_pin        ;  // 窗口置顶
+    QToolBar*                        m_toolbar      = nullptr;
+    QMenu*                           m_menu_save    = nullptr;  // 另存为
+    QActionGroup*                    m_actions_scale= nullptr;
+    // 菜单和工具栏的动作（使用 Qt 父对象管理内存，避免 shared_ptr 与 QObject 的双重释放）
+    QAction* m_action_media_open        = nullptr;  // 打开
+    QAction* m_action_media_save        = nullptr;  // 保存
+    QAction* m_action_media_save_as     = nullptr;  // 另存为
+    QAction* m_action_media_prev        = nullptr;  // 上一个
+    QAction* m_action_media_next        = nullptr;  // 下一个
+    QAction* m_action_media_fit         = nullptr;  // 适应窗口
+    QAction* m_action_media_zoom_in     = nullptr;  // 放大
+    QAction* m_action_media_zoom_out    = nullptr;  // 缩小
+    QAction* m_action_media_normal_size = nullptr;  // 原始大小
+    QAction* m_action_window_full_screen= nullptr;  // 全屏显示
+    QAction* m_action_window_pin        = nullptr;  // 窗口置顶
     Utils::FontIcons m_icons = Utils::FontIcons().reset().update();  // 图标工具
     // 状态记录
     bool   m_fit_to_window = true;  // 图片自适应窗口大小

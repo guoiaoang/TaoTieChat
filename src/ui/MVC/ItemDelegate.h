@@ -4,6 +4,8 @@
 #include "Utils.h"
 #include "Defines.h"
 
+class DemoContactDelegateItem;
+
 // 无特殊设置时一个 QAbstractListModel 只会创建一个 ContactDelegate，再轮流调用 paint 对每一行数据进行绘制
 // 但也可以：1.为不同的行/列设置了不同的 Delegate; 2.多栏视图（如 QTreeView 或 QTableView）为不同的“列（Column）”设置不同的 Delegate
 class ItemDelegate : public QStyledItemDelegate {
@@ -30,6 +32,7 @@ private:
 private:
     // 显示群组时高度和图标的缩放倍数
     double group_height_scale() const { return double(3) / 2; }
+    mutable std::shared_ptr<DemoContactDelegateItem> m_demo_contact_delegate_item = nullptr;
 };
 Q_DECLARE_METATYPE(std::shared_ptr<ItemDelegate>)  // 确保向 QVariant 提供支持
 // 在程序初始化时注册（如果涉及到跨类型转换）

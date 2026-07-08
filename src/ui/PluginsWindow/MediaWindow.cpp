@@ -5,10 +5,10 @@ MediaWindow::MediaWindow(QWidget *parent)
     : QMainWindow(parent), m_ui(std::make_shared<Ui::MediaWindow>()) {
     m_ui->setupUi(this);
 
-    // new
-    m_toolbar       = std::make_shared<QToolBar    >(    );
-    m_menu_save     = std::make_shared<QMenu       >(    );
-    m_actions_scale = std::make_shared<QActionGroup>(this);
+    // new: use Qt parent ownership (raw pointers) to avoid double-delete
+    m_toolbar       = new QToolBar(this);
+    m_menu_save     = new QMenu(this);
+    m_actions_scale = new QActionGroup(this);
 
     // 初始化需要的图标
     m_icons.reset();
@@ -17,13 +17,13 @@ MediaWindow::MediaWindow(QWidget *parent)
     m_icons.update();
 
     auto init_action = [this](
-        std::shared_ptr<QAction>& action,
+        QAction*& action,
         const QIcon& icon,  const QString& text,
         const QKeySequence& shortcut,
         bool visible  , bool enabled,
         bool checkable, bool checked
     ) {
-        if(!action) { action = std::make_shared<QAction>(); }
+        if(!action) { action = new QAction(this); }
         action->setIcon     (icon     );  // 设置动作图标
         action->setText     (text     );  // 设置动作文本
         action->setShortcut (shortcut );  // 设置动作快捷键
@@ -45,17 +45,17 @@ MediaWindow::MediaWindow(QWidget *parent)
     init_action(m_action_window_full_screen, m_icons.icon.fullscreen   , tr("Full Screen"  ), QKeySequence(QKeySequence::FullScreen), true, true , true , false);  // 全屏显示
     init_action(m_action_window_pin        , m_icons.icon.pin          , tr("Pin"          ), QKeySequence(                        ), true, true , true , false);  // 窗口置顶
 
-    QObject::connect(m_action_media_open        .get(), &QAction::triggered, this, &MediaWindow::on_media_open        );
-    QObject::connect(m_action_media_save        .get(), &QAction::triggered, this, &MediaWindow::on_media_save        );
-    QObject::connect(m_action_media_save_as     .get(), &QAction::triggered, this, &MediaWindow::on_media_save_as     );
-    QObject::connect(m_action_media_prev        .get(), &QAction::triggered, this, &MediaWindow::on_media_prev        );
-    QObject::connect(m_action_media_next        .get(), &QAction::triggered, this, &MediaWindow::on_media_next        );
-    QObject::connect(m_action_media_fit         .get(), &QAction::triggered, this, &MediaWindow::on_media_fit         );
-    QObject::connect(m_action_media_zoom_in     .get(), &QAction::triggered, this, &MediaWindow::on_media_zoom_in     );
-    QObject::connect(m_action_media_zoom_out    .get(), &QAction::triggered, this, &MediaWindow::on_media_zoom_out    );
-    QObject::connect(m_action_media_normal_size .get(), &QAction::triggered, this, &MediaWindow::on_media_normal_size );
-    QObject::connect(m_action_window_full_screen.get(), &QAction::triggered, this, &MediaWindow::on_window_full_screen);
-    QObject::connect(m_action_window_pin        .get(), &QAction::triggered, this, &MediaWindow::on_window_pin        );
+    QObject::connect(m_action_media_open        , &QAction::triggered, this, &MediaWindow::on_media_open        );
+    QObject::connect(m_action_media_save        , &QAction::triggered, this, &MediaWindow::on_media_save        );
+    QObject::connect(m_action_media_save_as     , &QAction::triggered, this, &MediaWindow::on_media_save_as     );
+    QObject::connect(m_action_media_prev        , &QAction::triggered, this, &MediaWindow::on_media_prev        );
+    QObject::connect(m_action_media_next        , &QAction::triggered, this, &MediaWindow::on_media_next        );
+    QObject::connect(m_action_media_fit         , &QAction::triggered, this, &MediaWindow::on_media_fit         );
+    QObject::connect(m_action_media_zoom_in     , &QAction::triggered, this, &MediaWindow::on_media_zoom_in     );
+    QObject::connect(m_action_media_zoom_out    , &QAction::triggered, this, &MediaWindow::on_media_zoom_out    );
+    QObject::connect(m_action_media_normal_size , &QAction::triggered, this, &MediaWindow::on_media_normal_size );
+    QObject::connect(m_action_window_full_screen, &QAction::triggered, this, &MediaWindow::on_window_full_screen);
+    QObject::connect(m_action_window_pin        , &QAction::triggered, this, &MediaWindow::on_window_pin        );
 
     // static inline QMetaObject::Connection QObject::connect<...>(const QAction *sender, void (QAction::*signal)(bool checked), const MediaWindow *context, void (MediaWindow::*&&slot)(), Qt::ConnectionType type = Qt::AutoConnection)
     // connect(m_action_open.get(), &QAction::triggered, this, &MediaWindow::on_media_open);
@@ -66,37 +66,37 @@ MediaWindow::MediaWindow(QWidget *parent)
         return action;
     };
     const QList<QAction *> actions_scale{
-        m_action_media_fit         .get(),
-        m_action_media_zoom_in     .get(),
-        m_action_media_zoom_out    .get(),
-        m_action_media_normal_size .get()
+        m_action_media_fit        ,
+        m_action_media_zoom_in    ,
+        m_action_media_zoom_out   ,
+        m_action_media_normal_size
     };
     for(auto&action : actions_scale) {
         m_actions_scale->addAction(action);
     }
     // add to toolbar
     const QList<QAction *> toolbar_actions{
-        // m_action_open           .get(),
-        // m_action_save           .get(),
-        // make_separator()        .get(),
-        m_action_media_save_as     .get(),
-        make_separator()                 ,
-        m_action_media_prev        .get(),
-        m_action_media_next        .get(),
-        make_separator()                 ,
-        m_action_media_fit         .get(),
-        m_action_media_zoom_in     .get(),
-        m_action_media_zoom_out    .get(),
-        m_action_media_normal_size .get(),
-        make_separator()                 ,
-        m_action_window_full_screen.get(),
-        m_action_window_pin        .get()
+        // m_action_open,
+        // m_action_save,
+        // make_separator(),
+        m_action_media_save_as,
+        make_separator(),
+        m_action_media_prev,
+        m_action_media_next,
+        make_separator(),
+        m_action_media_fit,
+        m_action_media_zoom_in,
+        m_action_media_zoom_out,
+        m_action_media_normal_size,
+        make_separator(),
+        m_action_window_full_screen,
+        m_action_window_pin
     };
     m_toolbar->addActions(toolbar_actions);
 
     // action saveas  // 另存为按钮作为扩展按钮 - 保存按钮的菜单
-    m_menu_save        ->addAction(m_action_media_save_as.get());
-    m_action_media_save->setMenu  (m_menu_save           .get());
+    m_menu_save        ->addAction(m_action_media_save_as);
+    m_action_media_save->setMenu  (m_menu_save           );
     // m_menu_save->setStyle();
     m_action_media_open        ->setMenuRole(QAction::ApplicationSpecificRole);
     m_action_window_full_screen->setMenuRole(QAction::TextHeuristicRole      );
@@ -107,7 +107,7 @@ MediaWindow::MediaWindow(QWidget *parent)
     m_toolbar->setIconSize(QSize(32, 32)); // 这里设置显示的图标大小
     m_toolbar->setContextMenuPolicy(Qt::PreventContextMenu);  // 不显示右键菜单
     // add toolbar to window
-    this->addToolBar(m_toolbar.get());
+    this->addToolBar(m_toolbar);
 
     connect(this, &MediaWindow::media_changed, m_ui->label, &QLabel::setPixmap);
     m_ui->label->setAlignment(Qt::AlignCenter);

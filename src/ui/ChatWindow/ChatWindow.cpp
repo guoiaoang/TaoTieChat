@@ -192,7 +192,7 @@ void ChatWindow::init() {
     m_ui->page_list_contact->setIndentation(0); // m_ui->page_list_contact->indentation() / 2);  // 设置分组缩进
     m_ui->page_list_contact->setHeaderHidden(true); // 隐藏表头，看起来更像 QQ 列表
     m_ui->page_list_contact->setItemDelegate(m_contact_delegate.get());
-    m_ui->page_list_contact->expandAll();
+    // m_ui->page_list_contact->expandAll();  // 添加数据后才能展开
     // 使用 currentChanged 信号支持键盘上下键导航和鼠标点击
     connect(m_ui->page_list_contact->selectionModel(), &QItemSelectionModel::currentChanged, this, &ChatWindow::handle_contact_selection_changed);
     // 设置最小折叠宽度
@@ -206,11 +206,29 @@ void ChatWindow::init() {
 
 #ifdef _DEBUG
     if(1) {
+        // m_contact_model->add_member(ENUMS::ItemGroupType::REQUEST, Accounts::instance().get_current_account());
+        // m_contact_model->add_member(ENUMS::ItemGroupType::FRIENDS, Accounts::instance().get_current_account());
         for(int i = 0; i <= 10000; ++i) {
             auto contact = std::make_shared<ContactInfo>();
-            contact->mutBaseInfo().setAccountId(QString("Contact:Account ID %1 (%2)").arg(i, 5, 10, '0').arg(QDateTime::currentDateTimeUtc().toString(Qt::ISODate)));
+            auto num = QString("%1").arg(i, 5, 10, '0');
+            auto time = QDateTime::currentDateTimeUtc().toString(Qt::ISODate);
+            contact->mutBaseInfo().setAccountId(QString("Account ID : %1 (%2)").arg(num).arg(time));
+            contact->mutBaseInfo().setUserId   (QString("User ID    : %1 (%2)").arg(num).arg(time));
+            contact->mutBaseInfo().setNickname (QString("Nickname   : %1 (%2)").arg(num).arg(time));
+            contact->mutBaseInfo().setSignature(QString("Signature  : %1 (%2)").arg(num).arg(time));
             m_contact_model->add_member(ENUMS::ItemGroupType::REQUEST, contact);
         }
+        // auto index_group = m_contact_model->index_group(ENUMS::ItemGroupType::REQUEST);
+        // if(index_group.isValid() && index_group.model()->hasChildren(index_group)) {
+        //     m_ui->page_list_contact->expand(index_group);
+        // }
+        for(auto group_type : std::vector<ENUMS::ItemGroupType>({ ENUMS::ItemGroupType::REQUEST, ENUMS::ItemGroupType::FRIENDS })) {
+            auto index_group = m_contact_model->index_group(group_type);
+            if(index_group.isValid() && index_group.model()->hasChildren(index_group)) {
+                m_ui->page_list_contact->expand(index_group);
+            }
+        }
+        // m_ui->page_list_contact->expandAll();  // 会展开无成员的节点
     }
 #endif // __DEBUG
 

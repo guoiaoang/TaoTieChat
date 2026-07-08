@@ -16,32 +16,33 @@ DemoContactDelegateItem::~DemoContactDelegateItem() { }
 std::shared_ptr<DemoContactDelegateItem::StyleData> DemoContactDelegateItem::get_style_data() {
     std::shared_ptr<StyleData> style_data = std::make_shared<DemoContactDelegateItem::StyleData>();
 
-    auto parent_rect = [this](const QWidget*widget) {
-        // 1. 拿到子控件自己的本地矩形 (x 和 y 通常为 0，即 QRect(0, 0, width, height))
-        QRect rect_child = widget->rect();
-
-        // 2. 将这个本地矩形的左上角坐标，映射到指定的父窗口（比如 this 主窗口）的坐标系中
-        QPoint pos_parent = widget->mapTo(this, QPoint(0, 0));
-
-        // 3. 重新组合成子控件在指定父窗口中的新 QRect
-        QRect rect_in_parent(pos_parent, rect_child.size());
-
-        // qDebug() << "相对于指定顶层窗口的精确范围:" << rect_in_parent;
-        return rect_in_parent;
-    };
-
-    // 当前获取到的大小包含重叠，交界处需要自行计算
-
+    // 放弃 setVisible，改用清空文本占位。或者如果非要用 setVisible，必须在每次显隐后手动“强制刷新”：
     this->m_ui->label_time  ->setVisible(false);
     this->m_ui->label_notice->setVisible(false);
 
-    // style_data->rect_window   = this->rect();
+    // 一旦动了可见性，必须立刻强制当前小局部布局重新计算！
+    if (this->layout()) {
+        this->layout()->invalidate(); // 使布局失效，标记需要重新计算
+        this->layout()->activate();   // 强制立刻、同步完成重新排版，不准异步滞后
+    }
+
+    auto parent_rect = [this](const QWidget* widget) {
+        return QRect(widget->mapTo(this, QPoint(0, 0)), widget->rect().size());
+    };
+
+    // 此时拿到的 nickname 宽度就是绝对精准、没有滞后的 227 了！
     style_data->rect_avatar   = parent_rect(this->m_ui->label_avatar  );
     style_data->rect_nickname = parent_rect(this->m_ui->label_nickname);
     style_data->rect_message  = parent_rect(this->m_ui->label_message );
 
+    // 恢复可见性并再次强制刷新
     this->m_ui->label_time  ->setVisible(true);
     this->m_ui->label_notice->setVisible(true);
+
+    if (this->layout()) {
+        this->layout()->invalidate();
+        this->layout()->activate();
+    }
 
     style_data->rect_time   = parent_rect(this->m_ui->label_time  );
     style_data->rect_notice = parent_rect(this->m_ui->label_notice);

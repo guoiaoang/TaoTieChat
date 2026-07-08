@@ -276,8 +276,8 @@ public:
         // var_item[Qt::StatusTipRole] = text_diaplay;  // 效果不好
         var_item[Qt::WhatsThisRole] = text_diaplay;
         // 为了展示不同类型，给群组设置背景颜色
-        var_item[Qt::BackgroundRole] = QVariant::fromValue<QColor>(Qt::darkCyan);
-        var_item[Qt::ForegroundRole] = QVariant::fromValue<QColor>(Qt::darkMagenta);
+        // var_item[Qt::BackgroundRole] = QVariant::fromValue<QColor>(Qt::darkCyan);
+        // var_item[Qt::ForegroundRole] = QVariant::fromValue<QColor>(Qt::darkMagenta);
         var_item[Qt::DecorationRole] = icon_init(); // 设置默认图标样式
         auto item_group = data_root()->add_child(new TreeItemData(column_index, var_item));
         return item_group;
@@ -452,7 +452,13 @@ public:
         // return item_member;
     }
 
-    bool has_group(ENUMS::ItemGroupType group_type) {
+    QModelIndex index_group(ENUMS::ItemGroupType group_type) {
+        auto row = row_group(group_type);
+        return row == -1 ? QModelIndex() : createIndex(row, 0, data_root()->get_item_childs().at(row));
+        return QModelIndex();
+    }
+
+    int row_group(ENUMS::ItemGroupType group_type) {
         auto func_get_item_check_by_findif = [group_type](const std::map<int, QVariant>&data_column) {
             return data_column.contains(ENUMS::role_item_data()) && data_column.at(ENUMS::role_item_data()).value<ENUMS::ItemGroupType>() == group_type;
         };
@@ -461,14 +467,19 @@ public:
             auto vec_filter = item_ite->get_data_columns() | std::views::filter(func_get_item_check_by_findif);
             return !vec_filter.empty();
         };
-        auto func_get_item_by_findif = [this, func_get_item_cmp_by_findif](ENUMS::ItemGroupType group_type) {
+        auto func_get_row_by_findif = [this, func_get_item_cmp_by_findif](ENUMS::ItemGroupType group_type) -> int {
             Q_UNUSED(group_type);
             auto& childs = data_root()->get_item_childs();
             auto it = std::ranges::find_if(childs, func_get_item_cmp_by_findif);
-            return (it == childs.end()) ? nullptr : *it;
+            return (it == childs.end()) ? -1 : std::distance(childs.begin(), it);  // 返回 row
         };
-        Q_UNUSED(func_get_item_by_findif);
-        return func_get_item_by_findif(group_type) != nullptr;
+        Q_UNUSED(func_get_row_by_findif);
+        auto row = func_get_row_by_findif(group_type);
+        return row;
+    }
+
+    bool has_group(ENUMS::ItemGroupType group_type) {
+        return row_group(group_type) != -1;
     }
 
     // 生成一个占位图标，否则获取图标大小会异常

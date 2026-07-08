@@ -20,6 +20,7 @@ bool ItemDelegate::paint_group(QPainter *painter, const QStyleOptionViewItem &op
     // 绘制背景
     {
         // 绘制背景（处理选中、悬停状态）
+        opt.backgroundBrush = QBrush((option.state & QStyle::State_Selected) ? QColor(Qt::darkCyan) : opt.backgroundBrush);
         opt.widget->style()->drawPrimitive(QStyle::PE_PanelItemViewItem, &opt, painter, opt.widget);
     }
 
@@ -107,55 +108,87 @@ bool ItemDelegate::paint_contact(QPainter *painter, const QStyleOptionViewItem &
     initStyleOption(&opt, index);
     painter->save();
     painter->setRenderHint(QPainter::Antialiasing);
-    int level_offset = 10;  // 左边预留一些空间以表示层级
 
     // 绘制背景
     {
         // 绘制背景（处理选中、悬停状态）
+        opt.backgroundBrush = QBrush((option.state & QStyle::State_Selected) ? QColor(Qt::darkCyan) : opt.backgroundBrush);
         opt.widget->style()->drawPrimitive(QStyle::PE_PanelItemViewItem, &opt, painter, opt.widget);
     }
 
-    // 绘制图标
     {
-        // 修改图标大小
-        int height_item = opt.decorationSize.height();
-        int height_icon = (height_item * group_height_scale());
-        opt.decorationSize = QSize(height_icon, height_icon);
-
-        // 根据颜色和大小生成图标
-        QColor color_icon = opt.palette.color(QPalette::Text);  // 指定固定的颜色
-        static Utils::FontIcons icon_font = Utils::FontIcons();
-        if (icon_font.size.avatar != opt.decorationSize || icon_font.color.normal != color_icon) {
-            icon_font.size.avatar = opt.decorationSize;
-            icon_font.color.normal = color_icon;
-            icon_font.update();
+        // 获取样式
+        if(!m_demo_contact_delegate_item) {
+            m_demo_contact_delegate_item = std::make_shared<DemoContactDelegateItem>();
         }
+        if(m_demo_contact_delegate_item->size() != option.rect.size()) {
+            // 调整大小
+            m_demo_contact_delegate_item->resize(option.rect.size());
+            Utils::in_memory_layout_expander(m_demo_contact_delegate_item.get());
+        }
+        auto style_data = m_demo_contact_delegate_item->get_style_data();
+        // qDebug().noquote().nospace() << "item size : " << option.rect.size()
+        //     << ", demo size : " << m_demo_contact_delegate_item->size()
+        //     << ", nicknam width : " << style_data->rect_nickname.width()
+        //     << ", nicknam width : " << style_data->rect_message.width();
 
-        QIcon ico_show = icon_font.icon.contacts;  // TODO:修改为实际的头像
+        // 获取数据内容
+        auto var_data   = index.data(ENUMS::role_item_data());
+        auto contact_info = var_data.value<std::shared_ptr<ContactInfo>>();
 
-        // 修改图标为水平居中并绘制
-        opt.displayAlignment = Qt::AlignLeft | Qt::AlignVCenter; // 添加图标水平居中的对齐属性
-        QRect rect_icon = opt.widget->style()->subElementRect(QStyle::SE_ItemViewItemDecoration, &opt, opt.widget);
-        rect_icon.moveLeft(rect_icon.left() + level_offset);
+        // 获取头像  // 圆角头像
+        static std::map<QString, QPixmap> map_cacha_avatar;
+        auto avatar_id  = contact_info->baseInfo().avatarId();
+        if (!map_cacha_avatar.contains(avatar_id)) {
+            auto avatar_file_path = Database::instance().get_local_file_id_path(avatar_id + ";size:128*128");
+            auto pixmap_avatar_source = QPixmap(avatar_file_path);
+            if(pixmap_avatar_source.isNull()) {
+                // 修改图标大小
+                int height_item = opt.decorationSize.height();
+                int height_icon = (height_item * group_height_scale());
+                opt.decorationSize = QSize(height_icon, height_icon);
 
-        painter->drawPixmap(rect_icon, ico_show.pixmap(opt.decorationSize, QIcon::Normal));
-    }
+                // 根据颜色和大小生成图标
+                QColor color_icon = opt.palette.color(QPalette::Text);  // 指定固定的颜色
+                static Utils::FontIcons icon_font = Utils::FontIcons();
+                if (icon_font.size.avatar != opt.decorationSize || icon_font.color.normal != color_icon) {
+                    icon_font.size.avatar = opt.decorationSize;
+                    icon_font.color.normal = color_icon;
+                    icon_font.update();
+                }
 
-    // 绘制文本
-    {
-        // 获取总的绘制区域 // 拿到扣除图标、复选框后，真正属于文本的矩形区域
-        QRect rect_text = opt.widget->style()->subElementRect(QStyle::SE_ItemViewItemText, &opt, opt.widget);
-        rect_text.setLeft(rect_text.left() + level_offset);
+                QIcon&ico_show = icon_font.icon.contacts;
+                pixmap_avatar_source = QPixmap(ico_show.pixmap(opt.decorationSize, QIcon::Normal));
+            }
+            auto pixmap_avatar = Utils::to_round_pixmap(pixmap_avatar_source, style_data->rect_avatar.width() / 2);
+            map_cacha_avatar[avatar_id] = pixmap_avatar;
+        }
+        // 头像
+        auto pixmap_avatar = map_cacha_avatar[avatar_id];
+        // 昵称
+        auto nickname = contact_info->baseInfo().nickname() + " aaabbbcccdddeeefffggghhhiiijjjkkklllmmmnnnooopppqqqrrrssstttuuuvvvwwwxxxyyyzzz";
+        QFontMetrics metrics_nickname(style_data->font_nickname);
+        QString elided_nickname = metrics_nickname.elidedText(nickname, Qt::ElideRight, style_data->rect_nickname.width());
+        // 签名
+        auto signature = contact_info->baseInfo().signature() + " aaabbbcccdddeeefffggghhhiiijjjkkklllmmmnnnooopppqqqrrrssstttuuuvvvwwwxxxyyyzzz";
+        QFontMetrics metrics_signature(style_data->font_signature);
+        QString elided_signature = metrics_signature.elidedText(signature, Qt::ElideRight, style_data->rect_message.width());
 
-#ifdef _DEBUG
-        opt.text += " aaabbbcccdddeeefffggghhhiiijjjkkklllmmmnnnooopppqqqrrrssstttuuuvvvwwwxxxyyyzzz";
-#endif // _DEBUG
+        painter->save();
+        painter->translate(option.rect.topLeft()); // 将画布原点移到 (x, y)
 
-        // 获取文本
-        QString str_contact_name_elided = opt.fontMetrics.elidedText(opt.text, opt.textElideMode, rect_text.width());
+        // 绘制头像
+        painter->drawPixmap(style_data->rect_avatar, pixmap_avatar);
+        // 绘制昵称
+        painter->setFont(style_data->font_nickname);
+        painter->setPen(option.state & QStyle::State_Selected ? option.palette.highlightedText().color() : option.palette.text().color());
+        painter->drawText(style_data->rect_nickname, Qt::AlignLeft | Qt::AlignVCenter, elided_nickname);
+        // 绘制签名内容
+        painter->setFont(style_data->font_signature);
+        painter->setPen(option.state & QStyle::State_Selected ? option.palette.highlightedText().color() : QColor(100, 100, 100));
+        painter->drawText(style_data->rect_message, Qt::AlignLeft | Qt::AlignVCenter, elided_signature);
 
-        // 绘制
-        painter->drawText(rect_text, opt.displayAlignment, str_contact_name_elided);
+        painter->restore();
     }
 
     painter->restore();
@@ -197,6 +230,10 @@ QSize ItemDelegate::sizeHint(const QStyleOptionViewItem &option, const QModelInd
             size.setHeight(size.height() * group_height_scale());
         }
         else if (data_item_type == ENUMS::ItemDataType::CONTACT) {
+            if(!m_demo_contact_delegate_item) {
+                m_demo_contact_delegate_item = std::make_shared<DemoContactDelegateItem>();
+            }
+            return QSize(-1, m_demo_contact_delegate_item->size().height());
             // size = sizeHint_contact(option, index);
         }
         if (size != QSize()) { return size; }

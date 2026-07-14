@@ -68,7 +68,7 @@ SearchWindow::SearchWindow(QWidget *parent)
     m_ui->searchpage_toolbutton_user->hide();  // 只有一个作用时可暂不显示标签
 
     // 设置回车键操作
-    this->installEventFilter(this);
+    this->installEventFilter(this);  // 用于完成回车键发起搜索功能
 }
 
 SearchWindow::~SearchWindow() {
@@ -202,7 +202,7 @@ bool SearchWindow::eventFilter(QObject *watched, QEvent *event) {
                 return QScrollArea::eventFilter(watched, event); // 放行
             }
 
-            // 否则，触发我们的 QToolButton
+            // 用户支持点击回车键执行搜索动作 // 否则，触发我们的 QToolButton
             m_ui->searchpage_toolbutton_search->animateClick();
             return true; // 拦截
         }

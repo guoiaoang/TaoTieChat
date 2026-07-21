@@ -12,6 +12,21 @@ class ContactWindow : public QWidget {
     Q_OBJECT
 
 public:
+    enum class ShowFlag : int {
+        unset    = 0,      // no flags
+        View     = 1 << 1, // 0x00000002,  // 查看
+        Edit     = 1 << 2, // 0x00000004,  // 编辑
+        Contact  = 1 << 3, // 0x00000008,  // 联系人
+        Stranger = 1 << 4, // 0x00000010,  // 陌生人/非联系人
+        Self     = 1 << 5, // 0x00000020,  // 自己
+        Search   = 1 << 6, // 0x00000040,  // 搜索页面
+        Request  = 1 << 7, // 0x00000080,  // 好友请求
+    };
+    Q_DECLARE_FLAGS(ShowFlags, ShowFlag)
+    // Q_DECLARE_FLAGS(ShowFlags, ShowFlag)
+    // Q_DECLARE_OPERATORS_FOR_FLAGS(ShowFlags)
+
+public:
     explicit ContactWindow(QWidget *parent = nullptr);
     ~ContactWindow();
 
@@ -21,21 +36,26 @@ public:
     void set_cache_contact_info (const std::shared_ptr<ContactInfo>&contact_info );
     void set_cache_avatar_pixmap(const std::shared_ptr<QPixmap    >&avatar_pixmap);
     void show_contact(const std::shared_ptr<ContactInfo>&contact_info, const std::shared_ptr<QPixmap>&avatar_pixmap = nullptr);
+    void set_request_mode(bool request_mode = false);  // 好友申请页面
+    void set_show_mode(const ShowFlags show_flags);
+    ShowFlags get_show_mode() const { return m_show_flags; }
 
 private:
     // 显示模式
-    bool set_edit_mode(bool edit = true);
+    // bool set_edit_mode(bool edit = true);
     // 按钮和菜单的槽函数
-    void on_button_manager ();
-    void on_button_avatar  ();
-    void on_button_save    ();
-    void on_button_cancel  ();
-    void on_button_add     ();
-    void on_button_messages();
-    void on_button_voice   ();
-    void on_button_video   ();
-    void on_action_edit    ();
-    void on_action_remove  ();
+    void slot_button_manager ();
+    void slot_button_avatar  ();
+    void slot_button_save    ();
+    void slot_button_cancel  ();
+    void slot_button_add     ();
+    void slot_button_accept  ();
+    void slot_button_ignore  ();
+    void slot_button_messages();
+    void slot_button_voice   ();
+    void slot_button_video   ();
+    void slot_action_edit    ();
+    void slot_action_remove  ();
 
     // get_local_avatar_id_pixmap 根据文件 ID 在本地查找文件并加载为头像图片
     std::shared_ptr<QPixmap> get_local_avatar_id_pixmap(const QString&avatar_id);
@@ -67,5 +87,8 @@ private:
     std::shared_ptr<ContactInfo      > m_cache_contact_info ;
     std::shared_ptr<QPixmap          > m_cache_avatar       ;
     bool m_edit_mode = false;
+    ShowFlags m_show_flags = ShowFlag::unset;
     Utils::WidgetTools::LineEdit m_edit_tool;
 };
+
+Q_DECLARE_OPERATORS_FOR_FLAGS(ContactWindow::ShowFlags)

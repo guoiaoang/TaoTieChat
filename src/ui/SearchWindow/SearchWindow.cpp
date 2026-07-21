@@ -57,6 +57,8 @@ SearchWindow::SearchWindow(QWidget *parent)
             if(!contact_info) { break; }
 
             this->m_user_window->show_contact(contact_info);
+            this->m_user_window->set_show_mode(this->m_user_window->get_show_mode() | ContactWindow::ShowFlags(ContactWindow::ShowFlag::Search));  // 标明分组
+            this->m_user_window->setWindowTitle(tr("Search result"));
             Utils::widget_raise(this->m_user_window.get());
             return;
         } while(false);

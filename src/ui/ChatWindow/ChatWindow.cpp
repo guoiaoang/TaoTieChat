@@ -488,36 +488,113 @@ void ChatWindow::handle_contact_item_clicked(const QModelIndex &index) {
             if (!var_item_data.canConvert<std::shared_ptr<ContactInfo>>()) { break; }
             auto contact_info = var_item_data.value<std::shared_ptr<ContactInfo>>();
             if (!contact_info) { break; }
+            // 获取节点分组
+            ENUMS::ItemGroupType parent_group_type = ENUMS::ItemGroupType::UNSET;
+            do{
+                auto index_parent = index.parent();
+                if (!index_parent.isValid()) { break; }
+
+                // 判断数据类型
+                auto var_parent_type = index_parent.data(ENUMS::role_item_type());
+                if (!var_parent_type.isValid()) { break; }
+                if (!var_parent_type.canConvert<ENUMS::ItemDataType>()) { break; }
+                auto data_parent_type = var_parent_type.value<ENUMS::ItemDataType>();
+                if (data_parent_type != ENUMS::ItemDataType::GROUP) { break; }
+
+                // 获取数据
+                auto var_parent_data = index_parent.data(ENUMS::role_item_data());
+                if (!var_parent_data.canConvert<ENUMS::ItemGroupType>()) { break; }
+                parent_group_type = var_parent_data.value<ENUMS::ItemGroupType>();
+                qDebug().noquote().nospace() << "parent group_type : " << Utils::Transform::to_string(parent_group_type);
+            } while(false);
+
             // debug info
             qDebug().noquote().nospace() << "clicked ContactInfo : ENUMS::ItemGroupType::" << *contact_info;
             // show contact
-            // 查找是否已经添加
-            ContactWindow *contact_window_update = nullptr;  // 需要更新的窗口
-            for(int idx = 0; idx < m_ui->stacked_contact_detail->count(); ++idx) {
-                ContactWindow*contact_window_already = dynamic_cast<ContactWindow*>(m_ui->stacked_contact_detail->widget(idx));
-                if (!contact_window_already) {
-                    break;
+            if(0) {
+                // 查找是否已经添加
+                ContactWindow *contact_window_update = nullptr;  // 需要更新的窗口
+                for(int idx = 0; idx < m_ui->stacked_contact_detail->count(); ++idx) {
+                    ContactWindow*contact_window_already = dynamic_cast<ContactWindow*>(m_ui->stacked_contact_detail->widget(idx));
+                    if (!contact_window_already) {
+                        break;
+                    }
+                    const std::shared_ptr<ContactInfo>&contact_info_already = contact_window_already->get_cache_contact_info();
+                    if (contact_info->baseInfo().accountId() == contact_info_already->baseInfo().accountId() &&
+                        contact_info->baseInfo().userId   () == contact_info_already->baseInfo().userId   ()
+                    ) {
+                        contact_window_update = contact_window_already;  // 找到需要更新的窗口
+                        break;
+                    }
                 }
-                const std::shared_ptr<ContactInfo>&contact_info_already = contact_window_already->get_cache_contact_info();
-                if (contact_info->baseInfo().accountId() == contact_info_already->baseInfo().accountId() &&
-                    contact_info->baseInfo().userId   () == contact_info_already->baseInfo().userId   ()
-                ) {
-                    contact_window_update = contact_window_already;  // 找到需要更新的窗口
-                    break;
+                // 如果已经添加则更新信息
+                if (contact_window_update) {
+                    contact_window_update->show_contact(contact_info);
                 }
+                // 如果没有则添加
+                else {
+                    contact_window_update = new ContactWindow(this);
+                    contact_window_update->show_contact(contact_info);
+                    m_ui->stacked_contact_detail->addWidget(contact_window_update);
+                }
+                // 显示
+                m_ui->stacked_contact_detail->setCurrentWidget(contact_window_update);
             }
-            // 如果已经添加则更新信息
-            if (contact_window_update) {
-                contact_window_update->show_contact(contact_info);
+
+            // 中心置顶显示
+            else if(1) {
+                class CenterFrame : public QScrollArea {
+                public:
+                    CenterFrame() : m_layout(new QGridLayout), m_container_widget(new QWidget()) {
+                        m_layout->setParent(m_container_widget);
+                        m_container_widget->setLayout(m_layout);
+                        setWidgetResizable(true);
+                        setWidget(m_container_widget);
+                    }
+                    void set_child_widget(QWidget*child_widget) {
+                        if(!m_child_widget) {
+                            m_child_widget = child_widget;
+                            m_layout->addWidget(m_child_widget, 0, 0, Qt::AlignCenter | Qt::AlignTop);
+                        }
+                        else {
+                            m_layout->replaceWidget(m_child_widget, child_widget);
+                            if(m_child_widget) { delete m_child_widget; m_child_widget = nullptr; }
+                            m_child_widget = child_widget;
+                        }
+                    }
+                    QWidget*get_child_widget() {
+                        return m_child_widget;
+                    }
+                private:
+                    QGridLayout* m_layout           = nullptr;
+                    QWidget    * m_container_widget = nullptr;
+                    QWidget    * m_child_widget     = nullptr;
+                };
+                // 查找需要更新的窗口
+                CenterFrame *m_center_frame = nullptr;
+                for(int idx = 0; idx < m_ui->stacked_contact_detail->count(); ++idx) {
+                    m_center_frame = dynamic_cast<CenterFrame*>(m_ui->stacked_contact_detail->widget(idx));
+                    if (m_center_frame) {
+                        break;
+                    }
+                }
+                // 如果不存在则添加
+                if(!m_center_frame) {
+                    m_center_frame = new CenterFrame;
+                    m_ui->stacked_contact_detail->addWidget(m_center_frame);
+                }
+                ContactWindow *contact_window = dynamic_cast<ContactWindow*>(m_center_frame->get_child_widget());
+                if(!contact_window) {
+                    contact_window = new ContactWindow;
+                    m_center_frame->set_child_widget(contact_window);
+                }
+                contact_window->show_contact(contact_info);  // 显示指定信息
+                contact_window->set_show_mode(contact_window->get_show_mode() | ContactWindow::ShowFlags(ContactWindow::ShowFlag::Request));  // 标明分组
+                contact_window->setWindowTitle(tr("Contact request"));
+                // 获取当前分组，进行申请页面的特殊设置
+                contact_window->set_request_mode(parent_group_type == ENUMS::ItemGroupType::REQUEST);
+                m_ui->stacked_contact_detail->setCurrentWidget(m_center_frame);
             }
-            // 如果没有则添加
-            else {
-                contact_window_update = new ContactWindow(this);
-                contact_window_update->show_contact(contact_info);
-                m_ui->stacked_contact_detail->addWidget(contact_window_update);
-            }
-            // 显示
-            m_ui->stacked_contact_detail->setCurrentWidget(contact_window_update);
         }
         return;
     } while(false);
@@ -581,6 +658,7 @@ void ChatWindow::slot_button_navigate_avatar() {
     // 设置为弹窗窗口，否则有父窗口时会显示在父窗口内，发生与父窗口内容重叠的情况
     m_contact_window->setWindowFlags(m_contact_window->windowFlags() |  Qt::Dialog);
     m_contact_window->show_contact(Accounts::instance().get_current_account());
+    m_contact_window->setWindowTitle(tr("Profile"));
     m_contact_window->show();
 
     // 先显示窗口再更新内容，避免网络请求较慢时窗口无响应
@@ -593,6 +671,7 @@ void ChatWindow::slot_button_navigate_avatar() {
     NetworkClient::instance().search_user(params_search_user, [this](const search_user_params&params_search_user, const search_user_reply&reply_search_user) {
         if (!reply_search_user || !reply_search_user->result().hasSuccessCode()) { return; }
         m_contact_window->show_contact(std::make_shared<ContactInfo>(reply_search_user->contactInfo()));
+        m_contact_window->setWindowTitle(tr("Profile"));
     });
 }
 

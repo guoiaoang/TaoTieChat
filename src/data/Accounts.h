@@ -10,8 +10,8 @@ class Accounts : public QObject{
     Q_OBJECT
 private:
     Accounts();
-    Accounts(const Accounts&) = default;
-    Accounts& operator=(const Accounts&) = default;
+    Accounts(const Accounts&) = delete;
+    Accounts& operator=(const Accounts&) = delete;
 public:
     ~Accounts();
     static Accounts& instance();

@@ -271,7 +271,7 @@ public:
         // 设置一些默认显示的数据，防止未设置 delegete 显示为空
         var_item[Qt::DisplayRole  ] = text_diaplay;
         var_item[Qt::EditRole     ] = text_diaplay;
-        var_item[Qt::ToolTipRole  ] = text_diaplay;
+        // var_item[Qt::ToolTipRole  ] = text_diaplay;
         // var_item[Qt::StatusTipRole] = text_diaplay;  // 效果不好
         var_item[Qt::WhatsThisRole] = text_diaplay;
         // 为了展示不同类型，给群组设置背景颜色
@@ -360,7 +360,7 @@ public:
         // 设置一些默认显示的数据，防止未设置 delegete 显示为空
         var_item[Qt::DisplayRole  ] = text_diaplay;
         var_item[Qt::EditRole     ] = text_diaplay;
-        var_item[Qt::ToolTipRole  ] = text_diaplay;
+        // var_item[Qt::ToolTipRole  ] = text_diaplay;
         // var_item[Qt::StatusTipRole] = text_diaplay;  // 效果不好
         var_item[Qt::WhatsThisRole] = text_diaplay;
         var_item[Qt::DecorationRole] = icon_init(); // 设置默认图标样式，实际不使用
@@ -575,7 +575,7 @@ public:
         // 设置一些默认显示的数据，防止未设置 delegete 显示为空
         var_item[Qt::DisplayRole  ] = text_diaplay;
         var_item[Qt::EditRole     ] = text_diaplay;
-        var_item[Qt::ToolTipRole  ] = text_diaplay;
+        // var_item[Qt::ToolTipRole  ] = text_diaplay;
         // var_item[Qt::StatusTipRole] = text_diaplay;  // 效果不好
         var_item[Qt::WhatsThisRole] = text_diaplay;
         var_item[Qt::DecorationRole] = icon_init(); // 设置默认图标样式，实际不使用

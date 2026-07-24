@@ -335,6 +335,7 @@ if(ENABLE_CLIENT)
             LinguistTools
             SvgWidgets
             Svg
+            Xml
             Protobuf
             ProtobufQtCoreTypes
             ProtobufQuick
@@ -343,7 +344,7 @@ if(ENABLE_CLIENT)
             ProtobufWellKnownTypes  # 用于支持 `protobuf` 自带 `*.proto` 文件的自动编译
     )
     # `find_package(QT NAMES Qt6 Qt5 REQUIRED)` 必须，用于设置 `QT_VERSION_MAJOR`，便于部署脚本的判断，否则不会执行 `qt_generate_deploy_app_script`
-    find_package(QT NAMES Qt6 Qt5      REQUIRED COMPONENTS Core Widgets LinguistTools)
+    find_package(QT NAMES Qt6 Qt5      REQUIRED COMPONENTS Core Widgets LinguistTools Xml)
     # find_package(Qt${QT_VERSION_MAJOR} REQUIRED COMPONENTS Core Widgets LinguistTools)
     # find_package(Qt6 6.5 REQUIRED COMPONENTS Core Widgets LinguistTools Svg SvgWidgets Network Grpc Protobuf)
 
@@ -639,6 +640,7 @@ if(ENABLE_CLIENT)
             Qt::Svg
             Qt::SvgWidgets
             Qt::Network
+            Qt::Xml
             Qt::Grpc
             Qt::Protobuf
             Qt::ProtobufWellKnownTypes   # protobuf 内置的 `google/protobuf/*.proto` 文件生成的库

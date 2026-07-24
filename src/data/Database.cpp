@@ -5,6 +5,70 @@ Database& Database::instance() {
     return s_database;
 }
 
+// 使用示例：将 64x64 的 SVG 放大渲染保存为 1024x1024 的 PNG
+// resizeSvgToBitmap("icon.svg", "icon_1024.png", QSize(1024, 1024));
+bool resizeSvgToBitmap(const QString &inputSvgPath, const QString &outputImagePath, const QSize &newSize) {
+    // 1. 加载 SVG 渲染器
+    QSvgRenderer renderer(inputSvgPath);
+    if (!renderer.isValid()) {
+        return false; // SVG 文件解析失败
+    }
+
+    // 2. 创建指定大小的透明 QImage（支持 Alpha 通道）
+    QImage image(newSize, QImage::Format_ARGB32);
+    image.fill(Qt::transparent); // 背景透明
+
+    // 3. 使用 QPainter 将 SVG 绘制到 QImage 上
+    QPainter painter(&image);
+    painter.setRenderHint(QPainter::Antialiasing);         // 抗锯齿
+    painter.setRenderHint(QPainter::SmoothPixmapTransform); // 顺滑缩放
+
+    // 绘制到指定的区域大小
+    renderer.render(&painter, QRectF(0, 0, newSize.width(), newSize.height()));
+    painter.end();
+
+    // 4. 保存为目标文件（根据扩展名自动识别 PNG/JPG 等）
+    return image.save(outputImagePath);
+}
+
+// 使用示例：调整 XML 视口尺寸并保存为新的 svg
+// resizeSvgVector("input.svg", "output_resized.svg", QSize(800, 600));
+bool resizeSvgVector(const QString &inputSvgPath, const QString &outputSvgPath, const QSize &newSize) {
+    QFile file(inputSvgPath);
+    if (!file.open(QIODevice::ReadOnly)) return false;
+
+    // 1. 解析 SVG 为 DOM 树
+    QDomDocument doc;
+    if (!doc.setContent(&file)) {
+        file.close();
+        return false;
+    }
+    file.close();
+
+    // 2. 获取根节点 <svg>
+    QDomElement svgElement = doc.documentElement();
+    if (svgElement.tagName() != "svg") return false;
+
+    // 3. 设置/更新宽与高属性
+    svgElement.setAttribute("width", QString("%1px").arg(newSize.width()));
+    svgElement.setAttribute("height", QString("%1px").arg(newSize.height()));
+
+    // 提示：若需要适配比例，亦可同时调整 viewBox 属性，例如：
+    // svgElement.setAttribute("viewBox", QString("0 0 %1 %2").arg(newSize.width()).arg(newSize.height()));
+
+    // 4. 将修改后的 XML 内容写入新 SVG 文件
+    QFile outFile(outputSvgPath);
+    if (!outFile.open(QIODevice::WriteOnly | QIODevice::Truncate | QIODevice::Text)) {
+        return false;
+    }
+
+    QTextStream stream(&outFile);
+    doc.save(stream, 4); // 4 表示 XML 缩进空格数
+    outFile.close();
+
+    return true;
+}
+
 // 无法直接使用子成员中的函数，只能挨个转发
 QString Database::get_local_file_id_path(const QString&file_id) {
     // return m_file_id_path_map.get_local_file_id_path(file_id);
@@ -50,7 +114,14 @@ QString Database::get_local_file_id_path(const QString&file_id) {
             // 如果不存在则需要转换
             if(!QFileInfo(size_path).exists()) {
                 Utils::create_dirs(Utils::get_dir(size_path));
-                QPixmap(file_path).scaled(QSize(size_width, size_height), Qt::KeepAspectRatio, Qt::SmoothTransformation).save(size_path);
+                // 检测文件格式
+                QByteArray format = QImageReader::imageFormat(file_path);
+                if (format.toLower() == "svg" || format.toLower() == "svgz") {
+                    resizeSvgVector(file_path, size_path, QSize(size_width, size_height));
+                }
+                else {
+                    QPixmap(file_path).scaled(QSize(size_width, size_height), Qt::KeepAspectRatio, Qt::SmoothTransformation).save(size_path);
+                }
             }
             m_file_id_path_map.save_local_file_id_path(file_id, size_path);
             file_path = size_path;

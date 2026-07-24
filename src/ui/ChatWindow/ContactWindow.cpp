@@ -467,7 +467,7 @@ void ContactWindow::slot_button_add() {
     // params_get_contact_request->a
     params_contact_request->setRequestUserAuth(*Accounts::instance().get_auth_request().get());
     params_contact_request->setTargetUserId(contact_info->baseInfo().userId());  // TODO: 改为添加账号 ID
-    auto callback_contact_request = [this](const contact_request_params&param_contact_request, const contact_request_reply&reply_contact_request) {
+    auto callback_contact_request = [this](const contact_request_params&params_contact_request, const contact_request_reply&reply_contact_request) {
         // 消息发送失败
         if (!reply_contact_request || !reply_contact_request->hasResult() || !reply_contact_request->result().hasSuccessCode()) {
             QString error_message = tr("Failed to send contact request.");
@@ -486,9 +486,51 @@ void ContactWindow::slot_button_add() {
 }
 
 void ContactWindow::slot_button_accept() {
+    auto contact_info = get_cache_contact_info();
+    contact_reply_params params_contact_reply = std::make_shared<ContactReplyRequest>();
+    params_contact_reply->setRequestUserAuth(*Accounts::instance().get_auth_request().get());
+    params_contact_reply->setTargetUserId(contact_info->baseInfo().userId());  // TODO: 改为添加账号 ID
+    params_contact_reply->setReply(ContactReplyCode::CONTACT_REPLY_ACCEPT);
+    auto callback_contact_reply = [this](const contact_reply_params&params_contact_reply, const contact_reply_reply&reply_contact_reply) {
+        // 消息发送失败
+        if (!reply_contact_reply || !reply_contact_reply->hasResult() || !reply_contact_reply->result().hasSuccessCode()) {
+            QString error_message = tr("Failed to send contact reply.");
+            if (reply_contact_reply && reply_contact_reply->hasResult()) {
+                error_message += tr("\n\ncode : 0x%1\nmessage : %2")
+                                     .arg(int64_t(reply_contact_reply->result().errorCode()), 8, 16, QChar('0'))  // 16 进制显示，宽度 8 位，不足补 0
+                                     .arg(reply_contact_reply->result().message());
+            }
+            QMessageBox::information(this, tr("Error"), error_message, QMessageBox::StandardButton::Ok);
+            return;
+        }
+        // 提示消息发送成功  // 发送成功不必提示
+        // QMessageBox::information(this, tr("Success"), tr("Send contact request success."), QMessageBox::StandardButton::Ok);
+    };
+    NetworkClient::instance().contact_reply(params_contact_reply, callback_contact_reply);
 }
 
 void ContactWindow::slot_button_ignore() {
+    auto contact_info = get_cache_contact_info();
+    contact_reply_params params_contact_reply = std::make_shared<ContactReplyRequest>();
+    params_contact_reply->setRequestUserAuth(*Accounts::instance().get_auth_request().get());
+    params_contact_reply->setTargetUserId(contact_info->baseInfo().userId());  // TODO: 改为添加账号 ID
+    params_contact_reply->setReply(ContactReplyCode::CONTACT_REPLY_IGNORE);
+    auto callback_contact_reply = [this](const contact_reply_params&params_contact_reply, const contact_reply_reply&reply_contact_reply) {
+        // 消息发送失败
+        if (!reply_contact_reply || !reply_contact_reply->hasResult() || !reply_contact_reply->result().hasSuccessCode()) {
+            QString error_message = tr("Failed to send contact reply.");
+            if (reply_contact_reply && reply_contact_reply->hasResult()) {
+                error_message += tr("\n\ncode : 0x%1\nmessage : %2")
+                                     .arg(int64_t(reply_contact_reply->result().errorCode()), 8, 16, QChar('0'))  // 16 进制显示，宽度 8 位，不足补 0
+                                     .arg(reply_contact_reply->result().message());
+            }
+            QMessageBox::information(this, tr("Error"), error_message, QMessageBox::StandardButton::Ok);
+            return;
+        }
+        // 提示消息发送成功  // 发送成功不必提示
+        // QMessageBox::information(this, tr("Success"), tr("Send contact request success."), QMessageBox::StandardButton::Ok);
+    };
+    NetworkClient::instance().contact_reply(params_contact_reply, callback_contact_reply);
 }
 
 void ContactWindow::slot_button_messages() {

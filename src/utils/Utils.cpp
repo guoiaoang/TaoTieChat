@@ -24,6 +24,8 @@ QString app_path() {
 }
 
 QString app_dir_path() {
+    QString path_document = QStandardPaths::writableLocation(QStandardPaths::DocumentsLocation);
+    return path_document + "/TaoTie/Chat/Client";
     return QCoreApplication::applicationDirPath();
 }
 

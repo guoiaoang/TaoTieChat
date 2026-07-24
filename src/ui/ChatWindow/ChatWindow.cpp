@@ -214,6 +214,8 @@ void ChatWindow::init() {
         m_ui->page_list_contact->expand(index_group);
     }
 
+    // TODO: network -> data -> notify -> gui
+
 #ifdef _DEBUG
     if (0) {
         // m_contact_model->add_member(ENUMS::ItemGroupType::REQUEST, Accounts::instance().get_current_account());

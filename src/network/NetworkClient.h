@@ -56,6 +56,8 @@ public:
     void set_server_url(const QUrl&url) { m_url_server = url; }
     QUrl server_url() const { return m_url_server; }
     bool init();
+    // bool reset_connection();
+    bool disconnect_sync(const QString& account_id);
 
 public:
     // 直接接口
@@ -95,4 +97,6 @@ private:
     // 共享的 gRPC HTTP/2 通道
     std::shared_ptr<QGrpcHttp2Channel> m_channel;  // 相同 channel 代表长连接
     QGrpcCallOptions m_grpc_call_options = QGrpcCallOptions{}.setDeadlineTimeout(std::chrono::seconds(300));  // 公共的调用选项
+    // 用于断开同步线程
+    std::unordered_map<QString, QPointer<QGrpcBidiStream>> m_cache_connection_syncs;
 };

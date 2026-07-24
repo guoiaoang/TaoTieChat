@@ -21,6 +21,34 @@ void ChatWindow::reinit() {
 }
 
 void ChatWindow::release_resources() {
+    m_ui.reset();
+    // 创建对象
+    m_menu_settings         .reset();
+    m_action_settings       .reset();
+    m_action_rember_password.reset();
+    m_action_auto_login     .reset();
+    m_action_signout        .reset();
+    m_action_exit           .reset();
+    // add
+    m_menu_add     .reset();
+    m_action_add   .reset();
+    m_action_create.reset();
+    // model/view
+    m_contact_model   .reset();
+    m_contact_delegate.reset();
+    // 退出时需要关闭及重置的页面
+    m_search_window .reset();  // 搜素页面
+    m_contact_window.reset();  // 点击头像时显示的个人信息页面
+    //
+    m_cache_self_info  .reset();
+    m_cache_self_avatar.reset();
+
+    // 单客户端单账号：退出登录时释放管道，允许下一次登录
+    Utils::OS::try_grab_account_pipe(Accounts::instance().get_current_account()->baseInfo().userId(), false);
+
+    // 断开实时同步的连接网络
+    // NetworkClient::instance().reset_connection();
+    NetworkClient::instance().disconnect_sync(Accounts::instance().get_current_account()->baseInfo().accountId());
 }
 
 void ChatWindow::init() {
@@ -50,9 +78,8 @@ void ChatWindow::init() {
     connect(m_ui->button_add               , &QToolButton::clicked, this, [&](){ this->on_show_add_menu     (); }); // 点击了添加按钮
     // 各种菜单事件
     connect(m_action_signout .get(), &QAction::triggered, this, [&](){
+        release_resources();
         emit signout();
-        // 单客户端单账号：退出登录时释放管道，允许下一次登录
-        Utils::OS::try_grab_account_pipe(Accounts::instance().get_current_account()->baseInfo().userId(), false);
     });
     connect(m_action_exit    .get(), &QAction::triggered, this, [&](){ QApplication::exit(0); });
     connect(m_action_settings.get(), &QAction::triggered, this, [&](){ qDebug() << "m_action_settings"; });
@@ -631,7 +658,7 @@ void ChatWindow::update_contact_info(const std::shared_ptr<ContactInfo>&contact_
 }
 
 bool ChatWindow::eventFilter(QObject *obj, QEvent *event) {
-    if (obj == m_ui->edit_search) {
+    if (m_ui && obj && m_ui->edit_search && obj == m_ui->edit_search) {
         if (event->type() == QEvent::MouseButtonRelease) {
             // // 主动关闭后才应该重建窗口
             // if (m_search_window) {

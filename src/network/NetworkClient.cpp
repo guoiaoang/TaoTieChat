@@ -32,6 +32,44 @@ bool NetworkClient::init() {
     return true;
 }
 
+// bool NetworkClient::reset_connection() {
+//     m_inited = false;
+//     m_channel       .reset();
+//     m_client_account.reset();
+//     m_client_file   .reset();
+//     m_client_message.reset();
+//     m_client_search .reset();
+//     m_client_status .reset();
+//     m_client_sync   .reset();
+//     m_client_sync   .reset();
+//     init();
+//     return true;
+// }
+
+bool NetworkClient::disconnect_sync(const QString& account_id) {
+    if (!m_cache_connection_syncs.contains(account_id)) { return false; }
+    if (!m_cache_connection_syncs[account_id]) { return false; }
+
+    auto&stream = m_cache_connection_syncs[account_id];
+
+    // 1. 断开该 Stream 上的所有信号槽（切断回调，防止退出后还会触发 messageReceived）
+    stream->disconnect();
+
+    // 2. 尝试关闭/取消底层 gRPC/Qt-Grpc 流通信
+    // 注：QGrpcStream 自身通常提供 cancel() 或 close() 方法
+    stream->cancel(); // 或者 m_activeStream->close(); 依据你使用的封装库而定
+
+    // 3. 投递延时销毁（销毁底层 socket 并安全释放内存）
+    stream->deleteLater();
+
+    // 4. 将成员指针置空，防止二次操作
+    stream = nullptr;
+
+    m_cache_connection_syncs.erase(account_id);
+
+    return true;
+}
+
 // 成功失败都要返回，失败时要返回错误原因
 bool NetworkClient::signup(const signup_params& params, const signup_callback& callback) {
     using namespace Utils::Wrapper;
@@ -560,20 +598,27 @@ bool NetworkClient::sync(const sync_params& params, const sync_callback& callbac
         }
 
         Stream* raw_stream_ptr = reply_conn.release(); // 释放所有权，由信号槽挂载生命周期
+        m_cache_connection_syncs[account_id] = raw_stream_ptr;
+
+        // QPointer 是专门为 QObject 及其子类设计的智能指针。当其指向的 QObject 被真正析构时，QPointer 会自动将自己重置为 nullptr。
 
         // 收到数据时触发的消息
         // 服务器每次 while 写数据到客户端都会触发一次
         // 监听服务器下发的数据 (长连接核心)
-        connect(raw_stream_ptr, &Stream::messageReceived, this, [raw_stream_ptr, params, callback]() {
+        QPointer<Stream> safeStreamPtr = raw_stream_ptr;
+        connect(raw_stream_ptr, &Stream::messageReceived, this, [safeStreamPtr, params, callback]() {
+            if (!safeStreamPtr) { return; }
+
             // 读取服务器推过来的长连接通知
-            std::optional<Reply> reply = raw_stream_ptr->read<Reply>();
+            std::optional<Reply> reply = safeStreamPtr->read<Reply>();
             if (reply && callback) {
                 // 将数据异步回调给外面
                 callback(params, reply);
             }
         });
 
-        connect(raw_stream_ptr, &Stream::finished, raw_stream_ptr, [raw_stream_ptr](const QGrpcStatus &status) {
+        connect(raw_stream_ptr, &Stream::finished, raw_stream_ptr, [this, raw_stream_ptr, account_id](const QGrpcStatus &status) {
+            if (m_cache_connection_syncs.contains(account_id)) { m_cache_connection_syncs.erase(account_id); }
             raw_stream_ptr->deleteLater(); // 优雅销毁流对象
         });
         break;

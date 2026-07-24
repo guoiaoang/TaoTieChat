@@ -247,7 +247,12 @@ bool AuthWindow::signin(const signin_params& params_signin, const std::shared_pt
 bool AuthWindow::handle_signup_successd(const signup_params& params_signup) {
     QMessageBox::information(this, tr("tips"), tr("SignUp success. close this dialog to SignIn."));
 
-    // TODO:清除界面数据
+    // 清除界面数据
+    m_ui->signup_edit_username->clear();
+    m_ui->signup_edit_password->clear();
+    m_ui->signup_edit_confirm ->clear();
+    m_ui->signup_edit_question->clear();
+    m_ui->signup_edit_answer  ->clear();
 
     // 创建用于登陆的参数  // 注册返回的信息不包含 token，因此需要使用密码登录
     signin_params params_signin = std::make_shared<TaoTieChat::SignInRequest>();

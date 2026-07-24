@@ -213,26 +213,28 @@
         <translation>创建群</translation>
     </message>
     <message>
-        <location filename="../ui/ChatWindow/ChatWindow.cpp" line="622"/>
+        <location filename="../ui/ChatWindow/ChatWindow.cpp" line="660"/>
         <source>Contact request</source>
         <translation>联系人申请</translation>
     </message>
     <message>
-        <location filename="../ui/ChatWindow/ChatWindow.cpp" line="690"/>
-        <location filename="../ui/ChatWindow/ChatWindow.cpp" line="703"/>
+        <location filename="../ui/ChatWindow/ChatWindow.cpp" line="728"/>
+        <location filename="../ui/ChatWindow/ChatWindow.cpp" line="741"/>
         <source>Profile</source>
         <translation>个人资料</translation>
     </message>
     <message>
+        <location filename="../ui/ChatWindow/ChatWindow.cpp" line="435"/>
         <source>Failed to download avatar.</source>
-        <translation type="vanished">头像图片下载失败。</translation>
+        <translation>头像图片下载失败。</translation>
     </message>
     <message>
+        <location filename="../ui/ChatWindow/ChatWindow.cpp" line="436"/>
         <source>
 
 code : 0x%1
 message : %2</source>
-        <translation type="vanished">
+        <translation>
 
 错误代码 : 0x%1
 错误消息 : %2</translation>
@@ -384,7 +386,7 @@ message : %2</source>
         <location filename="../ui/ChatWindow/ContactWindow.cpp" line="497"/>
         <location filename="../ui/ChatWindow/ContactWindow.cpp" line="521"/>
         <source>Failed to send contact reply.</source>
-        <translation type="unfinished"></translation>
+        <translation>好友申请回复失败。</translation>
     </message>
     <message>
         <location filename="../ui/ChatWindow/ContactWindow.cpp" line="621"/>

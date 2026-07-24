@@ -27,6 +27,11 @@ private:
     void release_resources();
     void init();
 
+    // network
+    bool updata_current_account_info();
+    bool network_status_sync();
+    bool download_contact_avatar(const std::shared_ptr<ContactInfo>&contact_info);
+
     // 显示设置菜单
     void on_show_settings_menu();
     // 显示 创建/添加 好友/群组 菜单

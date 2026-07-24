@@ -287,124 +287,162 @@ void ChatWindow::init() {
     // 更新个人信息显示  // 初始化赋值，需要创建副本，而不是共享同一片内存
     auto copy_contact_info = std::make_shared<ContactInfo>(*Accounts::instance().get_current_account().get());
     // set_cache_contact_info(copy_contact_info);
-    update_contact_info(copy_contact_info);
+    update_contact_info(copy_contact_info);  // 更新信息为 copy_contact_info
 
     // 从网络获取当前用户的个人信息并更新显示
-    {
-        auto&user_id = Accounts::instance().get_current_account()->baseInfo().userId();
-        search_user_params params_search_user = std::make_shared<SearchUserRequest>();
-        params_search_user->setRequestUserAuth(*Accounts::instance().get_auth_request().get());
-        params_search_user->setUserId(user_id);
-        NetworkClient::instance().search_user(params_search_user, [this](const search_user_params&params_search_user, const search_user_reply&reply_search_user) {
-            if (!reply_search_user || !reply_search_user->result().hasSuccessCode()) { return; }
-            // update_contact_info(std::make_shared<ContactInfo>(*reply_search_user->contactInfo().get()));
-            Accounts::instance().set_current_account(std::make_shared<ContactInfo>(reply_search_user->contactInfo()));
-        });
-    }
+    updata_current_account_info();  // 从网络或更新
 
     // 消息同步
-    {
-        auto get_local_last_id = [](SyncType type) {
-            return 0;
-        };
-        // get last id
-        get_last_id_params   params_get_last_id   = Accounts::instance().get_auth_request();
-        get_last_id_callback callback_get_last_id = [&](const get_last_id_params&params_get_last_id, const get_last_id_reply&reply_get_last_id) {
-            if (!reply_get_last_id) { return; }
-            if (!reply_get_last_id->hasResult()) { return; }
-            if (!reply_get_last_id->result().hasSuccessCode()) { return; }
+    network_status_sync();
+}
 
-            QList<TaoTieChat::SyncTag> sync_tags;  // 需要更新的消息
-            for(auto&tag : reply_get_last_id->tags()) {
-                auto server_last_id = tag.idEnd();
-                auto local_last_id = get_local_last_id(tag.type());
-                auto type_name = QMetaEnum::fromType<SyncType>().valueToKey(quint64(tag.type()));
-                qDebug().noquote().nospace() << "get_last_id SyncType : " << type_name << ", server_last_id : " << server_last_id << ", local_last_id : " << local_last_id;
-                if (server_last_id > local_last_id) {
-                    SyncTag sync_tag;
-                    sync_tag.setType   (tag.type());
-                    sync_tag.setIdStart(local_last_id );
-                    sync_tag.setIdEnd  (server_last_id);
-                    sync_tags.emplace_back(sync_tag);
-                }
+bool ChatWindow::updata_current_account_info() {
+    // 从网络获取当前用户的个人信息并更新显示
+    auto&user_id = Accounts::instance().get_current_account()->baseInfo().userId();
+    search_user_params params_search_user = std::make_shared<SearchUserRequest>();
+    params_search_user->setRequestUserAuth(*Accounts::instance().get_auth_request().get());
+    params_search_user->setUserId(user_id);
+    NetworkClient::instance().search_user(params_search_user, [this](const search_user_params&params_search_user, const search_user_reply&reply_search_user) {
+        if (!reply_search_user || !reply_search_user->result().hasSuccessCode()) { return; }
+        // update_contact_info(std::make_shared<ContactInfo>(*reply_search_user->contactInfo().get()));
+        Accounts::instance().set_current_account(std::make_shared<ContactInfo>(reply_search_user->contactInfo()));
+    });
+    return false;
+}
+
+bool ChatWindow::network_status_sync() {
+    auto get_local_last_id = [](SyncType type) {
+        return 0;
+    };
+    // get last id
+    get_last_id_params   params_get_last_id   = Accounts::instance().get_auth_request();
+    get_last_id_callback callback_get_last_id = [&](const get_last_id_params&params_get_last_id, const get_last_id_reply&reply_get_last_id) {
+        if (!reply_get_last_id) { return; }
+        if (!reply_get_last_id->hasResult()) { return; }
+        if (!reply_get_last_id->result().hasSuccessCode()) { return; }
+
+        QList<TaoTieChat::SyncTag> sync_tags;  // 需要更新的消息
+        for(auto&tag : reply_get_last_id->tags()) {
+            auto server_last_id = tag.idEnd();
+            auto local_last_id = get_local_last_id(tag.type());
+            auto type_name = QMetaEnum::fromType<SyncType>().valueToKey(quint64(tag.type()));
+            qDebug().noquote().nospace() << "get_last_id SyncType : " << type_name << ", server_last_id : " << server_last_id << ", local_last_id : " << local_last_id;
+            if (server_last_id > local_last_id) {
+                SyncTag sync_tag;
+                sync_tag.setType   (tag.type());
+                sync_tag.setIdStart(local_last_id );
+                sync_tag.setIdEnd  (server_last_id);
+                sync_tags.emplace_back(sync_tag);
             }
-            // 触发消息同步消息
-            // 同步监听
-            {
-                struct SyncNotify{
-                    bool inited = false;
-                    bool error = false;
-                };
-                std::shared_ptr<SyncNotify> notify_sync = std::make_shared<SyncNotify>();
-                //
-                sync_params params_sync = std::make_shared<SyncRequest>();
-                params_sync->setRequestUserAuth(*Accounts::instance().get_auth_request().get());
-                params_sync->setSyncTag(sync_tags);
-                //
-                sync_callback callback_sync = [&, notify_sync](const sync_params&params_sync, const sync_reply&reply_sync) {
-                    // 鉴权结果
-                    if (!notify_sync->inited) {
-                        if (!reply_sync->hasHeader() && !reply_sync->header().hasResult() && !reply_sync->header().result().hasSuccessCode()) {
-                            notify_sync->error = true;
-                            return;
-                        }
-                        notify_sync->inited = true;
+        }
+        // 触发消息同步消息
+        // 同步监听
+        {
+            struct SyncNotify{
+                bool inited = false;
+                bool error = false;
+            };
+            std::shared_ptr<SyncNotify> notify_sync = std::make_shared<SyncNotify>();
+            //
+            sync_params params_sync = std::make_shared<SyncRequest>();
+            params_sync->setRequestUserAuth(*Accounts::instance().get_auth_request().get());
+            params_sync->setSyncTag(sync_tags);
+            //
+            sync_callback callback_sync = [&, notify_sync](const sync_params&params_sync, const sync_reply&reply_sync) {
+                // 鉴权结果
+                if (!notify_sync->inited) {
+                    if (!reply_sync->hasHeader() && !reply_sync->header().hasResult() && !reply_sync->header().result().hasSuccessCode()) {
+                        notify_sync->error = true;
                         return;
                     }
-                    // 进行同步
-                    // qDebug().noquote().nospace() << "Get Sync Messages";
-                    if (!reply_sync->hasBody()) { return; }
-                    auto sync_reply_body = reply_sync->body();
-                    auto sync_tag        = sync_reply_body.tag();
-                    auto count           = sync_tag.count();
+                    notify_sync->inited = true;
+                    return;
+                }
+                // 进行同步
+                // qDebug().noquote().nospace() << "Get Sync Messages";
+                if (!reply_sync->hasBody()) { return; }
+                auto sync_reply_body = reply_sync->body();
+                auto sync_tag        = sync_reply_body.tag();
+                auto count           = sync_tag.count();
 
-                    qDebug().noquote().nospace() << "sync_reply : " << reply_sync;
+                qDebug().noquote().nospace() << "sync_reply : " << reply_sync;
 
-                    // 服务端数据异常或无更新时 `hasContacts() == false`
-                    if (sync_tag.type() == SyncType::SYNC_CONTACTS && sync_reply_body.hasContacts()) {
-                        for(auto sync_contact : sync_reply_body.contacts().contact()) {
-                            // 更新联系人信息
-                            // qDebug().nospace().noquote() << "Sync ContactInfo for AccountId : " << contact_info.baseInfo().accountId();
-                            if (sync_contact.subType() == SyncSubTypeContact::SYNC_CONTACT_REUQEST) {
-                                auto sync_contact_request = sync_contact.request();
-                                auto request_contact = sync_contact_request.contactRequest();  // 申请者的信息
-                                auto request_time    = sync_contact_request.time();
-                                auto request_message = sync_contact_request.message();
-                                qDebug().noquote().nospace() << "Get sync contact request. form : " << request_contact << ", time : " << request_time << ", message : " << request_message;
-                                // 添加到联系人列表中，但标记为申请好友（放入申请分组）
-                                add_contact(std::make_shared<ContactInfo>(request_contact), ENUMS::ItemGroupType::REQUEST);
-                            }
-                            else if (sync_contact.subType() == SyncSubTypeContact::SYNC_CONTACT_REPLY) {
-                                auto sync_contact_reply = sync_contact.reply();
-                                auto request_contact = sync_contact_reply.contactReply();  // 被申请者的信息
-                                auto request_time    = sync_contact_reply.time();
-                                auto request_message = sync_contact_reply.message();
-                                qDebug().noquote().nospace() << "Get sync contact reply. form : " << request_contact << ", time : " << request_time << ", message : " << request_message;
-                            }
+                // 服务端数据异常或无更新时 `hasContacts() == false`
+                if (sync_tag.type() == SyncType::SYNC_CONTACTS && sync_reply_body.hasContacts()) {
+                    for(auto sync_contact : sync_reply_body.contacts().contact()) {
+                        // 更新联系人信息
+                        // qDebug().nospace().noquote() << "Sync ContactInfo for AccountId : " << contact_info.baseInfo().accountId();
+                        if (sync_contact.subType() == SyncSubTypeContact::SYNC_CONTACT_REUQEST) {
+                            auto sync_contact_request = sync_contact.request();
+                            auto request_contact = sync_contact_request.contactRequest();  // 申请者的信息
+                            auto request_time    = sync_contact_request.time();
+                            auto request_message = sync_contact_request.message();
+                            qDebug().noquote().nospace() << "Get sync contact request. form : " << request_contact << ", time : " << request_time << ", message : " << request_message;
+                            // 添加到联系人列表中，但标记为申请好友（放入申请分组）
+                            add_contact(std::make_shared<ContactInfo>(request_contact), ENUMS::ItemGroupType::REQUEST);
+                            // 获取头像，防止列表中头像显示异常
+                            download_contact_avatar(std::make_shared<ContactInfo>(request_contact));
+                        }
+                        else if (sync_contact.subType() == SyncSubTypeContact::SYNC_CONTACT_REPLY) {
+                            auto sync_contact_reply = sync_contact.reply();
+                            auto request_contact = sync_contact_reply.contactReply();  // 被申请者的信息
+                            auto request_time    = sync_contact_reply.time();
+                            auto request_message = sync_contact_reply.message();
+                            qDebug().noquote().nospace() << "Get sync contact reply. form : " << request_contact << ", time : " << request_time << ", message : " << request_message;
                         }
                     }
-                    // 服务端只区分了 SyncType::MESSAGES，文件也是 SyncType::MESSAGES 的一个子类型，需要客户端手动测试
-                    else if (sync_tag.type() == SyncType::SYNC_MESSAGES) {
-                        // if (sync_reply_body.hasMessages()) {
-                        //     for(auto message : sync_reply_body.messages().messages()) {
-                        //         // 更新消息
-                        //         qDebug().nospace().noquote() << "Sync Message(message) for sender_account_id : " << message.senderAccountId();
-                        //     }
-                        // }
-                        // // 服务端只区分了 SyncType::MESSAGES，文件也是 SyncType::MESSAGES 的一个子类型，需要客户端手动测试
-                        // else if (sync_reply_body.hasFileEvents()) {
-                        //     for(auto file_event : sync_reply_body.fileEvents().fileEvents()) {
-                        //         // 更新文件信息
-                        //         qDebug().nospace().noquote() << "Sync Message(file) for file_id : " << file_event.fileId();
-                        //     }
-                        // }
-                    }
-                };
-                NetworkClient::instance().sync(params_sync, callback_sync);
-            }
-        };
-        NetworkClient::instance().get_last_id(params_get_last_id, callback_get_last_id);
-    }
+                }
+                // 服务端只区分了 SyncType::MESSAGES，文件也是 SyncType::MESSAGES 的一个子类型，需要客户端手动测试
+                else if (sync_tag.type() == SyncType::SYNC_MESSAGES) {
+                    // if (sync_reply_body.hasMessages()) {
+                    //     for(auto message : sync_reply_body.messages().messages()) {
+                    //         // 更新消息
+                    //         qDebug().nospace().noquote() << "Sync Message(message) for sender_account_id : " << message.senderAccountId();
+                    //     }
+                    // }
+                    // // 服务端只区分了 SyncType::MESSAGES，文件也是 SyncType::MESSAGES 的一个子类型，需要客户端手动测试
+                    // else if (sync_reply_body.hasFileEvents()) {
+                    //     for(auto file_event : sync_reply_body.fileEvents().fileEvents()) {
+                    //         // 更新文件信息
+                    //         qDebug().nospace().noquote() << "Sync Message(file) for file_id : " << file_event.fileId();
+                    //     }
+                    // }
+                }
+            };
+            NetworkClient::instance().sync(params_sync, callback_sync);
+        }
+    };
+    NetworkClient::instance().get_last_id(params_get_last_id, callback_get_last_id);
+    return false;
+}
+
+bool ChatWindow::download_contact_avatar(const std::shared_ptr<ContactInfo>&contact_info) {
+    if (!contact_info || !contact_info->hasBaseInfo() || contact_info->baseInfo().avatarId().isEmpty()) { return false; }
+
+    // 本地有头像时无需再次下载
+    auto avatar_id = contact_info->baseInfo().avatarId();
+    auto avatar_path = Database::instance().get_local_file_id_path(avatar_id);
+    auto avatar_pixmap(avatar_path);
+    if (!avatar_pixmap.isEmpty() && !avatar_pixmap.isNull()) { return true; }
+
+    // 下载并显示头像
+    network_file_io_notify_callback callback_download_file_notify = [this](const NetworkFileIONotify&notify) {
+        // 忽略下载进度通知
+        if (notify.ok && notify.code == int64_t(SuccessCode::SUCCESS) && notify.uploading) {
+            return;
+        }
+        if (!notify.ok) {
+            QString error_message = tr("Failed to download avatar.");
+            error_message += tr("\n\ncode : 0x%1\nmessage : %2")
+                .arg(notify.code, 8, 16, QChar('0'))  // 16 进制显示，宽度 8 位，不足补 0
+                .arg(notify.message);
+            // QMessageBox::information(this, tr("Error"), error_message, QMessageBox::StandardButton::Ok);
+            return;
+        }
+    };
+    qint64 downloaded_size = QFileInfo(avatar_path).size();
+    NetworkClient::instance().download_file(avatar_id, qMax(qint64(0), downloaded_size), callback_download_file_notify);
+    return false;
 }
 
 void ChatWindow::on_show_settings_menu() {

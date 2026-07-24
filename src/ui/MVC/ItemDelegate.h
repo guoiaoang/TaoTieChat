@@ -68,7 +68,7 @@ public:
         // m_demo_contact_delegate_item->render(painter, QPoint(0, 0));
 
         // 遮罩绘制
-        if(0) {
+        if (0) {
             // painter->save();
             painter->setRenderHint(QPainter::Antialiasing);
 
@@ -100,7 +100,7 @@ public:
             user_data->nickname  = user_data->contact_info->baseInfo().nickname ();
             user_data->signature = user_data->contact_info->baseInfo().signature();
             // 更新头像
-            if( user_data->avatar_id != user_data->contact_info->baseInfo().avatarId()) {
+            if (user_data->avatar_id != user_data->contact_info->baseInfo().avatarId()) {
                 user_data->avatar_id  = user_data->contact_info->baseInfo().avatarId();
                 auto avatar_file_path = Database::instance().get_local_file_id_path(user_data->avatar_id + ";size:128*128");
                 QPixmap pixmap_avatar_source = QPixmap(avatar_file_path);
@@ -113,7 +113,7 @@ public:
         user_data = m_cache_user_data;
 
         // 用户未设置头像时设置默认头像
-        if(!user_data->pixmap_avatar) {
+        if (!user_data->pixmap_avatar) {
             static Utils::FontIcons font_icon =  Utils::FontIcons().update();
             user_data->pixmap_avatar = std::make_shared<QPixmap>(Utils::to_round_pixmap(font_icon.icon.profile.pixmap(style_data->rect_avatar.size()), style_data->rect_avatar.width() / 2));
         }
@@ -153,7 +153,7 @@ public:
 
 public:
     void set_contact_info(const std::shared_ptr<ContactInfo>& contact_info) {
-        if(m_contact_info) { m_contact_info.reset(); }
+        if (m_contact_info) { m_contact_info.reset(); }
         // 这里保存拷贝，防止外部修改影响内部
         m_contact_info = std::make_shared<ContactInfo>(*contact_info);
     }
@@ -272,7 +272,7 @@ public:
 
             // 调试时绘制背景及边框
 #ifdef _DEBUG
-            if(1) {
+            if (1) {
                 painter->setBrush(Qt::darkCyan);  // 背景颜色
                 painter->setPen(Qt::darkMagenta);  // 边框或字体颜色
                 painter->drawRect(0, 0, item_width - 1, item_height);  // `item_width - 1` 防止绘制到矩形外而观察不到
@@ -283,7 +283,7 @@ public:
             // painter->fillRect(option.rect, (option.state & QStyle::State_Selected) ? option.palette.highlight() : option.palette.base());
 
             // 绘制收起/展开状态按钮
-            if(need_update) {
+            if (need_update) {
                 int collapse_margin_top      = 3;
                 int collapse_margin_bottom   = 3;
                 int collapse_margin_left     = 0;
@@ -301,12 +301,12 @@ public:
 
                 qDebug() << "group name : " << m_data.group_name << ", collapsed : " << m_data.collapsed;
             }
-            if(m_cache.draw_collapse) {
+            if (m_cache.draw_collapse) {
                 painter->drawPixmap(m_cache.rect_collapse, m_cache.pixmap_collapse);
             }
 
             // 绘制计数
-            if(need_update) {
+            if (need_update) {
                 // 设置字体
                 m_cache.font_count = option.font;
                 m_cache.members_count = m_data.members_count;
@@ -314,7 +314,7 @@ public:
                 // 获取宽度
                 int count_width = 0;
                 static bool dynamic_calc_count = true;  // 实测动态计算对性能的影响与固定值几乎无差别
-                if(dynamic_calc_count) {
+                if (dynamic_calc_count) {
                     m_cache.font_count.setKerning(false);  // 关闭字距调整，提升测算速度
                     QFontMetrics metrics_count(m_cache.font_count);
                     count_width = metrics_count.horizontalAdvance(QString::number(m_cache.members_count)); // 用 horizontalAdvance 代替 boundingRect，效率更高
@@ -331,13 +331,13 @@ public:
                 // 足以显示最底部，及最左侧与其他控件不重叠时才显示
                 m_cache.draw_count = m_cache.rect_collapse.right() <= m_cache.rect_count.left() && item_height >= m_cache.rect_count.height();
             }
-            if(m_cache.draw_count) {
+            if (m_cache.draw_count) {
                 painter->setFont(m_cache.font_count);
                 painter->drawText(m_cache.rect_count, Qt::AlignRight | Qt::AlignVCenter, QString::number(m_cache.members_count));  // 右侧对齐
             }
 
             // 绘制群组名称
-            if(need_update) {
+            if (need_update) {
                 int group_name_margin_left  = 0;
                 int group_name_margin_right = 6;
                 int name_x = m_cache.rect_collapse.right() + group_name_margin_left;  // 图标往右挪 3 像素
@@ -346,7 +346,7 @@ public:
 
                 // 动态计算太卡了，不要使用这种方法
                 static bool dynamic_calc_group_name = false;
-                if(dynamic_calc_group_name) {
+                if (dynamic_calc_group_name) {
                     // 使用 QFontMetrics 计算省略后的文本，绘制处理后的文本
                     QFontMetrics metrics_group_name(m_data.group_name);
                     m_cache.elided_group_name = metrics_group_name.elidedText(m_data.group_name, Qt::ElideRight, m_cache.rect_group_name.width());
@@ -358,12 +358,12 @@ public:
                     m_cache.draw_group_name = name_width > 0;  // 是否可进行绘制
                 }
             }
-            if(m_cache.draw_group_name) {
+            if (m_cache.draw_group_name) {
                 painter->drawText(m_cache.rect_group_name, Qt::AlignLeft | Qt::AlignVCenter, m_cache.elided_group_name);
             }
 
             // 保存缓存关键词
-            if(need_update) {
+            if (need_update) {
                 m_cache.updated      = false;
                 m_cache.item_width   = item_width;
                 m_data.members_count = m_cache.members_count;
@@ -388,11 +388,11 @@ protected:
         if (!spacer) { return false; }
         // 是否启用仅支持点击展开按钮  // 不必要求仅点击在展开图标上
         static const bool collapse_button_only = false;
-        if(collapse_button_only) {
+        if (collapse_button_only) {
             // 将鼠标的全局/视口坐标，转换为当前 Item 的本地坐标
             QPoint local_pos = mouseEvent->pos() - option.rect.topLeft();
             // 判断是否点中了图标
-            if(m_cache.rect_collapse.contains(local_pos)) {
+            if (m_cache.rect_collapse.contains(local_pos)) {
                 return false;
             }
         }

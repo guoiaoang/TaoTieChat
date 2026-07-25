@@ -384,11 +384,15 @@ bool ChatWindow::network_status_sync() {
                             download_contact_avatar(std::make_shared<ContactInfo>(request_contact));
                         }
                         else if (sync_contact.subType() == SyncSubTypeContact::SYNC_CONTACT_REPLY) {
-                            auto sync_contact_reply = sync_contact.reply();
-                            auto request_contact = sync_contact_reply.contactReply();  // 被申请者的信息
-                            auto request_time    = sync_contact_reply.time();
-                            auto request_message = sync_contact_reply.message();
-                            qDebug().noquote().nospace() << "Get sync contact reply. form : " << request_contact << ", time : " << request_time << ", message : " << request_message;
+                            // 通过好友申请时无需获取好友申请结果，获取服务器直接推送的好友变更结果即可
+                            if (sync_contact.hasShip() && sync_contact.ship().hasContact()) {
+                                auto contact_info = sync_contact.ship().contact();
+                                qDebug().noquote().nospace() << "Contact updata : " << contact_info;
+                                // 添加到联系人列表中
+                                add_contact(std::make_shared<ContactInfo>(contact_info), ENUMS::ItemGroupType::FRIENDS);
+                                // 获取头像，防止列表中头像显示异常
+                                download_contact_avatar(std::make_shared<ContactInfo>(contact_info));
+                            }
                         }
                     }
                 }

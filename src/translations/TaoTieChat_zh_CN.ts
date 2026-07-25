@@ -213,23 +213,23 @@
         <translation>创建群</translation>
     </message>
     <message>
-        <location filename="../ui/ChatWindow/ChatWindow.cpp" line="660"/>
+        <location filename="../ui/ChatWindow/ChatWindow.cpp" line="664"/>
         <source>Contact request</source>
         <translation>联系人申请</translation>
     </message>
     <message>
-        <location filename="../ui/ChatWindow/ChatWindow.cpp" line="728"/>
-        <location filename="../ui/ChatWindow/ChatWindow.cpp" line="741"/>
+        <location filename="../ui/ChatWindow/ChatWindow.cpp" line="732"/>
+        <location filename="../ui/ChatWindow/ChatWindow.cpp" line="745"/>
         <source>Profile</source>
         <translation>个人资料</translation>
     </message>
     <message>
-        <location filename="../ui/ChatWindow/ChatWindow.cpp" line="435"/>
+        <location filename="../ui/ChatWindow/ChatWindow.cpp" line="439"/>
         <source>Failed to download avatar.</source>
         <translation>头像图片下载失败。</translation>
     </message>
     <message>
-        <location filename="../ui/ChatWindow/ChatWindow.cpp" line="436"/>
+        <location filename="../ui/ChatWindow/ChatWindow.cpp" line="440"/>
         <source>
 
 code : 0x%1

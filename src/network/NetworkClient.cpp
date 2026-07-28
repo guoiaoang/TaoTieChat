@@ -3,9 +3,9 @@
 #include "Database.h"
 
 bool NetworkClient::init() {
-    if(m_inited) { return true; }
+    if (m_inited) { return true; }
 
-    if(!server_url().isValid()) { set_server_url(QUrl("http://127.0.0.1:50051")); }
+    if (!server_url().isValid()) { set_server_url(QUrl("http://127.0.0.1:50051")); }
 
     // TODO:这里可以设置使用 https 加密链接，待客户端界面完善后再完成
     QGrpcChannelOptions grpc_channel_opts;
@@ -84,29 +84,29 @@ bool NetworkClient::signup(const signup_params& params, const signup_callback& c
     QString answer   = params->securityAnswer  ();
     // ====================================================================== //
     // 参数校验
-    do{
+    do {
         Result result(ResultWrapper{.error_code = ErrorCode::ERROR_UNSET}()); // 默认设为错误
         // 参数简单校验
         // ===============                                                    //
-        ;    if(user_id  .isEmpty()) { result = ResultWrapper{.error_code = ErrorCode::USER_ID_EMPTY             }(); }
-        else if(password .isEmpty()) { result = ResultWrapper{.error_code = ErrorCode::PASSWORD_EMPTY            }(); }
-        else if(confirm  .isEmpty()) { result = ResultWrapper{.error_code = ErrorCode::CONFIRM_PASSWORD_EMPTY    }(); }
-        else if(question .isEmpty()) { result = ResultWrapper{.error_code = ErrorCode::SECURITY_QUESTION_EMPTY   }(); }
-        else if(answer   .isEmpty()) { result = ResultWrapper{.error_code = ErrorCode::SECURITY_ANSWER_EMPTY     }(); }
-        else if(password != confirm) { result = ResultWrapper{.error_code = ErrorCode::DIFF_PASSWORD_WITH_CONFIRM}(); }
-        else if(!m_client_account  ) { result = ResultWrapper{.error_code = ErrorCode::ERROR_INIT                }(); }
+        ;    if (user_id  .isEmpty()) { result = ResultWrapper{.error_code = ErrorCode::USER_ID_EMPTY             }(); }
+        else if (password .isEmpty()) { result = ResultWrapper{.error_code = ErrorCode::PASSWORD_EMPTY            }(); }
+        else if (confirm  .isEmpty()) { result = ResultWrapper{.error_code = ErrorCode::CONFIRM_PASSWORD_EMPTY    }(); }
+        else if (question .isEmpty()) { result = ResultWrapper{.error_code = ErrorCode::SECURITY_QUESTION_EMPTY   }(); }
+        else if (answer   .isEmpty()) { result = ResultWrapper{.error_code = ErrorCode::SECURITY_ANSWER_EMPTY     }(); }
+        else if (password != confirm) { result = ResultWrapper{.error_code = ErrorCode::DIFF_PASSWORD_WITH_CONFIRM}(); }
+        else if (!m_client_account  ) { result = ResultWrapper{.error_code = ErrorCode::ERROR_INIT                }(); }
         //                                                    =============== //
         // 失败时也要发送通知
-        if(result.hasErrorCode() && result.errorCode() != ErrorCode::ERROR_UNSET) {
+        if (result.hasErrorCode() && result.errorCode() != ErrorCode::ERROR_UNSET) {
             ReplyOpt reply_opt = Reply();
             reply_opt->setResult(result);
-            if(callback) { callback(params, reply_opt); }
+            if (callback) { callback(params, reply_opt); }
             return false;
         }
         break;
-    } while(false);
+    } while (false);
     // 业务逻辑
-    do{
+    do {
         // ===============                                                    //
         std::unique_ptr<QGrpcCallReply> reply_conn = m_client_account->SignUp(*params, m_grpc_call_options);
         //                                                    =============== //
@@ -122,14 +122,14 @@ bool NetworkClient::signup(const signup_params& params, const signup_callback& c
         connect(rep_conn_ptr, &QGrpcCallReply::finished, rep_conn_ptr,
             [reply_conn = std::move(reply_conn), params, callback](const QGrpcStatus &status) mutable {
                 ReplyOpt reply_opt;
-                if(status.isOk()) { reply_opt = reply_conn->read<Reply>(); }
+                if (status.isOk()) { reply_opt = reply_conn->read<Reply>(); }
                 // 发送参数，返回参数
                 // 1. 返回参数为 nullopt 时代表返回错误，仅提示失败即可？？
                 // 2. 即使失败也要调用会回调，以便通知界面
-                if(callback) { callback(params, reply_opt); }
+                if (callback) { callback(params, reply_opt); }
             }, Qt::SingleShotConnection);
         break;
-    } while(false);
+    } while (false);
     return true;
 }
 
@@ -147,25 +147,25 @@ bool NetworkClient::signin(const signin_params& params, const signin_callback& c
     QString token      = auth.hasToken    () ? auth.token    () : QString();
     // ====================================================================== //
     // 参数校验
-    do{
+    do {
         Result result(ResultWrapper{.error_code = ErrorCode::ERROR_UNSET}()); // 默认设为错误
         // 参数简单校验
         // ===============                                                    //
-        ;    if(account_id.isEmpty() && user_id.isEmpty()) { result = ResultWrapper{.error_code = ErrorCode::AUTH_ID_EMPTY    }(); }
-        else if(password  .isEmpty() && token  .isEmpty()) { result = ResultWrapper{.error_code = ErrorCode::AUTH_METHOD_EMPTY}(); }
-        else if(!m_client_account                        ) { result = ResultWrapper{.error_code = ErrorCode::ERROR_INIT       }(); }
+        ;    if (account_id.isEmpty() && user_id.isEmpty()) { result = ResultWrapper{.error_code = ErrorCode::AUTH_ID_EMPTY    }(); }
+        else if (password  .isEmpty() && token  .isEmpty()) { result = ResultWrapper{.error_code = ErrorCode::AUTH_METHOD_EMPTY}(); }
+        else if (!m_client_account                        ) { result = ResultWrapper{.error_code = ErrorCode::ERROR_INIT       }(); }
         //                                                    =============== //
         // 失败时也要发送通知
-        if(result.hasErrorCode() && result.errorCode() != ErrorCode::ERROR_UNSET) {
+        if (result.hasErrorCode() && result.errorCode() != ErrorCode::ERROR_UNSET) {
             ReplyOpt reply_opt = Reply();
             reply_opt->setResult(result);
-            if(callback) { callback(params, reply_opt); }
+            if (callback) { callback(params, reply_opt); }
             return false;
         }
         break;
-    } while(false);
+    } while (false);
     // 业务逻辑
-    do{
+    do {
         // ===============                                                    //
         std::unique_ptr<QGrpcCallReply> reply_conn = m_client_account->SignIn(*params, m_grpc_call_options);
         //                                                    =============== //
@@ -181,11 +181,11 @@ bool NetworkClient::signin(const signin_params& params, const signin_callback& c
         connect(rep_conn_ptr, &QGrpcCallReply::finished, rep_conn_ptr,
             [reply_conn = std::move(reply_conn), params, callback](const QGrpcStatus &status) mutable {
                 ReplyOpt reply_opt;
-                if(status.isOk()) { reply_opt = reply_conn->read<Reply>(); }
-                if(callback) { callback(params, reply_opt); }
+                if (status.isOk()) { reply_opt = reply_conn->read<Reply>(); }
+                if (callback) { callback(params, reply_opt); }
             }, Qt::SingleShotConnection);
         break;
-    } while(false);
+    } while (false);
     return true;
 }
 
@@ -199,24 +199,24 @@ bool NetworkClient::search_user (const search_user_params&params, const search_u
     QString user_keyword = params->userId();
     // ====================================================================== //
     // 参数校验
-    do{
+    do {
         Result result(ResultWrapper{.error_code = ErrorCode::ERROR_UNSET}()); // 默认设为错误
         // 参数简单校验
         // ===============                                                    //
-        ;    if(user_keyword.isEmpty()) { result = ResultWrapper{.error_code = ErrorCode::TARGET_USER_ID_EMPTY}(); }
-        else if(!m_client_search      ) { result = ResultWrapper{.error_code = ErrorCode::ERROR_INIT          }(); }
+        ;    if (user_keyword.isEmpty()) { result = ResultWrapper{.error_code = ErrorCode::TARGET_USER_ID_EMPTY}(); }
+        else if (!m_client_search      ) { result = ResultWrapper{.error_code = ErrorCode::ERROR_INIT          }(); }
         //                                                    =============== //
         // 失败时也要发送通知
-        if(result.hasErrorCode() && result.errorCode() != ErrorCode::ERROR_UNSET) {
+        if (result.hasErrorCode() && result.errorCode() != ErrorCode::ERROR_UNSET) {
             ReplyOpt reply_opt = Reply();
             reply_opt->setResult(result);
-            if(callback) { callback(params, reply_opt); }
+            if (callback) { callback(params, reply_opt); }
             return false;
         }
         break;
-    } while(false);
+    } while (false);
     // 业务逻辑
-    do{
+    do {
         // ===============                                                    //
         std::unique_ptr<QGrpcCallReply> reply_conn = m_client_search->SearchUser(*params, m_grpc_call_options);
         //                                                    =============== //
@@ -232,14 +232,14 @@ bool NetworkClient::search_user (const search_user_params&params, const search_u
         connect(rep_conn_ptr, &QGrpcCallReply::finished, rep_conn_ptr,
             [reply_conn = std::move(reply_conn), params, callback](const QGrpcStatus &status) mutable {
                 ReplyOpt reply_opt;
-                if(status.isOk()) { reply_opt = reply_conn->read<Reply>(); }
+                if (status.isOk()) { reply_opt = reply_conn->read<Reply>(); }
                 // 发送参数，返回参数
                 // 1. 返回参数为 nullopt 时代表返回错误，仅提示失败即可？？
                 // 2. 即使失败也要调用会回调，以便通知界面
-                if(callback) { callback(params, reply_opt); }
+                if (callback) { callback(params, reply_opt); }
             }, Qt::SingleShotConnection);
         break;
-    } while(false);
+    } while (false);
     return true;
 }
 
@@ -257,24 +257,24 @@ bool NetworkClient::update_profile(const update_profile_params&params, const upd
     QString token      = auth.hasToken    () ? auth.token    () : QString();
     // ====================================================================== //
     // 参数校验
-    do{
+    do {
         Result result(ResultWrapper{.error_code = ErrorCode::ERROR_UNSET}()); // 默认设为错误
         // 参数简单校验
         // ===============                                                    //
-        ;    if(account_id.isEmpty() && user_id.isEmpty()) { result = ResultWrapper{.error_code = ErrorCode::AUTH_ID_EMPTY    }(); }
-        else if(password  .isEmpty() && token  .isEmpty()) { result = ResultWrapper{.error_code = ErrorCode::AUTH_METHOD_EMPTY}(); }
+        ;    if (account_id.isEmpty() && user_id.isEmpty()) { result = ResultWrapper{.error_code = ErrorCode::AUTH_ID_EMPTY    }(); }
+        else if (password  .isEmpty() && token  .isEmpty()) { result = ResultWrapper{.error_code = ErrorCode::AUTH_METHOD_EMPTY}(); }
         //                                                    =============== //
         // 失败时也要发送通知
-        if(result.hasErrorCode() && result.errorCode() != ErrorCode::ERROR_UNSET) {
+        if (result.hasErrorCode() && result.errorCode() != ErrorCode::ERROR_UNSET) {
             ReplyOpt reply_opt = Reply();
             reply_opt->setResult(result);
-            if(callback) { callback(params, reply_opt); }
+            if (callback) { callback(params, reply_opt); }
             return false;
         }
         break;
-    } while(false);
+    } while (false);
     // 业务逻辑
-    do{
+    do {
         // ===============                                                    //
         std::unique_ptr<QGrpcCallReply> reply_conn = m_client_account->UpdateProfile(*params, m_grpc_call_options);
         //                                                    =============== //
@@ -290,14 +290,14 @@ bool NetworkClient::update_profile(const update_profile_params&params, const upd
         connect(rep_conn_ptr, &QGrpcCallReply::finished, rep_conn_ptr,
             [reply_conn = std::move(reply_conn), params, callback](const QGrpcStatus &status) mutable {
                 ReplyOpt reply_opt;
-                if(status.isOk()) { reply_opt = reply_conn->read<Reply>(); }
+                if (status.isOk()) { reply_opt = reply_conn->read<Reply>(); }
                 // 发送参数，返回参数
                 // 1. 返回参数为 nullopt 时代表返回错误，仅提示失败即可？？
                 // 2. 即使失败也要调用会回调，以便通知界面
-                if(callback) { callback(params, reply_opt); }
+                if (callback) { callback(params, reply_opt); }
             }, Qt::SingleShotConnection);
         break;
-    } while(false);
+    } while (false);
     return true;
 }
 
@@ -318,28 +318,28 @@ bool NetworkClient::get_file_id(const get_file_id_params&params, const get_file_
     QString file_md5   = params->fileMetadata().fileMd5 ();
     // ====================================================================== //
     // 参数校验
-    do{
+    do {
         Result result(ResultWrapper{.error_code = ErrorCode::ERROR_UNSET}()); // 默认设为错误
         // 参数简单校验
         // ===============                                                    //
-        ;    if(account_id.isEmpty() && user_id.isEmpty()) { result = ResultWrapper{.error_code = ErrorCode::AUTH_ID_EMPTY    }(); }
-        else if(password  .isEmpty() && token  .isEmpty()) { result = ResultWrapper{.error_code = ErrorCode::AUTH_METHOD_EMPTY}(); }
-        else if(file_name .isEmpty()                     ) { result = ResultWrapper{.error_code = ErrorCode::FILE_NAME_EMPTY  }(); }
-        else if(file_size  <= 0                          ) { result = ResultWrapper{.error_code = ErrorCode::FILE_SIZE_INVALID}(); }
-        else if(file_md5  .isEmpty()                     ) { result = ResultWrapper{.error_code = ErrorCode::FILE_MD5_EMPTY   }(); }
-        else if(!m_client_file                           ) { result = ResultWrapper{.error_code = ErrorCode::ERROR_INIT       }(); }
+        ;    if (account_id.isEmpty() && user_id.isEmpty()) { result = ResultWrapper{.error_code = ErrorCode::AUTH_ID_EMPTY    }(); }
+        else if (password  .isEmpty() && token  .isEmpty()) { result = ResultWrapper{.error_code = ErrorCode::AUTH_METHOD_EMPTY}(); }
+        else if (file_name .isEmpty()                     ) { result = ResultWrapper{.error_code = ErrorCode::FILE_NAME_EMPTY  }(); }
+        else if (file_size  <= 0                          ) { result = ResultWrapper{.error_code = ErrorCode::FILE_SIZE_INVALID}(); }
+        else if (file_md5  .isEmpty()                     ) { result = ResultWrapper{.error_code = ErrorCode::FILE_MD5_EMPTY   }(); }
+        else if (!m_client_file                           ) { result = ResultWrapper{.error_code = ErrorCode::ERROR_INIT       }(); }
         //                                                    =============== //
         // 失败时也要发送通知
-        if(result.hasErrorCode() && result.errorCode() != ErrorCode::ERROR_UNSET) {
+        if (result.hasErrorCode() && result.errorCode() != ErrorCode::ERROR_UNSET) {
             ReplyOpt reply_opt = Reply();
             reply_opt->setResult(result);
-            if(callback) { callback(params, reply_opt); }
+            if (callback) { callback(params, reply_opt); }
             return false;
         }
         break;
-    } while(false);
+    } while (false);
     // 业务逻辑
-    do{
+    do {
         // ===============                                                    //
         std::unique_ptr<QGrpcCallReply> reply_conn = m_client_file->GetFileID(*params, m_grpc_call_options);
         //                                                    =============== //
@@ -355,14 +355,14 @@ bool NetworkClient::get_file_id(const get_file_id_params&params, const get_file_
         connect(rep_conn_ptr, &QGrpcCallReply::finished, rep_conn_ptr,
             [reply_conn = std::move(reply_conn), params, callback](const QGrpcStatus &status) mutable {
                 ReplyOpt reply_opt;
-                if(status.isOk()) { reply_opt = reply_conn->read<Reply>(); }
+                if (status.isOk()) { reply_opt = reply_conn->read<Reply>(); }
                 // 发送参数，返回参数
                 // 1. 返回参数为 nullopt 时代表返回错误，仅提示失败即可？？
                 // 2. 即使失败也要调用会回调，以便通知界面
-                if(callback) { callback(params, reply_opt); }
+                if (callback) { callback(params, reply_opt); }
             }, Qt::SingleShotConnection);
         break;
-    } while(false);
+    } while (false);
     return true;
 }
 
@@ -380,26 +380,26 @@ bool NetworkClient::contact_request(const contact_request_params& params, const 
     QString target_user_id = params->targetUserId();
     // ====================================================================== //
     // 参数校验
-    do{
+    do {
         Result result(ResultWrapper{.error_code = ErrorCode::ERROR_UNSET}()); // 默认设为错误
         // 参数简单校验
         // ===============                                                    //
-        ;    if(account_id.isEmpty() && user_id.isEmpty()) { result = ResultWrapper{.error_code = ErrorCode::AUTH_ID_EMPTY       }(); }
-        else if(password  .isEmpty() && token  .isEmpty()) { result = ResultWrapper{.error_code = ErrorCode::AUTH_METHOD_EMPTY   }(); }
-        else if(target_user_id.isEmpty()                 ) { result = ResultWrapper{.error_code = ErrorCode::TARGET_USER_ID_EMPTY}(); }
-        else if(!m_client_account                        ) { result = ResultWrapper{.error_code = ErrorCode::ERROR_INIT          }(); }
+        ;    if (account_id.isEmpty() && user_id.isEmpty()) { result = ResultWrapper{.error_code = ErrorCode::AUTH_ID_EMPTY       }(); }
+        else if (password  .isEmpty() && token  .isEmpty()) { result = ResultWrapper{.error_code = ErrorCode::AUTH_METHOD_EMPTY   }(); }
+        else if (target_user_id.isEmpty()                 ) { result = ResultWrapper{.error_code = ErrorCode::TARGET_USER_ID_EMPTY}(); }
+        else if (!m_client_account                        ) { result = ResultWrapper{.error_code = ErrorCode::ERROR_INIT          }(); }
         //                                                    =============== //
         // 失败时也要发送通知
-        if(result.hasErrorCode() && result.errorCode() != ErrorCode::ERROR_UNSET) {
+        if (result.hasErrorCode() && result.errorCode() != ErrorCode::ERROR_UNSET) {
             ReplyOpt reply_opt = Reply();
             reply_opt->setResult(result);
-            if(callback) { callback(params, reply_opt); }
+            if (callback) { callback(params, reply_opt); }
             return false;
         }
         break;
-    } while(false);
+    } while (false);
     // 业务逻辑
-    do{
+    do {
         // ===============                                                    //
         std::unique_ptr<QGrpcCallReply> reply_conn = m_client_account->ContactRequest(*params, m_grpc_call_options);
         //                                                    =============== //
@@ -415,11 +415,11 @@ bool NetworkClient::contact_request(const contact_request_params& params, const 
         connect(rep_conn_ptr, &QGrpcCallReply::finished, rep_conn_ptr,
                 [reply_conn = std::move(reply_conn), params, callback](const QGrpcStatus &status) mutable {
                     ReplyOpt reply_opt;
-                    if(status.isOk()) { reply_opt = reply_conn->read<Reply>(); }
-                    if(callback) { callback(params, reply_opt); }
+                    if (status.isOk()) { reply_opt = reply_conn->read<Reply>(); }
+                    if (callback) { callback(params, reply_opt); }
                 }, Qt::SingleShotConnection);
         break;
-    } while(false);
+    } while (false);
     return true;
 }
 
@@ -437,26 +437,26 @@ bool NetworkClient::contact_reply(const contact_reply_params& params, const cont
     QString target_user_id = params->targetUserId();
     // ====================================================================== //
     // 参数校验
-    do{
+    do {
         Result result(ResultWrapper{.error_code = ErrorCode::ERROR_UNSET}()); // 默认设为错误
         // 参数简单校验
         // ===============                                                    //
-        ;    if(account_id.isEmpty() && user_id.isEmpty()) { result = ResultWrapper{.error_code = ErrorCode::AUTH_ID_EMPTY       }(); }
-        else if(password  .isEmpty() && token  .isEmpty()) { result = ResultWrapper{.error_code = ErrorCode::AUTH_METHOD_EMPTY   }(); }
-        else if(target_user_id.isEmpty()                 ) { result = ResultWrapper{.error_code = ErrorCode::TARGET_USER_ID_EMPTY}(); }
-        else if(!m_client_account                        ) { result = ResultWrapper{.error_code = ErrorCode::ERROR_INIT          }(); }
+        ;    if (account_id.isEmpty() && user_id.isEmpty()) { result = ResultWrapper{.error_code = ErrorCode::AUTH_ID_EMPTY       }(); }
+        else if (password  .isEmpty() && token  .isEmpty()) { result = ResultWrapper{.error_code = ErrorCode::AUTH_METHOD_EMPTY   }(); }
+        else if (target_user_id.isEmpty()                 ) { result = ResultWrapper{.error_code = ErrorCode::TARGET_USER_ID_EMPTY}(); }
+        else if (!m_client_account                        ) { result = ResultWrapper{.error_code = ErrorCode::ERROR_INIT          }(); }
         //                                                    =============== //
         // 失败时也要发送通知
-        if(result.hasErrorCode() && result.errorCode() != ErrorCode::ERROR_UNSET) {
+        if (result.hasErrorCode() && result.errorCode() != ErrorCode::ERROR_UNSET) {
             ReplyOpt reply_opt = Reply();
             reply_opt->setResult(result);
-            if(callback) { callback(params, reply_opt); }
+            if (callback) { callback(params, reply_opt); }
             return false;
         }
         break;
-    } while(false);
+    } while (false);
     // 业务逻辑
-    do{
+    do {
         // ===============                                                    //
         std::unique_ptr<QGrpcCallReply> reply_conn = m_client_account->ContactReply(*params, m_grpc_call_options);
         //                                                    =============== //
@@ -472,11 +472,11 @@ bool NetworkClient::contact_reply(const contact_reply_params& params, const cont
         connect(rep_conn_ptr, &QGrpcCallReply::finished, rep_conn_ptr,
                 [reply_conn = std::move(reply_conn), params, callback](const QGrpcStatus &status) mutable {
                     ReplyOpt reply_opt;
-                    if(status.isOk()) { reply_opt = reply_conn->read<Reply>(); }
-                    if(callback) { callback(params, reply_opt); }
+                    if (status.isOk()) { reply_opt = reply_conn->read<Reply>(); }
+                    if (callback) { callback(params, reply_opt); }
                 }, Qt::SingleShotConnection);
         break;
-    } while(false);
+    } while (false);
     return true;
 }
 
@@ -497,25 +497,25 @@ bool NetworkClient::get_last_id(const get_last_id_params& params, const get_last
     QString token      = auth.hasToken    () ? auth.token    () : QString();
     // ====================================================================== //
     // 参数校验
-    do{
+    do {
         Result result(ResultWrapper{.error_code = ErrorCode::ERROR_UNSET}()); // 默认设为错误
         // 参数简单校验
         // ===============                                                    //
-        ;    if(account_id.isEmpty() && user_id.isEmpty()) { result = ResultWrapper{.error_code = ErrorCode::AUTH_ID_EMPTY    }(); }
-        else if(password  .isEmpty() && token  .isEmpty()) { result = ResultWrapper{.error_code = ErrorCode::AUTH_METHOD_EMPTY}(); }
-        else if(!m_client_sync                           ) { result = ResultWrapper{.error_code = ErrorCode::ERROR_INIT       }(); }
+        ;    if (account_id.isEmpty() && user_id.isEmpty()) { result = ResultWrapper{.error_code = ErrorCode::AUTH_ID_EMPTY    }(); }
+        else if (password  .isEmpty() && token  .isEmpty()) { result = ResultWrapper{.error_code = ErrorCode::AUTH_METHOD_EMPTY}(); }
+        else if (!m_client_sync                           ) { result = ResultWrapper{.error_code = ErrorCode::ERROR_INIT       }(); }
         //                                                    =============== //
         // 失败时也要发送通知
-        if(result.hasErrorCode() && result.errorCode() != ErrorCode::ERROR_UNSET) {
+        if (result.hasErrorCode() && result.errorCode() != ErrorCode::ERROR_UNSET) {
             ReplyOpt reply_opt = Reply();
             reply_opt->setResult(result);
-            if(callback) { callback(params, reply_opt); }
+            if (callback) { callback(params, reply_opt); }
             return false;
         }
         break;
-    } while(false);
+    } while (false);
     // 业务逻辑
-    do{
+    do {
         // ===============                                                    //
         std::unique_ptr<QGrpcCallReply> reply_conn = m_client_sync->GetLastID(*params, m_grpc_call_options);
         //                                                    =============== //
@@ -531,11 +531,11 @@ bool NetworkClient::get_last_id(const get_last_id_params& params, const get_last
         connect(rep_conn_ptr, &QGrpcCallReply::finished, rep_conn_ptr,
             [reply_conn = std::move(reply_conn), params, callback](const QGrpcStatus &status) mutable {
                 ReplyOpt reply_opt;
-                if(status.isOk()) { reply_opt = reply_conn->read<Reply>(); }
-                if(callback) { callback(params, reply_opt); }
+                if (status.isOk()) { reply_opt = reply_conn->read<Reply>(); }
+                if (callback) { callback(params, reply_opt); }
             }, Qt::SingleShotConnection);
         break;
-    } while(false);
+    } while (false);
     return true;
 }
 
@@ -552,7 +552,7 @@ bool NetworkClient::sync(const sync_params& params, const sync_callback& callbac
 
     auto&request = params;
     // 先添加认证信息
-    if(!request->hasRequestUserAuth()) { return false; }
+    if (!request->hasRequestUserAuth()) { return false; }
     auto auth = request->requestUserAuth();
     QString account_id = auth.hasAccountId() ? auth.accountId() : QString();
     QString user_id    = auth.hasUserId   () ? auth.userId   () : QString();
@@ -560,29 +560,29 @@ bool NetworkClient::sync(const sync_params& params, const sync_callback& callbac
     QString token      = auth.hasToken    () ? auth.token    () : QString();
     // ====================================================================== //
     // 参数校验
-    do{
+    do {
         Result result(ResultWrapper{.error_code = ErrorCode::ERROR_UNSET}()); // 默认设为错误
         // 参数简单校验
         // ===============                                                    //
-        ;    if(account_id.isEmpty() && user_id.isEmpty()) { result = ResultWrapper{.error_code = ErrorCode::AUTH_ID_EMPTY    }(); }
-        else if(password  .isEmpty() && token  .isEmpty()) { result = ResultWrapper{.error_code = ErrorCode::AUTH_METHOD_EMPTY}(); }
-        else if(!m_client_sync                           ) { result = ResultWrapper{.error_code = ErrorCode::ERROR_INIT       }(); }
+        ;    if (account_id.isEmpty() && user_id.isEmpty()) { result = ResultWrapper{.error_code = ErrorCode::AUTH_ID_EMPTY    }(); }
+        else if (password  .isEmpty() && token  .isEmpty()) { result = ResultWrapper{.error_code = ErrorCode::AUTH_METHOD_EMPTY}(); }
+        else if (!m_client_sync                           ) { result = ResultWrapper{.error_code = ErrorCode::ERROR_INIT       }(); }
         //                                                    =============== //
         // 失败时也要发送通知
-        if(result.hasErrorCode() && result.errorCode() != ErrorCode::ERROR_UNSET) {
+        if (result.hasErrorCode() && result.errorCode() != ErrorCode::ERROR_UNSET) {
             ReplyOpt reply_opt = Reply();
             Header header;
             header.setRequest(*params.get());
             header.setResult(result);
             reply_opt->setHeader(header);
-            if(callback) { callback(params, reply_opt); }
+            if (callback) { callback(params, reply_opt); }
             return false;
         }
         break;
-    } while(false);
+    } while (false);
     // 网络操作
     // 业务逻辑
-    do{
+    do {
         std::unique_ptr<Stream> reply_conn = m_client_sync->Sync(*request.get(), m_grpc_call_options);
         //                                                    =============== //
         const auto *rep_conn_ptr = reply_conn.get();  // 必须
@@ -593,7 +593,7 @@ bool NetworkClient::sync(const sync_params& params, const sync_callback& callbac
             Result result(ResultWrapper{.error_code = ErrorCode::ERROR_CONN}()); // 网络错误
             header.setResult(result);
             reply_opt->setHeader(header);
-            if(callback) { callback(params, reply_opt); }
+            if (callback) { callback(params, reply_opt); }
             return false;
         }
 
@@ -622,7 +622,7 @@ bool NetworkClient::sync(const sync_params& params, const sync_callback& callbac
             raw_stream_ptr->deleteLater(); // 优雅销毁流对象
         });
         break;
-    } while(false);
+    } while (false);
     return true;
 }
 
@@ -641,7 +641,7 @@ bool NetworkClient::get_file_id(const QString&file_path, network_file_io_notify_
         // QString real_md5;
     };
     std::shared_ptr<GetFileIdArgs> get_file_id_args = std::make_shared<GetFileIdArgs>();
-    if(file_path.isEmpty()) {
+    if (file_path.isEmpty()) {
         get_file_id_args->notify = Notify{ .ok = false, .code = int64_t(ErrorCode::FILE_NAME_EMPTY), .message = "file path empty.", .id = "", .path = file_path };
         callback_get_file_id_notiify(get_file_id_args->notify);
         return true;
@@ -650,7 +650,7 @@ bool NetworkClient::get_file_id(const QString&file_path, network_file_io_notify_
     auto file_name = file_info.fileName();
     auto file_size = file_info.size();
     auto file_md5 = Utils::Algorithm::calculate_file_md5(file_path);
-    if(file_name.isEmpty() || file_size < 0 || file_md5.isEmpty()) {
+    if (file_name.isEmpty() || file_size < 0 || file_md5.isEmpty()) {
         get_file_id_args->notify = Notify{
             .ok = false, .code = int64_t(ErrorCode::FILE_READ_ERROR), .message = "file not exists.", .id = "",
             .path = file_path, .size = file_size, .md5 = file_md5
@@ -672,7 +672,7 @@ bool NetworkClient::get_file_id(const QString&file_path, network_file_io_notify_
 
     get_file_id_callback callback_get_file_id = [callback_get_file_id_notiify, get_file_id_args](const get_file_id_params& request, const get_file_id_reply&reply) {
         // 网络超时或其他错误导致没有收到回复
-        if(reply == std::nullopt || !reply->hasResult()) {
+        if (reply == std::nullopt || !reply->hasResult()) {
             get_file_id_args->notify.ok      = false;
             get_file_id_args->notify.code    = int64_t(ErrorCode::ERROR_CONN);
             get_file_id_args->notify.message = "No reply or no result.";
@@ -718,11 +718,11 @@ bool NetworkClient::upload_file(const QString&file_path, network_file_io_notify_
         file_upload_args->notify = notify_get_file_id;  // 复制，便于修改
 
         // 获取文件上传 ID 错误
-        if(!file_upload_args->notify.ok || file_upload_args->notify.id.isEmpty()) {
+        if (!file_upload_args->notify.ok || file_upload_args->notify.id.isEmpty()) {
             callback_upload_file_notify(file_upload_args->notify);
             return;
         }
-        if(file_upload_args->notify.status == FileStatusCode::FILE_STATUS_UPLOADED) {
+        if (file_upload_args->notify.status == FileStatusCode::FILE_STATUS_UPLOADED) {
             file_upload_args->notify.ok      = true;
             file_upload_args->notify.code    = int64_t(SuccessCode::SUCCESS);
             file_upload_args->notify.message = "File already uploaded.";
@@ -731,7 +731,7 @@ bool NetworkClient::upload_file(const QString&file_path, network_file_io_notify_
         }
 
         // 业务逻辑
-        do{
+        do {
             // ===============                                                    //
             Request reuest;
             Header  header;
@@ -754,7 +754,7 @@ bool NetworkClient::upload_file(const QString&file_path, network_file_io_notify_
                 [reply_conn = std::move(reply_conn), file_upload_args, callback_upload_file_notify]() {
                     // 读取失败
                     auto reply = reply_conn->read<FileUploadReply>();
-                    if(!reply) {
+                    if (!reply) {
                         file_upload_args->error_occued   = true;
                         file_upload_args->notify.ok      = false;
                         file_upload_args->notify.code    = int64_t(ErrorCode::ERROR_RECV);
@@ -764,12 +764,12 @@ bool NetworkClient::upload_file(const QString&file_path, network_file_io_notify_
                     }
 
                     // 发生错误时已经通知，后续接收到数据时忽略即可，不必通知
-                    if(file_upload_args->error_occued) {
+                    if (file_upload_args->error_occued) {
                         return;
                     }
 
                     // 获取文件信息错误
-                    if(!reply->hasResult() || !reply->result().hasSuccessCode()) {
+                    if (!reply->hasResult() || !reply->result().hasSuccessCode()) {
                         file_upload_args->error_occued = true;
                         file_upload_args->notify.ok      = false;
                         file_upload_args->notify.code    = int64_t(ErrorCode::FILE_UPLOAD_ERROR);
@@ -780,7 +780,7 @@ bool NetworkClient::upload_file(const QString&file_path, network_file_io_notify_
 
                     // 文件已经上传完成则直接返回成功
                     FileStatusCode file_status = reply->fileStatus();
-                    if(file_status == FileStatusCode::FILE_STATUS_UPLOADED) {
+                    if (file_status == FileStatusCode::FILE_STATUS_UPLOADED) {
                         file_upload_args->notify.ok      = true;
                         file_upload_args->notify.code    = int64_t(SuccessCode::SUCCESS);
                         file_upload_args->notify.message = "File already uploaded.";
@@ -791,7 +791,7 @@ bool NetworkClient::upload_file(const QString&file_path, network_file_io_notify_
                     // 如果不是获取文件信息时返回的文件上传失败消息，
                     // 那么就是文件上传完成后服务器返回的上传结果，
                     // 此时的文件上传失败就是最终结果
-                    else if(file_status != FileStatusCode::FILE_STATUS_UPLOADING && file_upload_args->initialized) {
+                    else if (file_status != FileStatusCode::FILE_STATUS_UPLOADING && file_upload_args->initialized) {
                         file_upload_args->notify.ok      = false;
                         file_upload_args->notify.code    = int64_t(ErrorCode::FILE_UPLOAD_ERROR);
                         file_upload_args->notify.message = "File upload failed.";
@@ -804,7 +804,7 @@ bool NetworkClient::upload_file(const QString&file_path, network_file_io_notify_
                     // 校验已上传大小是否合法
                     file_upload_args->notify.uploaded_bytes = reply->uploadedBytes();  // 已经上传的字节数，支持断点续传时有用
                     file_upload_args->notify.uploaded_bytes = std::max<qint64>(0, file_upload_args->notify.uploaded_bytes);
-                    if(file_upload_args->notify.uploaded_bytes > file_upload_args->notify.size) {
+                    if (file_upload_args->notify.uploaded_bytes > file_upload_args->notify.size) {
                         file_upload_args->error_occued   = true;
                         file_upload_args->notify.ok      = false;
                         file_upload_args->notify.code    = int64_t(ErrorCode::FILE_READ_ERROR);
@@ -817,7 +817,7 @@ bool NetworkClient::upload_file(const QString&file_path, network_file_io_notify_
 
                     file_upload_args->file_upload = std::make_shared<QFile>(file_upload_args->notify.path);
                     // 打开文件
-                    if(!file_upload_args->file_upload->open(QIODevice::ReadOnly)) {
+                    if (!file_upload_args->file_upload->open(QIODevice::ReadOnly)) {
                         file_upload_args->error_occued   = true;
                         file_upload_args->notify.ok      = false;
                         file_upload_args->notify.code    = int64_t(ErrorCode::FILE_READ_ERROR);
@@ -840,10 +840,10 @@ bool NetworkClient::upload_file(const QString&file_path, network_file_io_notify_
 
                     // 发送文件内容
                     const size_t chunk_size = 128 * 1024;  // 128KB
-                    while(!file_upload_args->file_upload->atEnd()) {
+                    while (!file_upload_args->file_upload->atEnd()) {
                         QByteArray chunk_data = file_upload_args->file_upload->read(chunk_size);
                         qint64 bytes_read = chunk_data.size();
-                        if(bytes_read < 0) {
+                        if (bytes_read < 0) {
                             file_upload_args->file_upload->close();
                             file_upload_args->error_occued   = true;
                             file_upload_args->notify.ok      = false;
@@ -852,7 +852,7 @@ bool NetworkClient::upload_file(const QString&file_path, network_file_io_notify_
                             callback_upload_file_notify(file_upload_args->notify);
                             return;
                         }
-                        if(bytes_read == 0) {
+                        if (bytes_read == 0) {
                             break;  // 文件读取完成
                         }
                         Request request;
@@ -869,7 +869,7 @@ bool NetworkClient::upload_file(const QString&file_path, network_file_io_notify_
                 }
             );
             break;
-        } while(false);
+        } while (false);
     };
     get_file_id(file_path, callback_get_file_id_notify_test);
     return true;
@@ -884,7 +884,7 @@ bool NetworkClient::download_file(const QString&file_id, qint64 downloaded_size,
     // 不要同时下载一个文件
     static Utils::SimpleTasks<QString> s_tasks;
     // qDebug().nospace().noquote() << "tasks:" << s_tasks.m_active_tasks;
-    if(!s_tasks.record(file_id)) { return false; }
+    if (!s_tasks.record(file_id)) { return false; }
     //
     using Notify   = NetworkFileIONotify;
     using Callback = network_file_io_notify_callback;
@@ -908,10 +908,10 @@ bool NetworkClient::download_file(const QString&file_id, qint64 downloaded_size,
     file_download_args->notify.path     = Database::instance().get_local_file_id_path(file_id);
     file_download_args->downloaded_size = qMin<qint64>(qMax<qint64>(0, downloaded_size), QFileInfo(file_download_args->notify.path).size());
     // 路径不为空，代表有下载记录，此时可以打开文件
-    if(!file_download_args->notify.path.isEmpty()) {
+    if (!file_download_args->notify.path.isEmpty()) {
         Utils::create_dirs(Utils::get_dir(file_download_args->notify.path));  // 确保目录存在
         file_download_args->file_download = std::make_shared<QFile>(file_download_args->notify.path);
-        if(!file_download_args->file_download->open(QIODevice::ReadWrite)) {
+        if (!file_download_args->file_download->open(QIODevice::ReadWrite)) {
             file_download_args->notify.ok      = false;
             file_download_args->notify.code    = int64_t(ErrorCode::FILE_READ_ERROR);
             file_download_args->notify.message = tr("Failed to open file for md5 calculation: %1").arg(file_download_args->file_download->errorString());
@@ -920,7 +920,7 @@ bool NetworkClient::download_file(const QString&file_id, qint64 downloaded_size,
         }
     }
     // 业务逻辑
-    do{
+    do {
         // ===============                                                    //
         Request request_download_file_param;
         request_download_file_param.setRequestUserAuth(*Accounts::instance().get_auth_request().get());
@@ -939,14 +939,14 @@ bool NetworkClient::download_file(const QString&file_id, qint64 downloaded_size,
         connect(rep_conn_ptr, &Stream::messageReceived, this,
             [reply_conn = std::move(reply_conn), file_download_args, callback_download_file_notify]() {
                 // 发生错误时已经通知，后续接收到数据时忽略即可，不必通知
-                if(file_download_args->error_occued) {
+                if (file_download_args->error_occued) {
                     s_tasks.remove(file_download_args->notify.id);
                     return;
                 }
 
                 // 读取失败
                 auto reply = reply_conn->read<FileDownloadReply>();
-                if(!reply) {
+                if (!reply) {
                     s_tasks.remove(file_download_args->notify.id);
                     file_download_args->error_occued   = true;
                     file_download_args->notify.ok      = false;
@@ -957,8 +957,8 @@ bool NetworkClient::download_file(const QString&file_id, qint64 downloaded_size,
                 }
 
                 // 文件头
-                if(!file_download_args->initialized) {
-                    if(!reply->hasHeader()) {
+                if (!file_download_args->initialized) {
+                    if (!reply->hasHeader()) {
                         s_tasks.remove(file_download_args->notify.id);
                         file_download_args->error_occued   = true;
                         file_download_args->notify.ok      = false;
@@ -969,7 +969,7 @@ bool NetworkClient::download_file(const QString&file_id, qint64 downloaded_size,
                     }
 
                     file_download_args->header = reply->header();  // 导出
-                    if(!file_download_args->header.result().hasSuccessCode()) {
+                    if (!file_download_args->header.result().hasSuccessCode()) {
                         s_tasks.remove(file_download_args->notify.id);
                         file_download_args->error_occued   = true;
                         file_download_args->notify.ok      = false;
@@ -986,7 +986,7 @@ bool NetworkClient::download_file(const QString&file_id, qint64 downloaded_size,
                     file_download_args->notify.md5  = file_download_args->header.fileMetadata().fileMd5();
 
                     // 校验参数是否有效
-                    if(file_download_args->notify.name.isEmpty() || file_download_args->notify.size < 0 || file_download_args->notify.md5.isEmpty()) {
+                    if (file_download_args->notify.name.isEmpty() || file_download_args->notify.size < 0 || file_download_args->notify.md5.isEmpty()) {
                         s_tasks.remove(file_download_args->notify.id);
                         file_download_args->error_occued   = true;
                         file_download_args->notify.ok      = false;
@@ -997,13 +997,13 @@ bool NetworkClient::download_file(const QString&file_id, qint64 downloaded_size,
                     }
 
                     // 存储路径为空且文件未打开时，进行初始化
-                    if( file_download_args->notify.path.isEmpty() && !file_download_args->file_download) {
+                    if ( file_download_args->notify.path.isEmpty() && !file_download_args->file_download) {
                         file_download_args->notify.path = QString("%1/%2.part").arg(Utils::user_cache_path()).arg(file_download_args->notify.name);  //  未下载完成时添加标记
                         // 保存 file_id 和 本地路径的映射关系，以便后续根据 file_id 获取本地文件路径进行删除等操作
                         Database::instance().save_local_file_id_path(file_download_args->notify.id, file_download_args->notify.path); // 未下载完成时也进行存储，下载完成后再重命名及更新记录
                         Utils::create_dirs(Utils::get_dir(file_download_args->notify.path));  // 确保目录存在
                         file_download_args->file_download = std::make_shared<QFile>(file_download_args->notify.path);
-                        if(!file_download_args->file_download || !file_download_args->file_download->open(QIODevice::ReadWrite)) {
+                        if (!file_download_args->file_download || !file_download_args->file_download->open(QIODevice::ReadWrite)) {
                             s_tasks.remove(file_download_args->notify.id);
                             file_download_args->error_occued   = true;
                             file_download_args->notify.ok      = false;
@@ -1019,7 +1019,7 @@ bool NetworkClient::download_file(const QString&file_id, qint64 downloaded_size,
                     // 计算已有文件的 md5  // 只读取到下载起始位置与实际文件大小中的下限位置处即可
                     int64_t unread_bytes = file_offset;
                     file_download_args->calculated_md5.reset();
-                    while(file_download_args->file_download && unread_bytes > 0 && !file_download_args->file_download->atEnd()) {
+                    while (file_download_args->file_download && unread_bytes > 0 && !file_download_args->file_download->atEnd()) {
                         const size_t chunk_size = 128 * 1024;  // 128KB
                         QByteArray chunk_data = file_download_args->file_download->read(chunk_size);
                         file_download_args->calculated_md5.update(chunk_data);
@@ -1036,9 +1036,9 @@ bool NetworkClient::download_file(const QString&file_id, qint64 downloaded_size,
                 }
 
                 // 写入数据
-                if(!reply->hasChunk()) {
+                if (!reply->hasChunk()) {
                     // 服务器最后一次发送消息？？
-                    if(reply->hasHeader()) {
+                    if (reply->hasHeader()) {
                         // 服务器返回的第一个包就是文件信息时，走到这里说明文件信息有问题
                         file_download_args->error_occued   = true;
                         file_download_args->notify.ok      = true;
@@ -1059,9 +1059,9 @@ bool NetworkClient::download_file(const QString&file_id, qint64 downloaded_size,
                 auto chunk_data = reply->chunk().chunkData();
                 qint64 chunk_size = chunk_data.size();
                 // 有数据时进行写入
-                if(!chunk_data.isEmpty()) {
+                if (!chunk_data.isEmpty()) {
                     qint64 bytes_written = file_download_args->file_download->write(chunk_data);
-                    if(bytes_written != chunk_size) {
+                    if (bytes_written != chunk_size) {
                         s_tasks.remove(file_download_args->notify.id);
                         file_download_args->error_occued   = true;
                         file_download_args->notify.ok      = false;
@@ -1109,7 +1109,7 @@ bool NetworkClient::download_file(const QString&file_id, qint64 downloaded_size,
 
                 // 文件校验失败  // 先注释掉通知，下载出错时已经发送过通知了
                 // file_download_params->real_md5 = Utils::Algorithm::calculate_file_md5(file_download_params->notify.path);
-                if(file_download_args->notify.md5 != file_download_args->calculated_md5.get_hex_string()) {
+                if (file_download_args->notify.md5 != file_download_args->calculated_md5.get_hex_string()) {
                     // file_download_args->error_occued   = true;
                     // file_download_args->notify.ok      = false;
                     // file_download_args->notify.code    = int64_t(ErrorCode::FILE_DOWNLOAD_ERROR);
@@ -1134,6 +1134,6 @@ bool NetworkClient::download_file(const QString&file_id, qint64 downloaded_size,
             }
         );
         break;
-    } while(false);
+    } while (false);
     return false;
 }

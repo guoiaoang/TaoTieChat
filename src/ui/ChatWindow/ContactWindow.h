@@ -14,13 +14,14 @@ class ContactWindow : public QWidget {
 public:
     enum class ShowFlag : int {
         unset    = 0,      // no flags
-        View     = 1 << 1, // 0x00000002,  // 查看
-        Edit     = 1 << 2, // 0x00000004,  // 编辑
-        Contact  = 1 << 3, // 0x00000008,  // 联系人
-        Stranger = 1 << 4, // 0x00000010,  // 陌生人/非联系人
-        Self     = 1 << 5, // 0x00000020,  // 自己
-        Search   = 1 << 6, // 0x00000040,  // 搜索页面
-        Request  = 1 << 7, // 0x00000080,  // 好友请求
+        View     = 1 << 1, // 0x00000002,  // 显示模式：查看
+        Edit     = 1 << 2, // 0x00000004,  // 显示模式：编辑
+        Contact  = 1 << 3, // 0x00000008,  // 好友关系：联系人
+        Stranger = 1 << 4, // 0x00000010,  // 好友关系：陌生人/非联系人
+        Self     = 1 << 5, // 0x00000020,  // 好友关系：自己
+        Profile  = 1 << 6, // 0x00000040,  // 来源页面：个人资料
+        Search   = 1 << 7, // 0x00000080,  // 来源页面：搜索结果
+        Request  = 1 << 8, // 0x00000100,  // 来源页面：好友请求
     };
     Q_DECLARE_FLAGS(ShowFlags, ShowFlag)
     // Q_DECLARE_FLAGS(ShowFlags, ShowFlag)
@@ -36,7 +37,7 @@ public:
     void set_cache_contact_info (const std::shared_ptr<ContactInfo>&contact_info );
     void set_cache_avatar_pixmap(const std::shared_ptr<QPixmap    >&avatar_pixmap);
     void show_contact(const std::shared_ptr<ContactInfo>&contact_info, const std::shared_ptr<QPixmap>&avatar_pixmap = nullptr);
-    void set_request_mode(bool request_mode = false);  // 好友申请页面
+    // void set_request_mode(bool request_mode = false);  // 好友申请页面
     void set_show_mode(const ShowFlags show_flags);
     ShowFlags get_show_mode() const { return m_show_flags; }
 
@@ -56,6 +57,8 @@ private:
     void slot_button_video   ();
     void slot_action_edit    ();
     void slot_action_remove  ();
+    // 新添加好友时刷新好友关系状态
+    void slot_contact_status_changed(const std::shared_ptr<ContactInfos>& to_contact_info);
 
     // get_local_avatar_id_pixmap 根据文件 ID 在本地查找文件并加载为头像图片
     std::shared_ptr<QPixmap> get_local_avatar_id_pixmap(const QString&avatar_id);

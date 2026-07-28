@@ -164,7 +164,7 @@
     </message>
     <message>
         <location filename="../ui/ChatWindow/ChatWindow.ui" line="142"/>
-        <location filename="../ui/ChatWindow/ChatWindow.cpp" line="184"/>
+        <location filename="../ui/ChatWindow/ChatWindow.cpp" line="188"/>
         <source>Settings</source>
         <translation>设置</translation>
     </message>
@@ -179,12 +179,12 @@
         <translation></translation>
     </message>
     <message>
-        <location filename="../ui/ChatWindow/ChatWindow.cpp" line="178"/>
+        <location filename="../ui/ChatWindow/ChatWindow.cpp" line="182"/>
         <source>Rember password</source>
         <translation>记住密码</translation>
     </message>
     <message>
-        <location filename="../ui/ChatWindow/ChatWindow.cpp" line="181"/>
+        <location filename="../ui/ChatWindow/ChatWindow.cpp" line="185"/>
         <source>Auto login</source>
         <translation>自动登陆</translation>
     </message>
@@ -193,43 +193,41 @@
         <translation type="vanished">设置</translation>
     </message>
     <message>
-        <location filename="../ui/ChatWindow/ChatWindow.cpp" line="186"/>
+        <location filename="../ui/ChatWindow/ChatWindow.cpp" line="190"/>
         <source>Signout</source>
         <translation>退出登陆</translation>
     </message>
     <message>
-        <location filename="../ui/ChatWindow/ChatWindow.cpp" line="187"/>
+        <location filename="../ui/ChatWindow/ChatWindow.cpp" line="191"/>
         <source>Exit</source>
         <translation>退出程序</translation>
     </message>
     <message>
-        <location filename="../ui/ChatWindow/ChatWindow.cpp" line="197"/>
+        <location filename="../ui/ChatWindow/ChatWindow.cpp" line="201"/>
         <source>Add as a friend or join a group</source>
         <translation>添加好友或群组</translation>
     </message>
     <message>
-        <location filename="../ui/ChatWindow/ChatWindow.cpp" line="198"/>
+        <location filename="../ui/ChatWindow/ChatWindow.cpp" line="202"/>
         <source>Create a group</source>
         <translation>创建群</translation>
     </message>
     <message>
-        <location filename="../ui/ChatWindow/ChatWindow.cpp" line="664"/>
         <source>Contact request</source>
-        <translation>联系人申请</translation>
+        <translation type="vanished">联系人申请</translation>
     </message>
     <message>
-        <location filename="../ui/ChatWindow/ChatWindow.cpp" line="732"/>
-        <location filename="../ui/ChatWindow/ChatWindow.cpp" line="745"/>
+        <location filename="../ui/ChatWindow/ChatWindow.cpp" line="773"/>
         <source>Profile</source>
         <translation>个人资料</translation>
     </message>
     <message>
-        <location filename="../ui/ChatWindow/ChatWindow.cpp" line="439"/>
+        <location filename="../ui/ChatWindow/ChatWindow.cpp" line="464"/>
         <source>Failed to download avatar.</source>
         <translation>头像图片下载失败。</translation>
     </message>
     <message>
-        <location filename="../ui/ChatWindow/ChatWindow.cpp" line="440"/>
+        <location filename="../ui/ChatWindow/ChatWindow.cpp" line="465"/>
         <source>
 
 code : 0x%1
@@ -357,54 +355,69 @@ message : %2</source>
         <translation>视频</translation>
     </message>
     <message>
-        <location filename="../ui/ChatWindow/ContactWindow.cpp" line="44"/>
+        <location filename="../ui/ChatWindow/ContactWindow.cpp" line="46"/>
         <source>edit</source>
         <translation>编辑资料</translation>
     </message>
     <message>
-        <location filename="../ui/ChatWindow/ContactWindow.cpp" line="45"/>
-        <location filename="../ui/ChatWindow/ContactWindow.cpp" line="559"/>
+        <location filename="../ui/ChatWindow/ContactWindow.cpp" line="47"/>
+        <location filename="../ui/ChatWindow/ContactWindow.cpp" line="567"/>
         <source>remove</source>
         <translation>删除</translation>
     </message>
     <message>
-        <location filename="../ui/ChatWindow/ContactWindow.cpp" line="473"/>
+        <location filename="../ui/ChatWindow/ContactWindow.cpp" line="343"/>
+        <source>Contact request</source>
+        <translation>好友申请</translation>
+    </message>
+    <message>
+        <location filename="../ui/ChatWindow/ContactWindow.cpp" line="344"/>
+        <source>Profile</source>
+        <translation>个人资料</translation>
+    </message>
+    <message>
+        <location filename="../ui/ChatWindow/ContactWindow.cpp" line="345"/>
+        <source>Search result</source>
+        <translation>搜索结果</translation>
+    </message>
+    <message>
+        <location filename="../ui/ChatWindow/ContactWindow.cpp" line="481"/>
         <source>Failed to send contact request.</source>
         <translation>好友申请发送失败。</translation>
     </message>
     <message>
-        <location filename="../ui/ChatWindow/ContactWindow.cpp" line="483"/>
+        <location filename="../ui/ChatWindow/ContactWindow.cpp" line="491"/>
         <source>Success</source>
         <translation>成功</translation>
     </message>
     <message>
-        <location filename="../ui/ChatWindow/ContactWindow.cpp" line="483"/>
+        <location filename="../ui/ChatWindow/ContactWindow.cpp" line="491"/>
         <source>Send contact request success.</source>
         <translation>好友申请发送成功。</translation>
     </message>
     <message>
-        <location filename="../ui/ChatWindow/ContactWindow.cpp" line="497"/>
-        <location filename="../ui/ChatWindow/ContactWindow.cpp" line="521"/>
+        <location filename="../ui/ChatWindow/ContactWindow.cpp" line="505"/>
+        <location filename="../ui/ChatWindow/ContactWindow.cpp" line="529"/>
         <source>Failed to send contact reply.</source>
         <translation>好友申请回复失败。</translation>
     </message>
     <message>
-        <location filename="../ui/ChatWindow/ContactWindow.cpp" line="621"/>
+        <location filename="../ui/ChatWindow/ContactWindow.cpp" line="642"/>
         <source>Failed to download avatar.</source>
         <translation>头像图片下载失败。</translation>
     </message>
     <message>
-        <location filename="../ui/ChatWindow/ContactWindow.cpp" line="642"/>
+        <location filename="../ui/ChatWindow/ContactWindow.cpp" line="663"/>
         <source>Image Files (*.png;*.jpg;*.bmp)</source>
         <translation>图片格式 (*.png;*.jpg;*.bmp)</translation>
     </message>
     <message>
-        <location filename="../ui/ChatWindow/ContactWindow.cpp" line="645"/>
+        <location filename="../ui/ChatWindow/ContactWindow.cpp" line="666"/>
         <source>Select Avatar</source>
         <translation>选择头像</translation>
     </message>
     <message>
-        <location filename="../ui/ChatWindow/ContactWindow.cpp" line="675"/>
+        <location filename="../ui/ChatWindow/ContactWindow.cpp" line="696"/>
         <source>Failed to upload avatar.
 
 code : 0x%1
@@ -415,12 +428,12 @@ message : %2</source>
 错误消息 : %2</translation>
     </message>
     <message>
-        <location filename="../ui/ChatWindow/ContactWindow.cpp" line="429"/>
-        <location filename="../ui/ChatWindow/ContactWindow.cpp" line="475"/>
-        <location filename="../ui/ChatWindow/ContactWindow.cpp" line="499"/>
-        <location filename="../ui/ChatWindow/ContactWindow.cpp" line="523"/>
-        <location filename="../ui/ChatWindow/ContactWindow.cpp" line="622"/>
-        <location filename="../ui/ChatWindow/ContactWindow.cpp" line="702"/>
+        <location filename="../ui/ChatWindow/ContactWindow.cpp" line="437"/>
+        <location filename="../ui/ChatWindow/ContactWindow.cpp" line="483"/>
+        <location filename="../ui/ChatWindow/ContactWindow.cpp" line="507"/>
+        <location filename="../ui/ChatWindow/ContactWindow.cpp" line="531"/>
+        <location filename="../ui/ChatWindow/ContactWindow.cpp" line="643"/>
+        <location filename="../ui/ChatWindow/ContactWindow.cpp" line="723"/>
         <source>
 
 code : 0x%1
@@ -439,19 +452,19 @@ message : %2</source>
         <translation type="vanished">所选文件无法解析为图片。</translation>
     </message>
     <message>
-        <location filename="../ui/ChatWindow/ContactWindow.cpp" line="433"/>
-        <location filename="../ui/ChatWindow/ContactWindow.cpp" line="479"/>
-        <location filename="../ui/ChatWindow/ContactWindow.cpp" line="503"/>
-        <location filename="../ui/ChatWindow/ContactWindow.cpp" line="527"/>
-        <location filename="../ui/ChatWindow/ContactWindow.cpp" line="625"/>
-        <location filename="../ui/ChatWindow/ContactWindow.cpp" line="676"/>
-        <location filename="../ui/ChatWindow/ContactWindow.cpp" line="706"/>
+        <location filename="../ui/ChatWindow/ContactWindow.cpp" line="441"/>
+        <location filename="../ui/ChatWindow/ContactWindow.cpp" line="487"/>
+        <location filename="../ui/ChatWindow/ContactWindow.cpp" line="511"/>
+        <location filename="../ui/ChatWindow/ContactWindow.cpp" line="535"/>
+        <location filename="../ui/ChatWindow/ContactWindow.cpp" line="646"/>
+        <location filename="../ui/ChatWindow/ContactWindow.cpp" line="697"/>
+        <location filename="../ui/ChatWindow/ContactWindow.cpp" line="727"/>
         <source>Error</source>
         <translation>错误</translation>
     </message>
     <message>
-        <location filename="../ui/ChatWindow/ContactWindow.cpp" line="427"/>
-        <location filename="../ui/ChatWindow/ContactWindow.cpp" line="700"/>
+        <location filename="../ui/ChatWindow/ContactWindow.cpp" line="435"/>
+        <location filename="../ui/ChatWindow/ContactWindow.cpp" line="721"/>
         <source>Failed to update profile.</source>
         <translation>更新信息失败。</translation>
     </message>
@@ -460,18 +473,18 @@ message : %2</source>
         <translation type="vanished">获取更新信息失败。</translation>
     </message>
     <message>
-        <location filename="../ui/ChatWindow/ContactWindow.cpp" line="556"/>
-        <location filename="../ui/ChatWindow/ContactWindow.cpp" line="557"/>
+        <location filename="../ui/ChatWindow/ContactWindow.cpp" line="564"/>
+        <location filename="../ui/ChatWindow/ContactWindow.cpp" line="565"/>
         <source>Remove Contact</source>
         <translation>删除好友</translation>
     </message>
     <message>
-        <location filename="../ui/ChatWindow/ContactWindow.cpp" line="558"/>
+        <location filename="../ui/ChatWindow/ContactWindow.cpp" line="566"/>
         <source>Are you sure?</source>
         <translation>确定删除？</translation>
     </message>
     <message>
-        <location filename="../ui/ChatWindow/ContactWindow.cpp" line="560"/>
+        <location filename="../ui/ChatWindow/ContactWindow.cpp" line="568"/>
         <source>cancel</source>
         <translation>取消</translation>
     </message>
@@ -737,9 +750,8 @@ message : %2</source>
         <translation>群组</translation>
     </message>
     <message>
-        <location filename="../ui/SearchWindow/SearchWindow.cpp" line="61"/>
         <source>Search result</source>
-        <translation>搜索结果</translation>
+        <translation type="vanished">搜索结果</translation>
     </message>
     <message>
         <location filename="../ui/SearchWindow/SearchWindow.cpp" line="104"/>

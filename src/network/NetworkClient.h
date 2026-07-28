@@ -96,7 +96,8 @@ private:
     std::unique_ptr<SyncClient   > m_client_sync   ;
     // 共享的 gRPC HTTP/2 通道
     std::shared_ptr<QGrpcHttp2Channel> m_channel;  // 相同 channel 代表长连接
-    QGrpcCallOptions m_grpc_call_options = QGrpcCallOptions{}.setDeadlineTimeout(std::chrono::seconds(300));  // 公共的调用选项
+    // 公共的调用选项  // 长连接保活  // 心跳包并不能保活
+    QGrpcCallOptions m_grpc_call_options = QGrpcCallOptions{}.setDeadlineTimeout(std::chrono::years(9999));
     // 用于断开同步线程
     std::unordered_map<QString, QPointer<QGrpcBidiStream>> m_cache_connection_syncs;
 };

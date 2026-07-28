@@ -31,10 +31,10 @@ public:
     std::shared_ptr<AuthOpt     > get_auth_opt       (const QString&account_id) const;
 
 signals:
-    void signal_account_changing(const std::shared_ptr<ContactInfo >& contact_info );
-    void signal_account_changed ();
-    void signal_contact_list_changing(const std::shared_ptr<ContactInfos>& contact_infos);
-    void signal_contact_list_changed ();
+    void signal_account_changing     (const std::shared_ptr<ContactInfo>& from_contact_info, const std::shared_ptr<ContactInfo>& to_contact_info);
+    void signal_account_changed      (const std::shared_ptr<ContactInfo>& to_contact_info);
+    void signal_contact_list_changing(const std::shared_ptr<ContactInfos>& from_contact_info, const std::shared_ptr<ContactInfos>& to_contact_info);
+    void signal_contact_list_changed (const std::shared_ptr<ContactInfos>& to_contact_info);
     // void signal_contact_changed  (const std::shared_ptr<ContactInfo >& contact_info );
 
 private:

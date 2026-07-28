@@ -22,7 +22,7 @@ SearchWindow::SearchWindow(QWidget *parent)
         QString str_search_key = m_ui->searchpage_lineedit_key->text();
         str_search_key = str_search_key.trimmed();
         m_ui->searchpage_toolbutton_search->setEnabled(!str_search_key.isEmpty());
-        // if(str_search_key.isEmpty()) {
+        // if (str_search_key.isEmpty()) {
         //     this->m_users_model->clean();  // 搜索词为空时清空搜索结果
         // }
     });
@@ -47,21 +47,21 @@ SearchWindow::SearchWindow(QWidget *parent)
     // connect(ui->page_list_users->selectionModel(), &QItemSelectionModel::currentChanged, this, &ChatWindow::handle_contact_selection_changed);
     // 响应双击事件
     connect(m_ui->page_list_users, &QListView::doubleClicked, this, [this](const QModelIndex &index) {
-        do{
-            if(!index.isValid()) { break; }
+        do {
+            if (!index.isValid()) { break; }
 
             auto index_data = index.data(ENUMS::role_item_data());
-            if(!index_data.canConvert<std::shared_ptr<ContactInfo>>()) { break; }
+            if (!index_data.canConvert<std::shared_ptr<ContactInfo>>()) { break; }
 
             auto contact_info = index_data.value<std::shared_ptr<ContactInfo>>();
-            if(!contact_info) { break; }
+            if (!contact_info) { break; }
 
             this->m_user_window->show_contact(contact_info);
             this->m_user_window->set_show_mode(this->m_user_window->get_show_mode() | ContactWindow::ShowFlags(ContactWindow::ShowFlag::Search));  // 标明分组
-            this->m_user_window->setWindowTitle(tr("Search result"));
+            // this->m_user_window->setWindowTitle(tr("Search result"));
             Utils::widget_raise(this->m_user_window.get());
             return;
-        } while(false);
+        } while (false);
         qDebug() << "canConvert error.";
     });
 
@@ -79,7 +79,7 @@ SearchWindow::~SearchWindow() {
 bool SearchWindow::do_search(const QString&keyword) {
     // get_search_params(); //  应该封装为函数，当结果返回时对比搜索词一致时才显示
     QString str_search_keyword = keyword.trimmed();
-    if(str_search_keyword.isEmpty()) {
+    if (str_search_keyword.isEmpty()) {
         return false;
     }
 
@@ -91,7 +91,7 @@ bool SearchWindow::do_search(const QString&keyword) {
 
 bool SearchWindow::search_user(const QString&keyword) {
     QString str_search_keyword = keyword.trimmed();
-    if(str_search_keyword.isEmpty()) {
+    if (str_search_keyword.isEmpty()) {
         return false;
     }
 
@@ -105,23 +105,23 @@ bool SearchWindow::search_user(const QString&keyword) {
         Result    result;
 
         // 检验错误
-        do{
-            if(!reply_search_user) {
+        do {
+            if (!reply_search_user) {
                 error_code = ErrorCode::ERROR_RECV;
                 break;
             }
-            if(!reply_search_user->hasResult()) {
+            if (!reply_search_user->hasResult()) {
                 error_code = ErrorCode::ERROR_RECV;
                 break;
             }
             result = reply_search_user->result();
-            if(result.hasErrorCode()) {
+            if (result.hasErrorCode()) {
                 error_code    = result.errorCode();
                 error_message = result.message();
             }
-        } while(false);
+        } while (false);
         // 处理错误
-        if(error_code != ErrorCode::ERROR_UNSET) {
+        if (error_code != ErrorCode::ERROR_UNSET) {
             qDebug().noquote().nospace() << "network search users error, code : " << error_code << ", message : " << error_message;
             // 发生错误时要刷新显示为空列表
             this->m_users_model.reset();
@@ -130,16 +130,16 @@ bool SearchWindow::search_user(const QString&keyword) {
 
         qDebug().noquote().nospace() << "search_user reply : " << reply_search_user;
 
-        if(reply_search_user->hasContactInfo() && reply_search_user->contactInfo().hasBaseInfo() && !reply_search_user->contactInfo().baseInfo().avatarId().isEmpty()) {
+        if (reply_search_user->hasContactInfo() && reply_search_user->contactInfo().hasBaseInfo() && !reply_search_user->contactInfo().baseInfo().avatarId().isEmpty()) {
             auto file_id   = reply_search_user->contactInfo().baseInfo().avatarId();
             auto file_path = Database::instance().get_local_file_id_path(file_id);
             auto file_size = QFileInfo(file_path).size();
             // 没有本地记录但有头像 ID 时则从服务器下载完成后再显示
-            if(file_id.isEmpty() || file_path.isEmpty() || file_size <= 0) {
+            if (file_id.isEmpty() || file_path.isEmpty() || file_size <= 0) {
                 network_file_io_notify_callback callback_download_avatar_notify = [this, reply_search_user](const NetworkFileIONotify&notify) {
                     // qDebug().nospace().noquote() << "notify:" << notify;
                     // 下载时不需要更新界面
-                    if((notify.ok == true && notify.status == FileStatusCode::FILE_STATUS_UPLOADED) || (notify.ok == false)) {
+                    if ((notify.ok == true && notify.status == FileStatusCode::FILE_STATUS_UPLOADED) || (notify.ok == false)) {
                         // this->m_users_model->clean();
                         // this->m_users_model->add_member(std::make_shared<ContactInfo>(reply_search_user->contactInfo()));
 
@@ -161,7 +161,7 @@ bool SearchWindow::search_user(const QString&keyword) {
 
         // 有头像时直接添加显示即可
         // 搜索结果不为空时才添加成员  // 不知道为什么始终不为空
-        if(reply_search_user->hasContactInfo() && reply_search_user->contactInfo().hasBaseInfo() && !reply_search_user->contactInfo().baseInfo().accountId().isEmpty()) {
+        if (reply_search_user->hasContactInfo() && reply_search_user->contactInfo().hasBaseInfo() && !reply_search_user->contactInfo().baseInfo().accountId().isEmpty()) {
             // this->m_users_model->clean();
             // this->m_users_model->add_member(std::make_shared<ContactInfo>(reply_search_user->contactInfo()));
 
@@ -182,7 +182,7 @@ bool SearchWindow::search_user(const QString&keyword) {
 
 bool SearchWindow::search_group(const QString&keyword) {
     QString str_search_keyword = keyword.trimmed();
-    if(str_search_keyword.isEmpty()) {
+    if (str_search_keyword.isEmpty()) {
         return false;
     }
 

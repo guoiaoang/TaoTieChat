@@ -62,11 +62,23 @@ public:
         return (item_find != item_childs.end()) ? std::distance(item_childs.begin(), item_find) : 0;
     }
 
-    // 将传入节点添加为子节点  // 允许重复
+    // 将传入节点添加为子节点  // 允许重复  // 插入到末尾
     TreeItemData* add_child(TreeItemData* child) {
         if (!child) { return nullptr; }
         child->set_item_parent(this);
         this->rw_item_childs().emplace_back(child);
+        // 如果有子节点，那么至少需要显示一列数据，否则树无法显示  // 仅在当前节点为根节点时设置
+        if (!get_item_parent() && get_data_columns().size() <= 0) { set_data_columns(std::vector<std::map<int, QVariant>>(1)); }
+        return child;
+    }
+
+    // 将传入节点添加为子节点  // 允许重复  // 插入到指定位置
+    TreeItemData* insert_child(int pos, TreeItemData* child) {
+        auto&rw = this->rw_item_childs();
+        if (pos < 0 || pos > rw.size()) { return nullptr; }
+        if (!child) { return nullptr; }
+        child->set_item_parent(this);
+        rw.insert(rw.begin() + pos, child);
         // 如果有子节点，那么至少需要显示一列数据，否则树无法显示  // 仅在当前节点为根节点时设置
         if (!get_item_parent() && get_data_columns().size() <= 0) { set_data_columns(std::vector<std::map<int, QVariant>>(1)); }
         return child;
@@ -364,10 +376,63 @@ public:
         // var_item[Qt::StatusTipRole] = text_diaplay;  // 效果不好
         var_item[Qt::WhatsThisRole] = text_diaplay;
         var_item[Qt::DecorationRole] = icon_init(); // 设置默认图标样式，实际不使用
-        auto row_item = static_cast<int>(item_group->get_item_childs().size());
+
+        // 查找视图中的插入位置  // 判断条件是先判断昵称，昵称相同再判断用户 ID
+        auto func_find_pos = [](const std::vector<TreeItemData*>&childs, const std::shared_ptr<ContactInfo>&contact) -> int {
+            // 无效值不插入
+            if (!contact->hasBaseInfo()) { return -1; }
+            auto nn  = contact->baseInfo().nickname();
+            auto uid = contact->baseInfo().userId();
+            if (nn.isEmpty() && uid.isEmpty()) { return -1; }
+
+            // 空值前置  // 插入位置在 ite 前
+            auto ite = childs.begin();
+            for (; ite != childs.end(); ++ite) {
+                // 跳过已有的无效值
+                TreeItemData*tree_item_data = *ite;
+                if (!tree_item_data) { continue; }
+
+                bool finded = false;
+                for (auto&data_column : tree_item_data->get_data_columns()) {
+                    using T = std::shared_ptr<ContactInfo>;
+                    // 不是目标数据
+                    if (!data_column.contains(ENUMS::role_item_data())) { continue; }
+                    // 获取目标数据容器
+                    const QVariant&var_column = data_column.at(ENUMS::role_item_data());
+                    if (!var_column.isValid()) { continue; }
+                    if (!var_column.canConvert<T>()) { continue; }
+                    // 对比目标数据容器内数据
+                    T val = var_column.value<T>();
+                    // if (var_column.value<T>() == group_type) { return true; }
+                    if (!val->hasBaseInfo()) { continue; }
+                    auto&base_info = val->baseInfo();
+                    auto&nickname  = base_info.nickname();
+                    auto&user_id   = base_info.userId();
+                    // 使用 Qt 的 localeAwareCompare 实现支持中文拼音/本地化排序的对比升序排序
+                    int rnn = QString::localeAwareCompare(nn , nickname);
+                    int rid = QString::localeAwareCompare(uid, user_id );
+                    // 昵称一样时才比较账号 ID
+                    if (rnn < 0 || (rnn == 0 && rid < 0)) { finded = true; break; }
+                }
+                if (finded) { break; }
+            }
+            return static_cast<int>(std::distance(childs.begin(), ite));
+        };
+
+        int pos_insert = static_cast<int>(item_group->get_item_childs().size()); // 默认不排序
+        // 判断分组，查找插入位置
+        if (group_type == ENUMS::ItemGroupType::FRIENDS) {
+            pos_insert = func_find_pos(item_group->get_item_childs(), contact);
+            qDebug().noquote().nospace() << "insert pos : " << pos_insert << ", contact nickname : " << contact->baseInfo().nickname();
+        }
+        if (pos_insert < 0) { return nullptr; }
+
+        auto row_item = static_cast<int>(pos_insert);
         const QModelIndex parent_index = index_group(group_type);
         beginInsertRows(parent_index, row_item, row_item);
-        auto item_member = item_group->add_child(new TreeItemData(column_index, var_item));
+        // 需要支持按位置插入
+        // auto item_member = item_group->add_child(new TreeItemData(column_index, var_item));
+        auto item_member = item_group->insert_child(pos_insert, new TreeItemData(column_index, var_item));
         endInsertRows();
         return item_member;
 

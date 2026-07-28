@@ -30,6 +30,8 @@ ContactWindow::ContactWindow(QWidget *parent) : QWidget(parent), m_ui(std::make_
     connect(m_ui->button_video   , &QToolButton::clicked  , this, &ContactWindow::slot_button_video   );
     connect(m_action_edit  .get(), &QAction    ::triggered, this, &ContactWindow::slot_action_edit    );
     connect(m_action_remove.get(), &QAction    ::triggered, this, &ContactWindow::slot_action_remove  );
+    // 新添加好友时刷新好友关系状态
+    connect(&Accounts::instance(), &Accounts::signal_contact_list_changed, this, &ContactWindow::slot_contact_status_changed);
 
     // set
     // 设置动态头像大小，与右侧内容高度一致
@@ -128,14 +130,14 @@ void ContactWindow::show_contact(const std::shared_ptr<ContactInfo>&contact_info
     show_avatar_id(base_info.avatarId());
 }
 
-void ContactWindow::set_request_mode(bool request_mode) {
-    // m_ui->button_add   ->setVisible(!request_mode);
-    m_ui->button_accept->setVisible(request_mode);
-    m_ui->button_ignore->setVisible(request_mode);
-    if (request_mode) {
-        m_ui->button_add   ->setVisible(false);
-    }
-}
+// void ContactWindow::set_request_mode(bool request_mode) {
+//     // m_ui->button_add   ->setVisible(!request_mode);
+//     m_ui->button_accept->setVisible(request_mode);
+//     m_ui->button_ignore->setVisible(request_mode);
+//     if (request_mode) {
+//         m_ui->button_add   ->setVisible(false);
+//     }
+// }
 
 // // 显示编辑模式，edit=true 编辑模式，edit=false 显示模式
 // bool ContactWindow::set_edit_mode(bool edit) {
@@ -255,7 +257,7 @@ void ContactWindow::set_request_mode(bool request_mode) {
 // }
 
 void ContactWindow::set_show_mode(const ShowFlags show_flags) {
-    // if(m_show_flags == show_flags) { return; }
+    // if (m_show_flags == show_flags) { return; }
     m_show_flags = show_flags;
 
     // m_show_flags = ShowFlag::Edit | ShowFlag::Self;
@@ -270,6 +272,7 @@ void ContactWindow::set_show_mode(const ShowFlags show_flags) {
     bool is_contact  = m_show_flags.testFlag(ShowFlag::Contact );
     bool is_stranger = m_show_flags.testFlag(ShowFlag::Stranger);
     bool is_self     = m_show_flags.testFlag(ShowFlag::Self    );
+    bool is_profile  = m_show_flags.testFlag(ShowFlag::Profile );
     bool is_search   = m_show_flags.testFlag(ShowFlag::Search  );
     bool is_request  = m_show_flags.testFlag(ShowFlag::Request );
 
@@ -296,9 +299,9 @@ void ContactWindow::set_show_mode(const ShowFlags show_flags) {
     m_ui->edit_notes       ->setDisabled(!is_contact); m_ui->edit_notes       ->setVisible(is_contact);
     m_ui->edit_description ->setDisabled(!is_contact); m_ui->edit_description ->setVisible(is_contact);
     m_ui->edit_tags        ->setDisabled(!is_contact); m_ui->edit_tags        ->setVisible(is_contact);
-    m_ui->edit_notes       ->setReadOnly(!(is_contact && is_edit)); m_ui->edit_notes      ->setStyleSheet((is_contact && is_edit) ? style_sheet_view : QString());
-    m_ui->edit_description ->setReadOnly(!(is_contact && is_edit)); m_ui->edit_description->setStyleSheet((is_contact && is_edit) ? style_sheet_view : QString());
-    m_ui->edit_tags        ->setReadOnly(!(is_contact && is_edit)); m_ui->edit_tags       ->setStyleSheet((is_contact && is_edit) ? style_sheet_view : QString());
+    m_ui->edit_notes       ->setReadOnly(!(is_contact && is_edit)); m_ui->edit_notes      ->setStyleSheet((is_contact && is_edit) ? QString() : style_sheet_view);
+    m_ui->edit_description ->setReadOnly(!(is_contact && is_edit)); m_ui->edit_description->setStyleSheet((is_contact && is_edit) ? QString() : style_sheet_view);
+    m_ui->edit_tags        ->setReadOnly(!(is_contact && is_edit)); m_ui->edit_tags       ->setStyleSheet((is_contact && is_edit) ? QString() : style_sheet_view);
 
     // 按钮先全部隐藏
     std::vector<QToolButton*> vec_footer_buttons = {
@@ -310,7 +313,7 @@ void ContactWindow::set_show_mode(const ShowFlags show_flags) {
         button->setDisabled(true); button->setVisible(false);
     }
 
-    // TODO:button_add
+    // button_add
     // m_ui->button_add->setDisabled(!(is_stranger && !is_request)); m_ui->button_add->setVisible(is_stranger && !is_request);
     if ((is_stranger || !is_contact) && is_search && !is_edit) {
         m_ui->button_add->setDisabled(false); m_ui->button_add->setVisible(true);
@@ -320,21 +323,26 @@ void ContactWindow::set_show_mode(const ShowFlags show_flags) {
     }
 
     // button_accept/button_ignore
-    m_ui->button_accept->setDisabled(!is_request); m_ui->button_accept->setVisible(is_request);
-    m_ui->button_ignore->setDisabled(!is_request); m_ui->button_ignore->setVisible(is_request);
+    m_ui->button_accept->setDisabled(is_edit || !is_request || is_contact); m_ui->button_accept->setVisible(!is_edit && is_request && !is_contact);
+    m_ui->button_ignore->setDisabled(is_edit || !is_request || is_contact); m_ui->button_ignore->setVisible(!is_edit && is_request && !is_contact);
 
     // button_modify/button_cancel
     m_ui->button_modify->setDisabled(!((is_self || is_contact) && is_edit)); m_ui->button_modify->setVisible((is_self || is_contact) && is_edit);
     m_ui->button_cancel->setDisabled(!((is_self || is_contact) && is_edit)); m_ui->button_cancel->setVisible((is_self || is_contact) && is_edit);
 
     // button_messages/button_voice/button_video
-    m_ui->button_messages->setDisabled(!is_contact); m_ui->button_messages->setVisible(is_contact);
-    m_ui->button_voice   ->setDisabled(!is_contact); m_ui->button_voice   ->setVisible(is_contact);
-    m_ui->button_video   ->setDisabled(!is_contact); m_ui->button_video   ->setVisible(is_contact);
+    m_ui->button_messages->setDisabled(is_edit || !is_contact); m_ui->button_messages->setVisible(!is_edit && is_contact);
+    m_ui->button_voice   ->setDisabled(is_edit || !is_contact); m_ui->button_voice   ->setVisible(!is_edit && is_contact);
+    m_ui->button_video   ->setDisabled(is_edit || !is_contact); m_ui->button_video   ->setVisible(!is_edit && is_contact);
 
     // m_action_edit/m_action_remove
-    m_action_edit  ->setDisabled(!((is_contact || is_self) && !is_edit));
-    m_action_remove->setDisabled(!((is_contact || is_self) && !is_edit));
+    m_action_edit  ->setDisabled(is_edit || is_stranger || (!is_contact && !is_self));
+    m_action_remove->setDisabled(is_edit || is_stranger || !is_contact || (is_self && is_profile));  // 个人名片中删除自己没有意义
+
+    // 设置窗口标题
+    ;    if (is_request) { setWindowTitle(tr("Contact request")); }
+    else if (is_profile) { setWindowTitle(tr("Profile"        )); }
+    else if (is_search ) { setWindowTitle(tr("Search result"  )); }
 }
 
 void ContactWindow::slot_button_manager() {
@@ -563,6 +571,19 @@ void ContactWindow::slot_action_remove() {
     QAbstractButton *button_clicked = message_box.clickedButton();
     if (dynamic_cast<QPushButton*>(button_clicked) == button_remove) {
         emit contact_remove(get_cache_contact_info());
+    }
+}
+
+void ContactWindow::slot_contact_status_changed(const std::shared_ptr<ContactInfos>& to_contact_info) {
+    if (!to_contact_info) { return; }
+    for (auto&contact : to_contact_info->contactInfos()) {
+        if (!contact.hasBaseInfo()) { continue; }
+        if (contact.baseInfo().accountId().isEmpty()) { continue; }
+        auto account_id = contact.baseInfo().accountId();
+        if (account_id != m_cache_contact_info->baseInfo().accountId()) { continue; }
+        // bool is_contact = Accounts::instance().is_contact(m_cache_contact_info);
+        show_contact(m_cache_contact_info);
+        break;
     }
 }
 

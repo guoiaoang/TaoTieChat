@@ -43,6 +43,10 @@ void ChatWindow::release_resources() {
     m_cache_self_info  .reset();
     m_cache_self_avatar.reset();
 
+    // 清除好友关系等
+    // Accounts::instance().set_current_account(std::make_shared<ContactInfo>());  // 登录时会使用该内容，不能在这里清除
+    Accounts::instance().set_contact_list(std::make_shared<ContactInfos>());
+
     // 单客户端单账号：退出登录时释放管道，允许下一次登录
     Utils::OS::try_grab_account_pipe(Accounts::instance().get_current_account()->baseInfo().userId(), false);
 
@@ -247,7 +251,7 @@ void ChatWindow::init() {
     if (0) {
         // m_contact_model->add_member(ENUMS::ItemGroupType::REQUEST, Accounts::instance().get_current_account());
         // m_contact_model->add_member(ENUMS::ItemGroupType::FRIENDS, Accounts::instance().get_current_account());
-        for(int i = 0; i <= 300; ++i) {
+        for (int i = 0; i <= 300; ++i) {
             auto contact = std::make_shared<ContactInfo>();
             auto num = QString("%1").arg(i, 5, 10, '0');
             auto time = QDateTime::currentDateTimeUtc().toString(Qt::ISODate);
@@ -261,7 +265,7 @@ void ChatWindow::init() {
         // if (index_group.isValid() && index_group.model()->hasChildren(index_group)) {
         //     m_ui->page_list_contact->expand(index_group);
         // }
-        for(auto group_type : std::vector<ENUMS::ItemGroupType>({ ENUMS::ItemGroupType::REQUEST, ENUMS::ItemGroupType::FRIENDS })) {
+        for (auto group_type : std::vector<ENUMS::ItemGroupType>({ ENUMS::ItemGroupType::REQUEST, ENUMS::ItemGroupType::FRIENDS })) {
             auto index_group = m_contact_model->index_group(group_type);
             if (index_group.isValid() && index_group.model()->hasChildren(index_group)) {
                 m_ui->page_list_contact->expand(index_group);
@@ -322,7 +326,7 @@ bool ChatWindow::network_status_sync() {
         if (!reply_get_last_id->result().hasSuccessCode()) { return; }
 
         QList<TaoTieChat::SyncTag> sync_tags;  // 需要更新的消息
-        for(auto&tag : reply_get_last_id->tags()) {
+        for (auto&tag : reply_get_last_id->tags()) {
             auto server_last_id = tag.idEnd();
             auto local_last_id = get_local_last_id(tag.type());
             auto type_name = QMetaEnum::fromType<SyncType>().valueToKey(quint64(tag.type()));
@@ -369,7 +373,7 @@ bool ChatWindow::network_status_sync() {
 
                 // 服务端数据异常或无更新时 `hasContacts() == false`
                 if (sync_tag.type() == SyncType::SYNC_CONTACTS && sync_reply_body.hasContacts()) {
-                    for(auto sync_contact : sync_reply_body.contacts().contact()) {
+                    for (auto sync_contact : sync_reply_body.contacts().contact()) {
                         // 更新联系人信息
                         // qDebug().nospace().noquote() << "Sync ContactInfo for AccountId : " << contact_info.baseInfo().accountId();
                         if (sync_contact.subType() == SyncSubTypeContact::SYNC_CONTACT_REUQEST) {
@@ -378,17 +382,38 @@ bool ChatWindow::network_status_sync() {
                             auto request_time    = sync_contact_request.time();
                             auto request_message = sync_contact_request.message();
                             qDebug().noquote().nospace() << "Get sync contact request. form : " << request_contact << ", time : " << request_time << ", message : " << request_message;
+                            // qDebug().noquote().nospace() << "Contacts : " << Accounts::instance().get_contact_list()->contactInfos();
                             // 添加到联系人列表中，但标记为申请好友（放入申请分组）
                             add_contact(std::make_shared<ContactInfo>(request_contact), ENUMS::ItemGroupType::REQUEST);
                             // 获取头像，防止列表中头像显示异常
                             download_contact_avatar(std::make_shared<ContactInfo>(request_contact));
+                            // qDebug().noquote().nospace() << "Contacts : " << Accounts::instance().get_contact_list()->contactInfos();
                         }
                         else if (sync_contact.subType() == SyncSubTypeContact::SYNC_CONTACT_REPLY) {
                             // 通过好友申请时无需获取好友申请结果，获取服务器直接推送的好友变更结果即可
                             if (sync_contact.hasShip() && sync_contact.ship().hasContact()) {
                                 auto contact_info = sync_contact.ship().contact();
                                 qDebug().noquote().nospace() << "Contact updata : " << contact_info;
-                                // 添加到联系人列表中
+
+                                // 更新好友列表  // 使用昵称及用户 ID 排序，不使用账号 ID 排序 // 联系人列表的排序不在这
+                                auto contact_infos = Accounts::instance().get_contact_list()->contactInfos();
+                                contact_infos.append(contact_info);
+                                // TODO:排序函数未验证
+                                auto func_contact_sort = [](const ContactInfo&l, const ContactInfo&r) {
+                                    if (!l.hasBaseInfo() || !r.hasBaseInfo()) { return false; }
+                                    auto lb = l.baseInfo(); auto ln = lb.nickname(); auto lu = lb.userId();
+                                    auto rb = r.baseInfo(); auto rn = rb.nickname(); auto ru = rb.userId();
+                                    if (ln != rn) { return ln < rn; }
+                                    else if (ln == rn && lu != ru) { return lu < ru; }
+                                    return false;
+                                };
+                                std::sort(contact_infos.begin(), contact_infos.end(), func_contact_sort);
+                                auto cis = std::make_shared<ContactInfos>();
+                                cis->setContactInfos(contact_infos);
+                                Accounts::instance().set_contact_list(cis);  // notify. TODO:shared_ptr -> *
+
+                                // 可以放到任务队列中触发的部分操作
+                                // 添加到联系人列表中  // TODO:不兼容上面的排序函数
                                 add_contact(std::make_shared<ContactInfo>(contact_info), ENUMS::ItemGroupType::FRIENDS);
                                 // 获取头像，防止列表中头像显示异常
                                 download_contact_avatar(std::make_shared<ContactInfo>(contact_info));
@@ -399,14 +424,14 @@ bool ChatWindow::network_status_sync() {
                 // 服务端只区分了 SyncType::MESSAGES，文件也是 SyncType::MESSAGES 的一个子类型，需要客户端手动测试
                 else if (sync_tag.type() == SyncType::SYNC_MESSAGES) {
                     // if (sync_reply_body.hasMessages()) {
-                    //     for(auto message : sync_reply_body.messages().messages()) {
+                    //     for (auto message : sync_reply_body.messages().messages()) {
                     //         // 更新消息
                     //         qDebug().nospace().noquote() << "Sync Message(message) for sender_account_id : " << message.senderAccountId();
                     //     }
                     // }
                     // // 服务端只区分了 SyncType::MESSAGES，文件也是 SyncType::MESSAGES 的一个子类型，需要客户端手动测试
                     // else if (sync_reply_body.hasFileEvents()) {
-                    //     for(auto file_event : sync_reply_body.fileEvents().fileEvents()) {
+                    //     for (auto file_event : sync_reply_body.fileEvents().fileEvents()) {
                     //         // 更新文件信息
                     //         qDebug().nospace().noquote() << "Sync Message(file) for file_id : " << file_event.fileId();
                     //     }
@@ -499,7 +524,7 @@ void ChatWindow::handle_contact_selection_changed(const QModelIndex &current, co
     //     if (!contact_info) { return; }
     //     // 查找是否已经添加
     //     ContactWindow *contact_window_update = nullptr;  // 需要更新的窗口
-    //     for(int idx = 0; idx < m_ui->stacked_contact_detail->count(); ++idx) {
+    //     for (int idx = 0; idx < m_ui->stacked_contact_detail->count(); ++idx) {
     //         ContactWindow*contact_window_already = dynamic_cast<ContactWindow*>(m_ui->stacked_contact_detail->widget(idx));
     //         if (!contact_window_already) {
     //             break;
@@ -535,7 +560,7 @@ void ChatWindow::handle_contact_selection_changed(const QModelIndex &current, co
 
 // 支持单击动作
 void ChatWindow::handle_contact_item_clicked(const QModelIndex &index) {
-    do{
+    do {
         if (!index.isValid()) { break; }
 
         auto var_item_type = index.data(ENUMS::role_item_type());
@@ -561,7 +586,7 @@ void ChatWindow::handle_contact_item_clicked(const QModelIndex &index) {
             if (!contact_info) { break; }
             // 获取节点分组
             ENUMS::ItemGroupType parent_group_type = ENUMS::ItemGroupType::UNSET;
-            do{
+            do {
                 auto index_parent = index.parent();
                 if (!index_parent.isValid()) { break; }
 
@@ -577,15 +602,15 @@ void ChatWindow::handle_contact_item_clicked(const QModelIndex &index) {
                 if (!var_parent_data.canConvert<ENUMS::ItemGroupType>()) { break; }
                 parent_group_type = var_parent_data.value<ENUMS::ItemGroupType>();
                 qDebug().noquote().nospace() << "parent group_type : " << Utils::Transform::to_string(parent_group_type);
-            } while(false);
+            } while (false);
 
             // debug info
             qDebug().noquote().nospace() << "clicked ContactInfo : ENUMS::ItemGroupType::" << *contact_info;
             // show contact
-            if(0) {
+            if (0) {
                 // 查找是否已经添加
                 ContactWindow *contact_window_update = nullptr;  // 需要更新的窗口
-                for(int idx = 0; idx < m_ui->stacked_contact_detail->count(); ++idx) {
+                for (int idx = 0; idx < m_ui->stacked_contact_detail->count(); ++idx) {
                     ContactWindow*contact_window_already = dynamic_cast<ContactWindow*>(m_ui->stacked_contact_detail->widget(idx));
                     if (!contact_window_already) {
                         break;
@@ -613,7 +638,7 @@ void ChatWindow::handle_contact_item_clicked(const QModelIndex &index) {
             }
 
             // 中心置顶显示
-            else if(1) {
+            else if (1) {
                 class CenterFrame : public QScrollArea {
                 public:
                     CenterFrame() : m_layout(new QGridLayout), m_container_widget(new QWidget()) {
@@ -623,15 +648,17 @@ void ChatWindow::handle_contact_item_clicked(const QModelIndex &index) {
                         setWidget(m_container_widget);
                     }
                     void set_child_widget(QWidget*child_widget) {
-                        if(!m_child_widget) {
+                        // qDebug().noquote().nospace() << "child_widget size : " << child_widget->size();
+                        if (!m_child_widget) {
                             m_child_widget = child_widget;
                             m_layout->addWidget(m_child_widget, 0, 0, Qt::AlignCenter | Qt::AlignTop);
                         }
                         else {
                             m_layout->replaceWidget(m_child_widget, child_widget);
-                            if(m_child_widget) { delete m_child_widget; m_child_widget = nullptr; }
+                            if (m_child_widget) { delete m_child_widget; m_child_widget = nullptr; }
                             m_child_widget = child_widget;
                         }
+                        // qDebug().noquote().nospace() << "child_widget size : " << child_widget->size();
                     }
                     QWidget*get_child_widget() {
                         return m_child_widget;
@@ -643,32 +670,32 @@ void ChatWindow::handle_contact_item_clicked(const QModelIndex &index) {
                 };
                 // 查找需要更新的窗口
                 CenterFrame *m_center_frame = nullptr;
-                for(int idx = 0; idx < m_ui->stacked_contact_detail->count(); ++idx) {
+                for (int idx = 0; idx < m_ui->stacked_contact_detail->count(); ++idx) {
                     m_center_frame = dynamic_cast<CenterFrame*>(m_ui->stacked_contact_detail->widget(idx));
                     if (m_center_frame) {
                         break;
                     }
                 }
                 // 如果不存在则添加
-                if(!m_center_frame) {
+                if (!m_center_frame) {
                     m_center_frame = new CenterFrame;
                     m_ui->stacked_contact_detail->addWidget(m_center_frame);
                 }
                 ContactWindow *contact_window = dynamic_cast<ContactWindow*>(m_center_frame->get_child_widget());
-                if(!contact_window) {
+                if (!contact_window) {
                     contact_window = new ContactWindow;
                     m_center_frame->set_child_widget(contact_window);
                 }
                 contact_window->show_contact(contact_info);  // 显示指定信息
-                contact_window->set_show_mode(contact_window->get_show_mode() | ContactWindow::ShowFlags(ContactWindow::ShowFlag::Request));  // 标明分组
-                contact_window->setWindowTitle(tr("Contact request"));
-                // 获取当前分组，进行申请页面的特殊设置
-                contact_window->set_request_mode(parent_group_type == ENUMS::ItemGroupType::REQUEST);
+                // 获取好友关系和分组信息
+                auto show_mode = contact_window->get_show_mode();
+                if (parent_group_type == ENUMS::ItemGroupType::REQUEST) { show_mode |= ContactWindow::ShowFlags(ContactWindow::ShowFlag::Request); }  // 是否显示同意添加按钮
+                contact_window->set_show_mode(show_mode);  // 标明分组
                 m_ui->stacked_contact_detail->setCurrentWidget(m_center_frame);
             }
         }
         return;
-    } while(false);
+    } while (false);
     qDebug() << "canConvert error.";
 }
 
@@ -729,7 +756,8 @@ void ChatWindow::slot_button_navigate_avatar() {
     // 设置为弹窗窗口，否则有父窗口时会显示在父窗口内，发生与父窗口内容重叠的情况
     m_contact_window->setWindowFlags(m_contact_window->windowFlags() |  Qt::Dialog);
     m_contact_window->show_contact(Accounts::instance().get_current_account());
-    m_contact_window->setWindowTitle(tr("Profile"));
+    m_contact_window->set_show_mode(m_contact_window->get_show_mode() | ContactWindow::ShowFlags(ContactWindow::ShowFlag::Profile));
+    // m_contact_window->setWindowTitle(tr("Profile"));
     m_contact_window->show();
 
     // 先显示窗口再更新内容，避免网络请求较慢时窗口无响应

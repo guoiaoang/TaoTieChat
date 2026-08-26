@@ -1,4 +1,5 @@
 #include "Accounts.h"
+#include "Database.h"
 
 Accounts& Accounts::instance() {
     static Accounts s_accounts;
@@ -133,3 +134,68 @@ std::shared_ptr<AuthOpt> Accounts::get_auth_opt(const QString&account_id) const 
     return m_map_account_id_auth_opt.at(account_id);
 }
 
+bool Accounts::set_contact(const QString&account_id, const std::shared_ptr<ContactInfo>& contact_info) {
+    // 只存缓存
+    if (contact_info->hasBaseInfo() && contact_info->baseInfo().accountId() == account_id) {
+        m_map_all_contacts[account_id] = contact_info;
+        return true;
+    }
+    return false;
+}
+
+std::shared_ptr<ContactInfo> Accounts::get_contact(const QString&account_id) const {
+    // 自己
+    if (m_current_account->hasBaseInfo() && m_current_account->baseInfo().accountId() == account_id) {
+        return m_current_account;
+    }
+    // 缓存
+    if (m_map_all_contacts.contains(account_id)) {
+        return m_map_all_contacts.at(account_id);
+    }
+    // 好友
+    else if (m_contact_infos) {
+        for(auto& contact : m_contact_infos->contactInfos()) {
+            if (contact.hasBaseInfo() && contact.baseInfo().accountId() == account_id) {
+                return std::make_shared<ContactInfo>(contact);
+            }
+        }
+    }
+    return nullptr;
+}
+
+bool Accounts::set_avatar(const QString&avatar_id, const QPixmap& pixamp) {
+    m_map_avatars[avatar_id] = pixamp;
+    return false;
+}
+
+const QPixmap Accounts::get_avatar(const QString&avatar_id) {
+    if (!m_map_avatars.contains(avatar_id)) {
+        // 获取头像  // 圆角头像
+        auto avatar_file_path = Database::instance().get_local_file_id_path(avatar_id + ";size:128*128");
+        auto pixmap_avatar_source = QPixmap(avatar_file_path);
+        // if(pixmap_avatar_source.isNull()) {
+        //     // 修改图标大小
+        //     int height_item = opt.decorationSize.height();
+        //     int height_icon = (height_item * group_height_scale());
+        //     opt.decorationSize = QSize(height_icon, height_icon);
+
+        //     // 根据颜色和大小生成图标
+        //     QColor color_icon = opt.palette.color(QPalette::Text);  // 指定固定的颜色
+        //     static Utils::FontIcons icon_font = Utils::FontIcons();
+        //     if (icon_font.size.avatar != opt.decorationSize || icon_font.color.normal != color_icon) {
+        //         icon_font.size.avatar = opt.decorationSize;
+        //         icon_font.color.normal = color_icon;
+        //         icon_font.update();
+        //     }
+
+        //     QIcon&ico_show = icon_font.icon.contacts;
+        //     pixmap_avatar_source = QPixmap(ico_show.pixmap(opt.decorationSize, QIcon::Normal));
+        // }
+        auto pixmap_avatar = Utils::to_round_pixmap(pixmap_avatar_source, 128 / 2);
+        m_map_avatars[avatar_id] = pixmap_avatar;
+    }
+    if (m_map_avatars.contains(avatar_id)) {
+        return m_map_avatars.at(avatar_id);
+    }
+    return QPixmap();
+}

@@ -22,9 +22,10 @@ namespace ENUMS {
     enum class ItemDataType : int {
         UNSET,
         NONE ,
-        GROUP  ,  // 分组
-        CONTACT,  // 联系人信息
-        MESSAGE,  // 消息
+        GROUP   ,  // 分组
+        CONTACT ,  // 联系人信息
+        CHATROOM,  // 对话
+        MESSAGE ,  // 消息
     };
     Q_ENUM_NS(ItemDataType)
     static int role_item_type() { return Qt::UserRole + 1; }

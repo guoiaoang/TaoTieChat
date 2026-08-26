@@ -30,6 +30,12 @@ public:
     void set_account_auth_opt(const QString&account_id, const std::shared_ptr<AuthOpt>& auth_opt);
     std::shared_ptr<AuthOpt     > get_auth_opt       (const QString&account_id) const;
 
+    // 获取指定账号的用户信息
+    bool set_contact(const QString&account_id, const std::shared_ptr<ContactInfo>& contact_info);
+    std::shared_ptr<ContactInfo> get_contact(const QString&account_id) const;
+    bool set_avatar(const QString&avatar_id, const QPixmap& pixamp);
+    const QPixmap get_avatar(const QString&avatar_id);
+
 signals:
     void signal_account_changing     (const std::shared_ptr<ContactInfo>& from_contact_info, const std::shared_ptr<ContactInfo>& to_contact_info);
     void signal_account_changed      (const std::shared_ptr<ContactInfo>& to_contact_info);
@@ -41,6 +47,8 @@ private:
     std::shared_ptr<ContactInfo>  m_current_account = std::make_shared<ContactInfo >();
     std::shared_ptr<ContactInfos> m_contact_infos   = std::make_shared<ContactInfos>();
     std::map<QString, std::shared_ptr<AuthOpt>> m_map_account_id_auth_opt;
+    std::map<QString, std::shared_ptr<ContactInfo>> m_map_all_contacts;
+    std::map<QString, QPixmap> m_map_avatars;
 };
 
 // 登陆附加选项  // 记住密码及自动登陆选项

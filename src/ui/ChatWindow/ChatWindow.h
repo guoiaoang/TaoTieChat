@@ -10,6 +10,7 @@ class ItemDelegate;
 class SearchWindow;
 class ContactWindow;
 class ContactInfo;
+class ChatroomModel;
 
 namespace Ui {
 class ChatWindow;
@@ -51,6 +52,9 @@ private:
 
     void show_avatar(const std::shared_ptr<QPixmap>&avatar_pixmap);
 
+    // 切换并显示聊天室
+    // void show_chatroom(const std::shared_ptr<ContactInfo>&contact_info);
+
 public Q_SLOTS:
     // // 聊天室管理
     // 添加到聊天室列表
@@ -61,10 +65,15 @@ public Q_SLOTS:
     // // 联系人管理
     // 添加到联系人列表
     void add_contact(const std::shared_ptr<ContactInfo>&contact_info, const ENUMS::ItemGroupType&group_type = ENUMS::ItemGroupType::NONE);
-    // model/view 模式下的选择
+    // model/view 模式下的选择  // 按键移动导致所选行变化时触发激活动作
     void handle_contact_selection_changed(const QModelIndex &current, const QModelIndex &previous);
     // 单击联系人/群组
     void handle_contact_item_clicked(const QModelIndex &index);
+
+    // model/view 模式下的选择  // 按键移动导致所选行变化时触发激活动作
+    void handle_chatroom_selection_changed(const QModelIndex &current, const QModelIndex &previous);
+    // 单击聊天室
+    void handle_chatroom_item_clicked(const QModelIndex &index);
 
     // 更新联系人信息，可能是头像、昵称、状态等
     void current_accounut_info_changed();
@@ -74,6 +83,11 @@ public Q_SLOTS:
     void slot_button_navigate_avatar ();
     void slot_button_navigate_message();
     void slot_button_navigate_contact();
+
+    // 发消息
+    void slot_message_to(const std::shared_ptr<ContactInfo>&contact_info);
+    void slot_voice_to(const std::shared_ptr<ContactInfo>&contact_info);
+    void slot_video_to(const std::shared_ptr<ContactInfo>&contact_info);
 
 signals:
     void signout();
@@ -99,6 +113,7 @@ private:
     std::shared_ptr<QAction> m_action_add      ;
     std::shared_ptr<QAction> m_action_create   ;
     // model/view/delegate
+    std::shared_ptr<ChatroomModel> m_chatroom_model  ;
     std::shared_ptr<ContactModel > m_contact_model   ;
     std::shared_ptr<ItemDelegate > m_contact_delegate;
     std::shared_ptr<SearchWindow > m_search_window   ;

@@ -8,6 +8,7 @@
 #include "SearchWindow.h"
 #include "ItemModel.h"
 #include "ItemDelegate.h"
+#include "MessageWindow.h"
 
 ChatWindow::ChatWindow(QWidget *parent) : QMainWindow(parent) {}
 
@@ -71,8 +72,9 @@ void ChatWindow::init() {
     m_action_add       = std::make_shared<QAction>();
     m_action_create    = std::make_shared<QAction>();
     // model/view
-    m_contact_model    = std::make_shared<ContactModel>();
-    m_contact_delegate = std::make_shared<ItemDelegate>();
+    m_chatroom_model   = std::make_shared<ChatroomModel>();
+    m_contact_model    = std::make_shared<ContactModel >();
+    m_contact_delegate = std::make_shared<ItemDelegate >();
 
     // 连接消息
     connect(m_ui->navigate_button_avatar   , &QToolButton::clicked, this, &ChatWindow::slot_button_navigate_avatar ); // 点击了头像按钮
@@ -131,8 +133,16 @@ void ChatWindow::init() {
     });
     // 支持单击展开群组
     connect(m_ui->page_list_contact, &QTreeView::clicked, this, &ChatWindow::handle_contact_item_clicked);
-    // 使用 currentChanged 信号支持键盘上下键导航和鼠标点击
-    connect(m_ui->page_list_contact->selectionModel(), &QItemSelectionModel::currentChanged, this, &ChatWindow::handle_contact_selection_changed);
+    // // 使用 currentChanged 信号支持键盘上下键导航和鼠标点击  // 需要先 setModel 才能连接
+    // connect(m_ui->page_list_contact->selectionModel(), &QItemSelectionModel::currentChanged, this, &ChatWindow::handle_contact_selection_changed);
+    // 发送消息
+    connect(m_contact_window.get(), &ContactWindow::sig_contact_message, this, &ChatWindow::slot_message_to);
+    connect(m_contact_window.get(), &ContactWindow::sig_contact_voice  , this, &ChatWindow::slot_voice_to  );
+    connect(m_contact_window.get(), &ContactWindow::sig_contact_video  , this, &ChatWindow::slot_video_to  );
+    // 点击聊天室列表中的项目
+    connect(m_ui->page_list_chat_room, &QTreeView::clicked, this, &ChatWindow::handle_chatroom_item_clicked);
+    // // 使用 currentChanged 信号支持键盘上下键导航和鼠标点击  // 需要先 setModel 才能连接
+    // connect(m_ui->page_list_chat_room->selectionModel(), &QItemSelectionModel::currentChanged, this, &ChatWindow::handle_chatroom_selection_changed);
 
     // 执行操作
     m_ui->chat_splitter->setStretchFactor(0, 0); // 编号 0 的窗口拉伸因子为 0 // 整个窗口调整大小时左侧宽度不调整
@@ -224,9 +234,9 @@ void ChatWindow::init() {
 
     // contact view/model/delegate
     m_ui->page_list_contact->setModel(m_contact_model.get());
-    m_ui->page_list_contact->setIndentation(0); // m_ui->page_list_contact->indentation() / 2);  // 设置分组缩进
-    m_ui->page_list_contact->setHeaderHidden(true); // 隐藏表头，看起来更像 QQ 列表
     m_ui->page_list_contact->setItemDelegate(m_contact_delegate.get());
+    m_ui->page_list_contact->setHeaderHidden(true); // 隐藏表头，看起来更像 QQ 列表
+    m_ui->page_list_contact->setIndentation(0); // m_ui->page_list_contact->indentation() / 2);  // 设置分组缩进  // 必须
     m_ui->page_list_contact->setAnimated(false);  // 禁用展开/折叠动画，加速加载
     m_ui->page_list_contact->setExpandsOnDoubleClick(false);  // 改成单击展开
     // m_ui->page_list_contact->setUniformRowHeights(true);  // 统一行高，避免逐行计算高度
@@ -235,6 +245,23 @@ void ChatWindow::init() {
     m_ui->page_list_contact      ->setMinimumWidth(200);  // 有效  // 建议
     // m_ui->stacked_contact_list->setMinimumWidth(300);  // 有效
     // m_ui->widget_contact_list ->setMinimumWidth(400);  // 有效
+    // // 使用 currentChanged 信号支持键盘上下键导航和鼠标点击  // 需要先 setModel 才能连接
+    connect(m_ui->page_list_contact->selectionModel(), &QItemSelectionModel::currentChanged, this, &ChatWindow::handle_contact_selection_changed);
+
+    // chatroom
+    m_ui->page_list_chat_room->setModel(m_chatroom_model.get());
+    m_ui->page_list_chat_room->setItemDelegate(m_contact_delegate.get());
+    m_ui->page_list_chat_room->setHeaderHidden(true); // 隐藏表头，看起来更像 QQ 列表
+    m_ui->page_list_chat_room->setIndentation(0); // m_ui->page_list_contact->indentation() / 2);  // 设置分组缩进  // 必须
+    m_ui->page_list_chat_room->setAnimated(false);  // 禁用展开/折叠动画，加速加载
+    m_ui->page_list_chat_room->setUniformRowHeights(true);  // 统一行高，避免逐行计算高度
+    // m_ui->page_list_chat_room->setExpandsOnDoubleClick(false);  // 改成单击展开
+    // m_ui->page_list_chat_room->expandAll();  // 添加数据后才能展开
+    // 设置消息显示列表最小折叠宽度，防止消息显示不全、错位
+    // m_ui->page_list_detail->setMinimumWidth(200);
+    m_ui->page_list_detail->setMinimumWidth(400);
+    // 使用 currentChanged 信号支持键盘上下键导航和鼠标点击  // 需要先 setModel 才能连接
+    connect(m_ui->page_list_chat_room->selectionModel(), &QItemSelectionModel::currentChanged, this, &ChatWindow::handle_chatroom_selection_changed);
 
     // 添加好友分组
     m_contact_model->add_group(ENUMS::ItemGroupType::REQUEST);
@@ -298,6 +325,9 @@ void ChatWindow::init() {
 
     // 消息同步
     network_status_sync();
+
+    // TODO:未添加的功能
+    m_ui->button_add->setVisible(false);
 }
 
 bool ChatWindow::updata_current_account_info() {
@@ -510,9 +540,11 @@ void ChatWindow::add_contact(const std::shared_ptr<ContactInfo>&contact_info, co
     m_contact_model->add_member(group_type, contact_info);
 }
 
+// 按键移动导致所选行变化时触发激活动作
 void ChatWindow::handle_contact_selection_changed(const QModelIndex &current, const QModelIndex &previous) {
-    // 索引值需要有效
-    if (!current.isValid()) { return; }
+    handle_contact_item_clicked(current);
+    // // 索引值需要有效
+    // if (!current.isValid()) { return; }
     // // 能够获取到有效的联系人信息
     // auto item_provider = m_contact_model->get(current.row());
     // if (item_provider->type() == "contact") {
@@ -685,6 +717,10 @@ void ChatWindow::handle_contact_item_clicked(const QModelIndex &index) {
                 if (!contact_window) {
                     contact_window = new ContactWindow;
                     m_center_frame->set_child_widget(contact_window);
+                    // 发送消息
+                    connect(contact_window, &ContactWindow::sig_contact_message, this, &ChatWindow::slot_message_to);
+                    connect(contact_window, &ContactWindow::sig_contact_voice  , this, &ChatWindow::slot_voice_to  );
+                    connect(contact_window, &ContactWindow::sig_contact_video  , this, &ChatWindow::slot_video_to  );
                 }
                 contact_window->show_contact(contact_info);  // 显示指定信息
                 // 获取好友关系和分组信息
@@ -697,6 +733,62 @@ void ChatWindow::handle_contact_item_clicked(const QModelIndex &index) {
         return;
     } while (false);
     qDebug() << "canConvert error.";
+}
+
+// 按键移动导致所选行变化时触发激活动作
+void ChatWindow::handle_chatroom_selection_changed(const QModelIndex &current, const QModelIndex &previous) {
+    handle_chatroom_item_clicked(current);
+}
+
+// 单击聊天室
+void ChatWindow::handle_chatroom_item_clicked(const QModelIndex &index) {
+    do {
+        if (!index.isValid()) { break; }
+
+        auto var_item_type = index.data(ENUMS::role_item_type());
+        if (!var_item_type.isValid()) { break; }
+        if (!var_item_type.canConvert<ENUMS::ItemDataType>()) { break; }
+
+        auto item_type = var_item_type.value<ENUMS::ItemDataType>();
+        auto var_item_data = index.data(ENUMS::role_item_data());
+        // if (item_type != ENUMS::ItemDataType::CHATROOM) { break; }
+        if (item_type != ENUMS::ItemDataType::CONTACT) { break; }
+
+        // 获取对话信息
+        if (!var_item_data.canConvert<std::shared_ptr<ContactInfo>>()) { break; }
+        auto contact_show = var_item_data.value<std::shared_ptr<ContactInfo>>();
+        if (!contact_show) { break; }
+        if (!contact_show->hasBaseInfo()) { break; }
+        auto account_id_show = contact_show->baseInfo().accountId();
+
+        // 先查找或添加对话
+        // slot_button_navigate_message();
+        int row = m_chatroom_model->add_contact_chatroom_row(contact_show);
+
+        // 查找窗口提取数据
+        MessageWindow* target_message_window = nullptr;
+        for (int idx = 0; idx < m_ui->stacked_contact_detail->count(); ++idx) {
+            // 获取窗口
+            MessageWindow* message_window = dynamic_cast<MessageWindow*>(m_ui->stacked_contact_detail->widget(idx));
+            if (!message_window) { continue; }
+            // 获取信息
+            auto contact_widget = message_window->get_contact();
+            if (!contact_widget) { continue; }
+            if (!contact_widget->hasBaseInfo()) { continue; }
+            auto account_id_widget = contact_widget->baseInfo().accountId();
+            // 比较存储
+            if (account_id_show != account_id_widget) { continue; }
+            target_message_window = message_window;
+            break;
+        }
+        // 找不到窗口时进行添加
+        if (!target_message_window) {
+            target_message_window = new MessageWindow;
+            target_message_window->set_contact(contact_show);
+            m_ui->stacked_contact_detail->addWidget(target_message_window);
+        }
+        m_ui->stacked_contact_detail->setCurrentWidget(target_message_window);
+    } while (false);
 }
 
 // 账号当前用户信息被修改时触发
@@ -756,8 +848,13 @@ void ChatWindow::slot_button_navigate_avatar() {
     // 设置为弹窗窗口，否则有父窗口时会显示在父窗口内，发生与父窗口内容重叠的情况
     m_contact_window->setWindowFlags(m_contact_window->windowFlags() |  Qt::Dialog);
     m_contact_window->show_contact(Accounts::instance().get_current_account());
-    m_contact_window->set_show_mode(m_contact_window->get_show_mode() | ContactWindow::ShowFlags(ContactWindow::ShowFlag::Profile));
-    // m_contact_window->setWindowTitle(tr("Profile"));
+    // 只有点击主界面的头像时才允许修改自己的资料
+    using ShowFlags = ContactWindow::ShowFlags;
+    using ShowFlag  = ContactWindow::ShowFlag ;
+    auto show_mode = m_contact_window->get_show_mode();
+    show_mode |= ShowFlags(ShowFlag::Profile );
+    show_mode |= ShowFlags(ShowFlag::Self    );
+    m_contact_window->set_show_mode(show_mode);
     m_contact_window->show();
 
     // 先显示窗口再更新内容，避免网络请求较慢时窗口无响应
@@ -770,7 +867,7 @@ void ChatWindow::slot_button_navigate_avatar() {
     NetworkClient::instance().search_user(params_search_user, [this](const search_user_params&params_search_user, const search_user_reply&reply_search_user) {
         if (!reply_search_user || !reply_search_user->result().hasSuccessCode()) { return; }
         m_contact_window->show_contact(std::make_shared<ContactInfo>(reply_search_user->contactInfo()));
-        m_contact_window->setWindowTitle(tr("Profile"));
+        // m_contact_window->setWindowTitle(tr("Profile"));
     });
 }
 
@@ -784,6 +881,48 @@ void ChatWindow::slot_button_navigate_contact() {
     m_ui->stacked_contact_list     ->setCurrentWidget(m_ui->stacked_page_contact);
     m_ui->navigate_button_chat_room->setEnabled(true );
     m_ui->navigate_button_contact  ->setEnabled(false);
+}
+
+void ChatWindow::slot_message_to(const std::shared_ptr<ContactInfo>&contact_show) {
+    // 先查找或添加对话
+    slot_button_navigate_message();
+    int row = m_chatroom_model->add_contact_chatroom_row(contact_show);
+    // 显示对话
+    if (!contact_show) { return; }
+    if (!contact_show->hasBaseInfo()) { return; }
+    auto account_id_show = contact_show->baseInfo().accountId();
+
+    // 查找窗口提取数据
+    MessageWindow* target_message_window = nullptr;
+    for (int index = 0; index < m_ui->stacked_contact_detail->count(); ++index) {
+        // 获取窗口
+        MessageWindow* message_window = dynamic_cast<MessageWindow*>(m_ui->stacked_contact_detail->widget(index));
+        if (!message_window) { continue; }
+        // 获取信息
+        auto contact_widget = message_window->get_contact();
+        if (!contact_widget) { continue; }
+        if (!contact_widget->hasBaseInfo()) { continue; }
+        auto account_id_widget = contact_widget->baseInfo().accountId();
+        // 比较存储
+        if (account_id_show != account_id_widget) { continue; }
+        target_message_window = message_window;
+        break;
+    }
+    // 找不到窗口时进行添加
+    if (!target_message_window) {
+        target_message_window = new MessageWindow;
+        target_message_window->set_contact(contact_show);
+        m_ui->stacked_contact_detail->addWidget(target_message_window);
+    }
+    m_ui->stacked_contact_detail->setCurrentWidget(target_message_window);
+}
+
+void ChatWindow::slot_voice_to(const std::shared_ptr<ContactInfo>&contact_info) {
+    // 先查找或添加对话
+}
+
+void ChatWindow::slot_video_to(const std::shared_ptr<ContactInfo>&contact_info) {
+    // 先查找或添加对话
 }
 
 void ChatWindow::set_cache_contact_info(const std::shared_ptr<ContactInfo>&contact_info) {

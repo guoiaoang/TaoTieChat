@@ -43,7 +43,7 @@ QVariant TreeModel::data(const QModelIndex &index, int role) const {
     if(!var.contains(role)) { return QVariant{}; }
     return var.at(role);
 }
-// 
+//
 // // 添加数据
 // void ItemModel::add(const std::shared_ptr<ItemDelegate>&item) {
 //     int row = rowCount();
@@ -51,7 +51,7 @@ QVariant TreeModel::data(const QModelIndex &index, int role) const {
 //     get().emplace_back(item);  // TODO:这里应该进行数据拷贝，防止外部更改影响到内部
 //     endInsertRows();
 // }
-// 
+//
 // // 移除数据
 // void ItemModel::remove(const std::shared_ptr<ItemDelegate>&item) {
 //     auto row = get(item);
@@ -62,37 +62,37 @@ QVariant TreeModel::data(const QModelIndex &index, int role) const {
 //     items.erase(it);
 //     endRemoveRows();
 // }
-// 
+//
 // // 清空或替换
 // void ItemModel::reset(const std::vector<std::shared_ptr<ItemDelegate>>&items) {
 //     beginResetModel();
 //     get() = items;
 //     endResetModel();
 // }
-// 
+//
 // // 获取数据组
 // const std::vector<std::shared_ptr<ItemDelegate>>& ItemModel::get() const {
 //     return m_items;
 // }
-// 
+//
 // // 获取数据组
 // std::vector<std::shared_ptr<ItemDelegate>>& ItemModel::get() {
 //     return m_items;
 // }
-// 
+//
 // //获取位置所在数据
 // std::shared_ptr<ItemDelegate> ItemModel::get(int pos) const {
 //     if (pos < 0 || pos >= rowCount()) { return nullptr; }
 //     return get().at(pos);
 // }
-// 
+//
 // // 替换指定位置的元素
 // bool ItemModel::replace(int pos, std::shared_ptr<ItemDelegate>&provider) {
 //     if (pos < 0 || pos >= rowCount()) { return false; }
 //     get()[pos] = provider;
 //     return true;
 // }
-// 
+//
 // // 获取数据所在位置
 // int ItemModel::get(const std::shared_ptr<ItemDelegate>&item_providers) const {
 //     int pos = -1;

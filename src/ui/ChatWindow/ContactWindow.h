@@ -14,14 +14,15 @@ class ContactWindow : public QWidget {
 public:
     enum class ShowFlag : int {
         unset    = 0,      // no flags
-        View     = 1 << 1, // 0x00000002,  // 显示模式：查看
-        Edit     = 1 << 2, // 0x00000004,  // 显示模式：编辑
-        Contact  = 1 << 3, // 0x00000008,  // 好友关系：联系人
-        Stranger = 1 << 4, // 0x00000010,  // 好友关系：陌生人/非联系人
-        Self     = 1 << 5, // 0x00000020,  // 好友关系：自己
-        Profile  = 1 << 6, // 0x00000040,  // 来源页面：个人资料
-        Search   = 1 << 7, // 0x00000080,  // 来源页面：搜索结果
-        Request  = 1 << 8, // 0x00000100,  // 来源页面：好友请求
+        View     = 1 << 0, // 0x00000001,  // 显示模式：查看
+        Edit     = 1 << 1, // 0x00000002,  // 显示模式：编辑
+        ViewOnly = 1 << 2, // 0x00000004,  // 显示模式：只允许查看
+        Contact  = 1 << 3, // 0x00000004,  // 好友关系：联系人
+        Stranger = 1 << 4, // 0x00000008,  // 好友关系：陌生人/非联系人
+        Self     = 1 << 5, // 0x00000010,  // 好友关系：自己
+        Profile  = 1 << 6, // 0x00000020,  // 来源页面：个人资料
+        Search   = 1 << 7, // 0x00000040,  // 来源页面：搜索结果
+        Request  = 1 << 8, // 0x00000080,  // 来源页面：好友请求
     };
     Q_DECLARE_FLAGS(ShowFlags, ShowFlag)
     // Q_DECLARE_FLAGS(ShowFlags, ShowFlag)
@@ -76,11 +77,11 @@ private:
     void update_profile_avatar(const QString&avatar_path);
 
 Q_SIGNALS:
-    void contact_add    (const std::shared_ptr<ContactInfo>&contact_info);
-    void contact_remove (const std::shared_ptr<ContactInfo>&contact_info);
-    void contact_message(const std::shared_ptr<ContactInfo>&contact_info);
-    void contact_voice  (const std::shared_ptr<ContactInfo>&contact_info);
-    void contact_video  (const std::shared_ptr<ContactInfo>&contact_info);
+    void sig_contact_add    (const std::shared_ptr<ContactInfo>&contact_info);
+    void sig_contact_remove (const std::shared_ptr<ContactInfo>&contact_info);
+    void sig_contact_message(const std::shared_ptr<ContactInfo>&contact_info);
+    void sig_contact_voice  (const std::shared_ptr<ContactInfo>&contact_info);
+    void sig_contact_video  (const std::shared_ptr<ContactInfo>&contact_info);
 
 private:
     std::shared_ptr<Ui::ContactWindow> m_ui                 ;

@@ -174,6 +174,8 @@ if(ENABLE_CLIENT)
         ${PROJECT_DIR_SOURCE}/ui/MVC/ItemModel.cpp
         ${PROJECT_DIR_SOURCE}/ui/MVC/ItemDelegate.h
         ${PROJECT_DIR_SOURCE}/ui/MVC/ItemDelegate.cpp
+        ${PROJECT_DIR_SOURCE}/ui/MVC/MessageDelegate.h
+        ${PROJECT_DIR_SOURCE}/ui/MVC/MessageDelegate.cpp
         # 联系人信息页面，与 ItemModel/ItemDelegate 无关
         ${PROJECT_DIR_SOURCE}/ui/ChatWindow/ContactWindow.h
         ${PROJECT_DIR_SOURCE}/ui/ChatWindow/ContactWindow.cpp

@@ -10,9 +10,9 @@ void ItemDelegate::register_delegates() const {
     if (!m_map_delegates.contains(ENUMS::ItemDataType::CONTACT)) {
         m_map_delegates[ENUMS::ItemDataType::CONTACT] = std::make_shared<ItemDelegateContact>();
     }
-    // if (!m_map_delegates.contains(ENUMS::ItemDataType::CHATROOM)) {
-    //     m_map_delegates[ENUMS::ItemDataType::CHATROOM] = std::make_shared<ItemDelegateChatroom>();
-    // }
+    if (!m_map_delegates.contains(ENUMS::ItemDataType::CHATROOM)) {
+        m_map_delegates[ENUMS::ItemDataType::CHATROOM] = std::make_shared<ItemDelegateChatroom>();
+    }
     // if (!m_map_delegates.contains(ENUMS::ItemDataType::MESSAGE)) {
     //     m_map_delegates[ENUMS::ItemDataType::MESSAGE] = std::make_shared<ItemDelegateMessage>();
     // }

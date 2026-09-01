@@ -11,6 +11,7 @@ class SearchWindow;
 class ContactWindow;
 class ContactInfo;
 class ChatroomModel;
+class MessageWindow;
 
 namespace Ui {
 class ChatWindow;
@@ -54,6 +55,11 @@ private:
 
     // 切换并显示聊天室
     // void show_chatroom(const std::shared_ptr<ContactInfo>&contact_info);
+
+    // 获取聊天记录窗口
+    MessageWindow* get_message_window(const QString&account_id);
+    // 更新列表中显示的最后一条消息
+    void update_last_message(const QString&chatroom_id, const std::shared_ptr<MessageContext>&last_message);
 
 public Q_SLOTS:
     // // 聊天室管理

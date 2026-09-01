@@ -69,6 +69,13 @@ public:
 };
 #endif // _DEBUG
 
+// 聊天列表所需的数据
+struct ChatroomData {
+    std::shared_ptr<ContactInfo> contact;
+    QString   text    ;  // last_message_text
+    QDateTime datetime;  // last_message_datetime
+};
+
 // auto callback = std::function<void(int error_code, const QString&error_message, ...)>;
 // using ResultInfo             = std::shared_ptr<SignUpReply>;
 // user register

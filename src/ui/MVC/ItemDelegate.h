@@ -11,6 +11,7 @@ class ItemDelegateBase : public QStyledItemDelegate {
 public:
     using QStyledItemDelegate::QStyledItemDelegate;
     ~ItemDelegateBase() = default;
+    virtual const ENUMS::ItemDataType item_type() const = 0;
     virtual bool editorEvent(QEvent *event, QAbstractItemModel *model, const QStyleOptionViewItem &option, const QModelIndex &index) override {
         return QStyledItemDelegate::editorEvent(event, model, option, index);
     };
@@ -52,6 +53,7 @@ Q_DECLARE_METATYPE(std::shared_ptr<ItemDelegate>)  // 确保向 QVariant 提供�
 class ItemDelegateContact : public ItemDelegateBase{
 public:
     using ItemDelegateBase::ItemDelegateBase;
+    const ENUMS::ItemDataType item_type() const override { return ENUMS::ItemDataType::CONTACT; };
     void paint(QPainter *painter, const QStyleOptionViewItem &option, const QModelIndex &index) const override {
         // return false;
 
@@ -170,7 +172,7 @@ public:
             if (!variant.isValid() || !variant.canConvert<ENUMS::ItemDataType>()) { break; }
 
             auto type = variant.value<ENUMS::ItemDataType>();
-            if (type != ENUMS::ItemDataType::CONTACT) { break; }
+            if (type != item_type()) { break; }
             if (!m_demo_contact_delegate_item) {
                 m_demo_contact_delegate_item = std::make_shared<DemoContactDelegateItem>();
             }
@@ -191,6 +193,7 @@ Q_DECLARE_METATYPE(std::shared_ptr<ItemDelegateContact>)  // 确保向 QVariant 
 class ItemDelegateGroup : public ItemDelegateBase{
 public:
     using ItemDelegateBase::ItemDelegateBase;
+    const ENUMS::ItemDataType item_type() const override { return ENUMS::ItemDataType::GROUP; };
     // 用于 ItemDelegate 中对界面的绘制  // 不要使用 QFontMetrics 等，会造成初始化及滑动时极其严重的卡顿。
     void paint(QPainter *painter, const QStyleOptionViewItem &option, const QModelIndex &index) const override {
         // 验证数据类型
@@ -290,17 +293,180 @@ private:
 };
 Q_DECLARE_METATYPE(std::shared_ptr<ItemDelegateGroup>)  // 确保向 QVariant 提供支持
 
-// // 显示为对话
-// class ItemDelegateChatroom : public ItemDelegateBase{
-// public:
-//     ItemDelegateChatroom() {}
-//     // 用于 ItemDelegate 中对界面的绘制
-//     void paint(QPainter *painter, const QStyleOptionViewItem &option, const QModelIndex &index) const override { ; };
-//     // 用于 ItemDelegate 中返回条目的大小
-//     // **注意：`sizeHint()` 返回的是初始大小，不会跟随 `resize()` 调整，宽度 `-1` 表示不关心，由系统实时计算。**
-//     QSize sizeHint(const QStyleOptionViewItem &option, const QModelIndex &index) const override { return QSize(-1, 80); };
-// };
-// Q_DECLARE_METATYPE(std::shared_ptr<ItemDelegateChatroom>)  // 确保向 QVariant 提供支持
+// 显示为对话
+class ItemDelegateChatroom : public ItemDelegateBase{
+    using ItemDelegateBase::ItemDelegateBase;
+public:
+    const ENUMS::ItemDataType item_type() const override { return ENUMS::ItemDataType::CHATROOM; };
+    // 用于 ItemDelegate 中对界面的绘制
+    void paint(QPainter *painter, const QStyleOptionViewItem &option, const QModelIndex &index) const override {
+        // return false;
+
+        // 验证数据类型
+        {
+            if (!index.isValid()) { return; }
+            auto var_data = index.data(ENUMS::role_item_data());
+            if (!var_data.isValid()) { return; }
+            if (!var_data.canConvert<std::shared_ptr<ChatroomData>>()) { return; }
+            auto chatroom_data = var_data.value<std::shared_ptr<ChatroomData>>();
+            if (!chatroom_data) { return; }
+            if (!chatroom_data->contact) { return; }
+        }
+
+        QStyleOptionViewItem opt = option;
+        initStyleOption(&opt, index);
+        painter->save();
+        painter->setRenderHint(QPainter::Antialiasing);
+
+        // 绘制背景
+        {
+            // 绘制背景（处理选中、悬停状态）
+            opt.backgroundBrush = QBrush((option.state & QStyle::State_Selected) ? opt.palette.color(QPalette::Highlight) : opt.backgroundBrush);
+            opt.widget->style()->drawPrimitive(QStyle::PE_PanelItemViewItem, &opt, painter, opt.widget);
+        }
+
+        // 绘制内容
+        {
+            // 获取样式
+            if(!m_demo_contact_delegate_item) {
+                m_demo_contact_delegate_item = std::make_shared<DemoContactDelegateItem>();
+            }
+            if(m_demo_contact_delegate_item->size() != option.rect.size()) {
+                // 调整大小
+                m_demo_contact_delegate_item->resize(option.rect.size());
+                Utils::in_memory_layout_expander(m_demo_contact_delegate_item.get());
+            }
+            auto style_data = m_demo_contact_delegate_item->get_style_data();
+            // qDebug().noquote().nospace() << "item size : " << option.rect.size()
+            //     << ", demo size : " << m_demo_contact_delegate_item->size()
+            //     << ", nicknam width : " << style_data->rect_nickname.width()
+            //     << ", nicknam width : " << style_data->rect_message.width();
+
+            // 获取数据内容
+            auto var_data   = index.data(ENUMS::role_item_data());
+            auto chatroom_data = var_data.value<std::shared_ptr<ChatroomData>>();
+            auto contact = chatroom_data->contact;
+
+            // 获取头像  // 圆角头像
+            static std::map<QString, QPixmap> map_cacha_avatar;
+            auto avatar_id  = contact->baseInfo().avatarId();
+            if (!map_cacha_avatar.contains(avatar_id)) {
+                auto avatar_file_path = Database::instance().get_local_file_id_path(avatar_id + ";size:128*128");
+                auto pixmap_avatar_source = QPixmap(avatar_file_path);
+                if(pixmap_avatar_source.isNull()) {
+                    // 修改图标大小
+                    int height_item = opt.decorationSize.height();
+                    int height_icon = (height_item * group_height_scale());
+                    opt.decorationSize = QSize(height_icon, height_icon);
+
+                    // 根据颜色和大小生成图标
+                    QColor color_icon = opt.palette.color(QPalette::Text);  // 指定固定的颜色
+                    static Utils::FontIcons icon_font = Utils::FontIcons();
+                    if (icon_font.size.avatar != opt.decorationSize || icon_font.color.normal != color_icon) {
+                        icon_font.size.avatar = opt.decorationSize;
+                        icon_font.color.normal = color_icon;
+                        icon_font.update();
+                    }
+
+                    QIcon&ico_show = icon_font.icon.contacts;
+                    pixmap_avatar_source = QPixmap(ico_show.pixmap(opt.decorationSize, QIcon::Normal));
+                }
+                auto pixmap_avatar = Utils::to_round_pixmap(pixmap_avatar_source, style_data->rect_avatar.width() / 2);
+                map_cacha_avatar[avatar_id] = pixmap_avatar;
+            }
+            // 头像
+            auto pixmap_avatar = map_cacha_avatar[avatar_id];
+            // 提示消息
+            auto last_message_text = chatroom_data->text;
+            QFontMetrics metrics_signature(style_data->font_signature);
+            QString elided_last_messsage = metrics_signature.elidedText(last_message_text, Qt::ElideRight, style_data->rect_message.width());
+            // 消息时间不应当截断
+            auto datetime = chatroom_data->datetime;
+            datetime.setTimeZone(QTimeZone::utc());
+            auto last_message_time = datetime.toLocalTime().toString("hh:mm");
+            QFontMetrics metrics_time(style_data->font_time);
+            // QString elided_last_messsage = metrics_time.elidedText(last_message_time, Qt::ElideRight, style_data->rect_message.width());
+
+            // 调整宽度
+            QRect rect_nickname_last = style_data->rect_nickname;
+            QRect rect_time_last     = style_data->rect_time;
+
+            QRect rect_time = metrics_time.boundingRect(last_message_time);
+            int adjusted_width = style_data->rect_time.width() - rect_time.width();
+            rect_time_last = rect_time_last.adjusted(adjusted_width, 0, 0, 0);
+            rect_nickname_last = rect_nickname_last.adjusted(0, 0, -adjusted_width, 0);
+            rect_nickname_last.setRight(rect_time_last.left() - 5);
+
+            // 昵称
+            auto nickname = contact->baseInfo().nickname();
+            QFontMetrics metrics_nickname(style_data->font_nickname);
+            QString elided_nickname = metrics_nickname.elidedText(nickname, Qt::ElideRight, rect_nickname_last.width());
+
+// #ifdef _DEBUG
+//         QString deebug_suffix = " aaabbbcccdddeeefffggghhhiiijjjkkklllmmmnnnooopppqqqrrrssstttuuuvvvwwwxxxyyyzzz";
+//         nickname  += deebug_suffix;
+//         signature += deebug_suffix;
+// #endif // _DEBUG
+
+            painter->save();
+            painter->translate(option.rect.topLeft()); // 将画布原点移到 (x, y)
+
+            // 绘制头像
+            painter->drawPixmap(style_data->rect_avatar, pixmap_avatar);
+            // 绘制昵称
+            painter->setFont(style_data->font_nickname);
+            painter->setPen(option.state & QStyle::State_Selected ? option.palette.highlightedText().color() : option.palette.text().color());
+            painter->drawText(rect_nickname_last, Qt::AlignLeft | Qt::AlignVCenter, elided_nickname);
+            // 绘制签名内容
+            painter->setFont(style_data->font_signature);
+            painter->setPen(option.state & QStyle::State_Selected ? option.palette.highlightedText().color() : QColor(100, 100, 100));
+            // painter->drawText(style_data->rect_message, Qt::AlignLeft | Qt::AlignVCenter, elided_signature);
+            painter->drawText(style_data->rect_message, Qt::AlignLeft | Qt::AlignVCenter, last_message_text);
+            painter->drawText(rect_time_last, Qt::AlignRight | Qt::AlignVCenter, last_message_time);
+
+#ifdef _DEBUG
+            if (0) {
+                // 画出昵称和时间所在矩形
+                painter->setPen(QPen(QColor(Qt::darkRed)));
+                painter->drawRect(rect_nickname_last);
+                painter->setPen(QPen(QColor(Qt::darkCyan)));
+                painter->drawRect(rect_time_last);
+                painter->setPen(QPen(QColor(Qt::darkMagenta)));
+                painter->drawRect(style_data->rect_message);
+            }
+#endif // _DEBUG
+            painter->restore();
+        }
+
+        painter->restore();
+    }
+    // 用于 ItemDelegate 中返回条目的大小
+    // **注意：`sizeHint()` 返回的是初始大小，不会跟随 `resize()` 调整，宽度 `-1` 表示不关心，由系统实时计算。**
+    QSize sizeHint(const QStyleOptionViewItem &option, const QModelIndex &index) const override {
+        QSize size = QStyledItemDelegate::sizeHint(option, index);
+        do{
+            if (!index.isValid()) { break; }
+
+            QVariant variant = index.data(ENUMS::role_item_type());
+            if (!variant.isValid() || !variant.canConvert<ENUMS::ItemDataType>()) { break; }
+
+            auto type = variant.value<ENUMS::ItemDataType>();
+            if (type != item_type()) { break; }
+            if (!m_demo_contact_delegate_item) {
+                m_demo_contact_delegate_item = std::make_shared<DemoContactDelegateItem>();
+            }
+            return QSize(-1, m_demo_contact_delegate_item->size().height());
+        } while(false);
+        return size;
+    }
+
+private:
+    double group_height_scale() const { return double(3) / 2; }
+
+private:
+    mutable std::shared_ptr<DemoContactDelegateItem> m_demo_contact_delegate_item = nullptr;
+};
+Q_DECLARE_METATYPE(std::shared_ptr<ItemDelegateChatroom>)  // 确保向 QVariant 提供支持
 
 // // 显示为对话
 // class ItemDelegateMessage : public ItemDelegateBase{

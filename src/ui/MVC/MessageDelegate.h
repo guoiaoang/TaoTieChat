@@ -66,6 +66,8 @@ public:
     explicit MessageDelegate(QObject *parent = nullptr);
     ~MessageDelegate() override;
 
+    const ENUMS::ItemDataType item_type() const { return ENUMS::ItemDataType::CHATROOM; };
+
     void paint(QPainter *painter, const QStyleOptionViewItem &option, const QModelIndex &index) const override;
     QSize sizeHint(const QStyleOptionViewItem &option, const QModelIndex &index) const override;
     bool editorEvent(QEvent *event, QAbstractItemModel *model, const QStyleOptionViewItem &option, const QModelIndex &index) override;

@@ -432,8 +432,12 @@ void MessageDelegate::paint(QPainter *painter, const QStyleOptionViewItem &optio
         // 发送的内容
         const QString short_text = message_context->hasShortText() ? message_context->shortText() : QString();
         // 发送的时间
-        QString send_time = (message_context->hasTimestamp() & message_context->timestamp().hasTimestamp()) ? 
-            message_context->timestamp().timestamp().toDateTime().toString(QStringLiteral("HH:mm:SS")) : "";
+        QString send_time;
+        if (message_context->hasTimestamp() & message_context->timestamp().hasTimestamp()) {
+            auto datetime = message_context->timestamp().timestamp().toDateTime();
+            datetime.setTimeZone(QTimeZone::utc());
+            send_time = datetime.toLocalTime().toString(QStringLiteral("hh:mm:ss"));
+        }
         // 发送者账号 ID
         QString sender_account_id = message_context->senderAccountId();
         // 发送者账号信息

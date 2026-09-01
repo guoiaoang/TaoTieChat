@@ -35,6 +35,8 @@ public:
 
     // 添加聊天内容到对话内
     void add_message(const std::shared_ptr<SyncMessage>&sync_message);
+    // 获取最后一条消息以便列表显示
+    const std::shared_ptr<MessageContext> get_last_message();
 
     // void update_messages(Messages messages);
     // void append_message (Message  message );
@@ -57,6 +59,9 @@ private slots:
     void slot_open_folder(const QString &filePath);
     void slot_openn_image(const QString &filePath);
     void slot_show_context_menu(const QPoint &viewportPos);
+
+signals:
+    void signal_new_message(const std::shared_ptr<MessageContext>&message);
 
 private:
     std::shared_ptr<Ui::MessageWindow> m_ui;

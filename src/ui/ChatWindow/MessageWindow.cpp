@@ -210,7 +210,15 @@ void MessageWindow::add_message(const std::shared_ptr<SyncMessage>&sync_message)
         message_context->setAccountId(receiver_account_id);
         message_context->setShortText(short_text);
         m_message_model->add_message(message_context);
+        // 通知列表更新消息
+        emit signal_new_message(message_context);
     } while (false);
+}
+
+// 获取最后一条消息以便列表显示
+const std::shared_ptr<MessageContext> MessageWindow::get_last_message() {
+    if (!m_message_model) { return nullptr; }
+    return m_message_model->get_last_message();
 }
 
 bool MessageWindow::eventFilter(QObject *watched, QEvent *event) {

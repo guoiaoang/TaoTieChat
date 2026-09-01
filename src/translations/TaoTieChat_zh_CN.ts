@@ -221,12 +221,12 @@
         <translation type="vanished">个人资料</translation>
     </message>
     <message>
-        <location filename="../ui/ChatWindow/ChatWindow.cpp" line="494"/>
+        <location filename="../ui/ChatWindow/ChatWindow.cpp" line="501"/>
         <source>Failed to download avatar.</source>
         <translation>头像图片下载失败。</translation>
     </message>
     <message>
-        <location filename="../ui/ChatWindow/ChatWindow.cpp" line="495"/>
+        <location filename="../ui/ChatWindow/ChatWindow.cpp" line="502"/>
         <source>
 
 code : 0x%1
@@ -694,17 +694,28 @@ message : %2</source>
         <translation type="obsolete">头像图片下载失败。</translation>
     </message>
     <message>
-        <location filename="../ui/ChatWindow/MessageWindow.cpp" line="380"/>
         <source>Failed to send contact reply.</source>
-        <translation type="unfinished">好友申请回复失败。</translation>
+        <translation type="vanished">发送聊天消息失败。</translation>
     </message>
     <message>
-        <location filename="../ui/ChatWindow/MessageWindow.cpp" line="382"/>
+        <location filename="../ui/ChatWindow/MessageWindow.cpp" line="48"/>
+        <source>Allowed character length: %1
+Current input character length: %2</source>
+        <translation>允许发送的字符长度：%1
+当前输入的字符长度：%2</translation>
+    </message>
+    <message>
+        <location filename="../ui/ChatWindow/MessageWindow.cpp" line="448"/>
+        <source>Failed to send chat message.</source>
+        <translation>发送聊天消息失败。</translation>
+    </message>
+    <message>
+        <location filename="../ui/ChatWindow/MessageWindow.cpp" line="450"/>
         <source>
 
 code : 0x%1
 message : %2</source>
-        <translation type="unfinished">
+        <translation>
 
 错误代码 : 0x%1
 错误消息 : %2</translation>

@@ -174,7 +174,8 @@ public:
         }
     }
 
-protected:
+// protected:
+public:
     virtual QModelIndex index(int row, int column, const QModelIndex &parent = QModelIndex()) const override;
     virtual QModelIndex parent     (const QModelIndex &child) const override;
     virtual int         rowCount   (const QModelIndex &parent = QModelIndex()) const override;
@@ -830,8 +831,8 @@ public:
         // 修改第 row 行、col 列的数据
         QModelIndex index = get_item_chatroom_index(chatroom);
         // 发射信号通知 View 刷新该单元格（也可指定受影响的 Roles 优化性能）
-        // emit dataChanged(index, index, { Qt::DisplayRole, Qt::UserRole });        
-        emit dataChanged(index, index);        
+        // emit dataChanged(index, index, { Qt::DisplayRole, Qt::UserRole });
+        emit dataChanged(index, index);
     }
 
 // private:

@@ -38,6 +38,19 @@ MessageWindow::MessageWindow(QWidget *parent)
     connect(m_message_delegate.get() , &MessageDelegate::imageActivated, this, &MessageWindow::slot_openn_image);
     // 右键菜单
     connect(m_ui->list_messages, &QListView::customContextMenuRequested, this, &MessageWindow::slot_show_context_menu);
+    // 限制消息长度
+    connect(m_ui->textEdit, &QTextEdit::textChanged, this, [this](){
+        auto plain_text = m_ui->textEdit->toPlainText();
+        auto current_text_length = plain_text.length();
+        auto avaliable_text_length = SHORT_MESSAGE_MAX_LENGTH - 1;
+        // 允许发送的字符长度：%1
+        // 当前输入的字符长度：%2
+        auto tooltips = tr("Allowed character length: %1\nCurrent input character length: %2").arg(current_text_length).arg(avaliable_text_length);
+        m_ui->textEdit->setToolTip(tooltips);
+        m_ui->button_send->setToolTip(tooltips);
+        // 基于服务器对此的要求，超长文本不允许发送
+        m_ui->button_send->setEnabled(current_text_length < avaliable_text_length);
+    });
 
     // set
     m_ui->list_messages->setSpacing(0);
@@ -73,7 +86,7 @@ MessageWindow::MessageWindow(QWidget *parent)
     // option.setWrapMode(QTextOption::WrapAnywhere);
     // // 3. 将修改后的 Option 重新应用回 QTextDocument
     // m_ui->textEdit->document()->setDefaultTextOption(option);
-    
+
     // 输入框提示文字
     const auto placeholderText = m_ui->textEdit->placeholderText()
         .arg( enable_return_send ? "Enter" : "Ctrl + Enter")
@@ -92,6 +105,7 @@ MessageWindow::MessageWindow(QWidget *parent)
     m_ui->list_messages->setSpacing(0);                                       // 行距在 delegate 内部处理
     m_ui->list_messages->setMouseTracking(true);                              // 悬停光标（手型/文本光标）需要鼠标追踪
     m_ui->list_messages->setContextMenuPolicy(Qt::CustomContextMenu);         // 右键菜单（视图的 contextMenuEvent 不会进委托）
+    m_ui->list_messages->verticalScrollBar()->setSingleStep(20);              // 调整鼠标一次滚动的像素数
 
     // Ctrl+C 复制选中文字 / Esc 清除选区 / 点空白处清除选区
     m_ui->list_messages->installEventFilter(this);
@@ -196,6 +210,22 @@ void MessageWindow::add_message(const std::shared_ptr<SyncMessage>&sync_message)
         if (!sync_message->hasTimestamp() && !sync_message->timestamp().hasTimestamp()) { break; }
         if (!sync_message->hasText() || !sync_message->text().hasShortText()) { break; }
 
+        // 判断滚动条是否在底部，在底部时新增消息后依然置底
+        // 1. 获取 Model 中最后一条消息的索引
+        int last_row = m_message_model->rowCount() - 1;
+        bool should_auto_scroll = true;
+        if (last_row >= 0) {
+            QModelIndex last_index = m_message_model->index(last_row, 0);
+            // 2. 获取最后一条消息在 View 内的视觉矩形 (Visual Rect)
+            QRect item_rect = m_ui->list_messages->visualRect(last_index);
+            // 3. 获取 View 当前的可视区域矩形
+            QRect viewport_rect = m_ui->list_messages->viewport()->rect();
+            // 4. 判断最后一条消息的矩形是否与可视区域重合（即可视区域内能看到最后一条消息）
+            should_auto_scroll = item_rect.intersects(viewport_rect);
+        }
+
+        // 5. 向 Model 追加新消息
+
         // 读取数据
         auto client_message_id   = sync_message->clientMessageId  ();
         auto sender_account_id   = sync_message->senderAccountId  ();
@@ -212,6 +242,15 @@ void MessageWindow::add_message(const std::shared_ptr<SyncMessage>&sync_message)
         m_message_model->add_message(message_context);
         // 通知列表更新消息
         emit signal_new_message(message_context);
+
+        // 6. 如果刚才最后一条消息在视口内，强制精准滚动到最新消息的【底部】
+        if (should_auto_scroll) {
+            // 必须用 QTimer::singleShot 延迟到下一帧，等待 Delegate 重新计算完新消息的 Height 并更新 ScrollBar 范围
+            QTimer::singleShot(0, this, [this]() {
+                QScrollBar *v_bar = m_ui->list_messages->verticalScrollBar();
+                v_bar->setValue(v_bar->maximum());
+            });
+        }
     } while (false);
 }
 
@@ -415,7 +454,7 @@ void MessageWindow::slot_button_send() {
     send_message_callback callback_send_message = [this](const send_message_params&params_send_message, const send_message_reply&reply_send_message) {
         // 消息发送失败
         if (!reply_send_message || !reply_send_message->hasResult() || !reply_send_message->result().hasSuccessCode()) {
-            QString error_message = tr("Failed to send contact reply.");
+            QString error_message = tr("Failed to send chat message.");
             if (reply_send_message && reply_send_message->hasResult()) {
                 error_message += tr("\n\ncode : 0x%1\nmessage : %2")
                                      .arg(int64_t(reply_send_message->result().errorCode()), 8, 16, QChar('0'))  // 16 进制显示，宽度 8 位，不足补 0

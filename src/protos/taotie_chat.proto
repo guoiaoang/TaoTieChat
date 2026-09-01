@@ -808,7 +808,7 @@ message SyncMessage {
 message SyncMessageText {
   oneof    info {
     string short_text        = 1;  // 文本消息内容
-  }  
+  }
 }
 
 // ------------------------------ SyncReplyBody ------------------------------ //

@@ -71,6 +71,7 @@ public:
     bool get_contact_request(const get_contact_request_params& params, const get_contact_request_callback& callback);  // 获取被好友申请的列表
     bool get_last_id        (const get_last_id_params        & params, const get_last_id_callback        & callback);  // pts
     bool sync               (const sync_params               & params, const sync_callback               & callback);  // pts
+    bool send_message       (const send_message_params       & params, const send_message_callback       & callback);  // 发送消息
     // 接口封装
     bool search_group (const QString&group) { return false; } // 搜索群聊 ID
     // TODO:get_file_id 应该封装在子线程中

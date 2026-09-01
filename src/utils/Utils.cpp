@@ -937,3 +937,43 @@ QDebug operator<<(QDebug debug, const SyncReply&rep) {
     debug.nospace() << ")";
     return debug;
 }
+
+QDebug operator<<(QDebug debug, const Timestamp&ts) {
+    QDebugStateSaver saver(debug); // 保持输出格式一致性
+    debug.nospace() << "Timestamp("
+        << "timestamp:" << (ts.hasTimestamp() ? ts.timestamp().toDateTime().toLocalTime().toString(Qt::ISODate) : "")
+        << ")";
+    debug.nospace() << ")";
+    return debug;
+}
+
+QDebug operator<<(QDebug debug, const MessageContext&req) {
+    QDebugStateSaver saver(debug); // 保持输出格式一致性
+    debug.nospace() << "MessageContext(";
+    if (req.hasRequestUserAuth()) { debug.nospace() << "request_user_auth:" << req.requestUserAuth() << ","; }
+    ;                               debug.nospace() << "sender_account_id:" << req.senderAccountId() << ",";
+    ;                               debug.nospace() << "client_message_id:" << req.clientMessageId() << ",";
+    if (req.hasTimestamp      ()) { debug.nospace() << "timestamp:"         << req.timestamp      () << ","; }
+    ;                               debug.nospace() << "oneof chat_room {";
+    ;    if (req.hasAccountId ()) { debug.nospace() << "account_id:"        << req.accountId      () << ","; }
+    else if (req.hasGroupId   ()) { debug.nospace() << "group_id:"          << req.groupId        () << ","; }
+    ;                               debug.nospace() << "}";
+    ;                               debug.nospace() << "oneof content:{";
+    if (req.hasShortText      ()) { debug.nospace() << "short_text:"        << req.shortText() << ","; }
+    ;                               debug.nospace() << "}";
+    debug.nospace() << ")";
+    return debug;
+}
+
+QDebug operator<<(QDebug debug, const MessageReply&rep) {
+    QDebugStateSaver saver(debug); // 保持输出格式一致性
+    debug.nospace() << "MessageReply(";
+    if(rep.hasRequest  ()) { debug.nospace() << "request:"   << rep.request  (); }
+    if(rep.hasResult   ()) { debug.nospace() << "result:"    << rep.result   (); }
+    if(rep.hasTimestamp()) { debug.nospace() << "timestamp:" << rep.timestamp(); }
+    debug.nospace() << "server_message_id:"  << rep.serverMessageId();
+    debug.nospace() << "message:"  << rep.message();
+    debug.nospace() << ")";
+    return debug;
+}
+

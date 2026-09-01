@@ -626,6 +626,65 @@ bool NetworkClient::sync(const sync_params& params, const sync_callback& callbac
     return true;
 }
 
+bool NetworkClient::send_message(const send_message_params& params, const send_message_callback& callback) {
+    using namespace Utils::Wrapper;
+    using Request  = MessageContext;
+    using Reply    = MessageReply;
+    using ReplyOpt = std::optional<Reply>;
+    // 有用的参数
+    const AuthRequest auth = (params && params->hasRequestUserAuth()) ? params->requestUserAuth() : AuthRequest();
+    QString account_id = auth.hasAccountId() ? auth.accountId() : QString();
+    QString user_id    = auth.hasUserId   () ? auth.userId   () : QString();
+    QString password   = auth.hasPassword () ? auth.password () : QString();
+    QString token      = auth.hasToken    () ? auth.token    () : QString();
+    // ====================================================================== //
+    // 参数校验
+    do {
+        Result result(ResultWrapper{.error_code = ErrorCode::ERROR_UNSET}()); // 默认设为错误
+        // 参数简单校验
+        // ===============                                                    //
+        ;    if (account_id.isEmpty() && user_id.isEmpty()) { result = ResultWrapper{.error_code = ErrorCode::AUTH_ID_EMPTY           }(); }
+        else if (password  .isEmpty() && token  .isEmpty()) { result = ResultWrapper{.error_code = ErrorCode::AUTH_METHOD_EMPTY       }(); }
+        else if (!params->hasShortText                  ()) { result = ResultWrapper{.error_code = ErrorCode::MESSAGE_TEXT_EMPTY      }(); }
+        else if (!params->hasAccountId                  ()) { result = ResultWrapper{.error_code = ErrorCode::TARGET_ACCOUNT_ID_EMPTY }(); }
+        else if ( params->clientMessageId().isEmpty     ()) { result = ResultWrapper{.error_code = ErrorCode::CONTEXT_REQUIRED        }(); }
+        else if (!m_client_message                        ) { result = ResultWrapper{.error_code = ErrorCode::ERROR_INIT              }(); }
+        else if (!params->hasTimestamp() || !params->timestamp().hasTimestamp()) { result = ResultWrapper{.error_code = ErrorCode::CONTEXT_REQUIRED }(); }
+        //                                                    =============== //
+        // 失败时也要发送通知
+        if (result.hasErrorCode() && result.errorCode() != ErrorCode::ERROR_UNSET) {
+            ReplyOpt reply_opt = Reply();
+            reply_opt->setResult(result);
+            if (callback) { callback(params, reply_opt); }
+            return false;
+        }
+        break;
+    } while (false);
+    // 业务逻辑
+    do {
+        // ===============                                                    //
+        std::unique_ptr<QGrpcCallReply> reply_conn = m_client_message->TTCSendMessage(*params.get(), m_grpc_call_options);
+        //                                                    =============== //
+        const auto *rep_conn_ptr = reply_conn.get();  // 必须
+        if (!rep_conn_ptr) {
+            ReplyOpt reply_opt = Reply();
+            reply_opt->setResult(ResultWrapper{.error_code = ErrorCode::ERROR_CONN}());
+            if (callback) { callback(params, reply_opt); }
+            return false;
+        }
+        // 捕获输出返回信息  // 单次模型需要使用 `Qt::SingleShotConnection` 以便结束后销毁
+        // lamda 表达式不可使用引用，会造成生命周期问题
+        connect(rep_conn_ptr, &QGrpcCallReply::finished, rep_conn_ptr,
+            [reply_conn = std::move(reply_conn), params, callback](const QGrpcStatus &status) mutable {
+                ReplyOpt reply_opt;
+                if (status.isOk()) { reply_opt = reply_conn->read<Reply>(); }
+                if (callback) { callback(params, reply_opt); }
+            }, Qt::SingleShotConnection);
+        break;
+    } while (false);
+    return true;
+}
+
 bool NetworkClient::get_file_id(const QString&file_path, network_file_io_notify_callback& callback_get_file_id_notiify) {
     using Wrapper  = Utils::Wrapper::FileMetadataWrapper;
     using Notify   = NetworkFileIONotify;

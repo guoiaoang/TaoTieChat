@@ -668,3 +668,9 @@ QDebug operator<<(QDebug debug, const SyncReplyHeader&header);
 QDebug operator<<(QDebug debug, const SyncContact&sync_contact);
 QDebug operator<<(QDebug debug, const SyncReplyBody&body);
 QDebug operator<<(QDebug debug, const SyncReply&rep);
+//
+QDebug operator<<(QDebug debug, const Timestamp&ts);
+// 发送消息
+// rpc SendMessage(MessageContext) returns (MessageReply) {}
+QDebug operator<<(QDebug debug, const MessageContext&req);
+QDebug operator<<(QDebug debug, const MessageReply&rep);

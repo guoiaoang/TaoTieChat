@@ -799,6 +799,20 @@ public:
     TreeItemData* add_message(const std::shared_ptr<MessageContext>&message_context) {
         // 先获取消息列表，再进行排序，查找插入位置，与上一条消息间隔时间过长时添加一条时间提示
 
+        // 去重
+        auto client_message_id = message_context->clientMessageId();
+        for (auto&item : data_root()->get_item_childs()) {
+            for (auto&column : item->get_data_columns()) {
+                auto data = column.at(ENUMS::role_item_data());
+                if (!data.isValid() || !data.canConvert<std::shared_ptr<MessageContext>>()) { continue; }
+                auto context = data.value<std::shared_ptr<MessageContext>>();
+                auto item_id = context->clientMessageId();
+                if (item_id == client_message_id) {
+                    return nullptr;  // 重复消息
+                }
+            }
+        }
+
         // 获取子节点列表
         auto item_childs = data_root()->get_item_childs();
         // 查找插入位置

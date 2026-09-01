@@ -38,11 +38,11 @@ private:
     // 显示 创建/添加 好友/群组 菜单
     void on_show_add_menu();
 
-    // // 聊天室管理
-    // 单击聊天室中的一个对话  // 显示聊天窗口
-    void on_chat_room_item_selected(const QModelIndex &index);
-    // 双击聊天室中的一个对话  // 微信会弹窗聊天窗口
-    void on_chat_room_item_activated(const QModelIndex &index);
+    // // // 聊天室管理
+    // // 单击聊天室中的一个对话  // 显示聊天窗口
+    // void on_chat_room_item_selected(const QModelIndex &index);
+    // // 双击聊天室中的一个对话  // 微信会弹窗聊天窗口
+    // void on_chat_room_item_activated(const QModelIndex &index);
 
     // 需要创建副本，而不是使用指针共享同一份内存
     void set_cache_contact_info(const std::shared_ptr<ContactInfo>&contact_info );
@@ -74,6 +74,9 @@ public Q_SLOTS:
     void handle_chatroom_selection_changed(const QModelIndex &current, const QModelIndex &previous);
     // 单击聊天室
     void handle_chatroom_item_clicked(const QModelIndex &index);
+
+    // 添加聊天内容到对话内
+    void add_message(const std::shared_ptr<SyncMessage>&sync_message);
 
     // 更新联系人信息，可能是头像、昵称、状态等
     void current_accounut_info_changed();

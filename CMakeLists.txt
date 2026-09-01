@@ -88,6 +88,11 @@ set(CMAKE_CXX_STANDARD            20)
 set(CMAKE_CXX_STANDARD_REQUIRED   ON)
 # 输出 compile_commands.json 编译数据库文件
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
+# 关闭编译安全警告   # warning C4996: 'getenv': This function or variable may be unsafe. Consider using _dupenv_s instead.
+add_compile_definitions(_CRT_SECURE_NO_WARNINGS)
+# 禁用 CMake 开发者警告   # 消除 `find_package(Protobuf ...)` 中包名大小写不一致的警告
+set(CMAKE_WARN_DEPRECATED               OFF   CACHE   BOOL   ""   FORCE)
+set(CMAKE_SUPPRESS_DEVELOPER_WARNINGS   ON    CACHE   BOOL   ""   FORCE)
 
 # ----------------------------   定义预处理器宏   ---------------------------- #
 
@@ -587,10 +592,13 @@ if(ENABLE_CLIENT)
     qt_add_translations(
         TARGETS
             ${PROJECT_NAME}
+        # 自动将生成的 .qm 嵌入到资源系统的 :/rc/translations 路径下
+        RESOURCE_PREFIX
+            "/rc/translations"
         TS_FILES
             ${PROJECT_FILES_TS}
-        QM_FILES_OUTPUT_VARIABLE
-            PROJECT_FILES_QM
+        # QM_FILES_OUTPUT_VARIABLE
+        #     PROJECT_FILES_QM
         # QM_OUTPUT_DIRECTORY "${PROJECT_DIR_SOURCE}/rc/translations"
     )
     install(FILES    ${PROJECT_FILES_QM}   DESTINATION   "translations")
@@ -604,30 +612,7 @@ if(ENABLE_CLIENT)
             -silent
     )
 
-    # ============== 编译时自动更新 TS 文件并同步 QM 文件到资源目录 ============== #
-
-    option(PROJECT_AUTO_UPDATE_TS   "Automatically run lupdate before building app target"   ON)
-    option(PROJECT_SYNC_QM_TO_RC    "Copy generated qm files to src/rc/translations"         ON)
-
-    if(PROJECT_SYNC_QM_TO_RC)
-        set(PROJECT_TRANSLATIONS_LRELEASE_TARGET   "${PROJECT_NAME}_lrelease")
-
-        # 定义一个自定义目标，在编译主程序之前执行 lrelease 生成 qm 文件，并将其复制到资源目录
-        add_custom_target(${PROJECT_TRANSLATIONS_LRELEASE_TARGET}
-            COMMAND
-                ${CMAKE_COMMAND} -E make_directory "${PROJECT_DIR_TRANSLATIONS}"
-            COMMAND
-                ${CMAKE_COMMAND} -E copy_if_different ${PROJECT_FILES_QM} "${PROJECT_DIR_TRANSLATIONS}"
-            COMMENT
-                "Syncing qm files to ${PROJECT_DIR_TRANSLATIONS}"
-            VERBATIM
-        )
-
-        # 确保在编译主程序之前执行同步目标
-        add_dependencies(${PROJECT_NAME}   ${PROJECT_TRANSLATIONS_LRELEASE_TARGET})
-    endif()
-
-    # ============================================================================ #
+    # ======================================================================== #
 
     # qt_add_resources(${PROJECT_NAME}   "translations"
     #     PREFIX   "/translations"
@@ -786,32 +771,6 @@ if(ENABLE_CLIENT)
     if(QT_VERSION_MAJOR   EQUAL   6)
         qt_finalize_executable(${PROJECT_NAME})
     endif()
-
-    # ======== 强制先更新 ts 文件再生成 qm 文件，确保翻译文件始终是最新的 ======== #
-
-    # Qt 翻译目标可能通过 cmake_language(DEFER CALL ...) 在本文件处理结束后才创建，
-    # 因此用 DEFER 确保 add_dependencies 在所有延迟目标可见后再执行。
-    set(_proj         "${PROJECT_NAME}")
-    set(_do_sync      "${PROJECT_SYNC_QM_TO_RC}")
-    set(_do_lupdate   "${PROJECT_AUTO_UPDATE_TS}")
-
-    cmake_language(DEFER CALL cmake_language EVAL CODE "
-        # sync_translations_to_rc 依赖 lrelease（先 QM 再同步）
-        if(\"${_do_sync}\" AND TARGET ${_proj}_lrelease AND TARGET sync_translations_to_rc)
-            add_dependencies(sync_translations_to_rc ${_proj}_lrelease)
-        endif()
-
-        # lrelease 依赖 lupdate（先 TS 再 QM）
-        if(\"${_do_lupdate}\")
-            if(TARGET ${_proj}_lupdate AND TARGET ${_proj}_lrelease)
-                add_dependencies(${_proj}_lrelease ${_proj}_lupdate)
-                add_dependencies(${_proj} ${_proj}_lupdate)
-            elseif(TARGET update_translations AND TARGET ${_proj}_lrelease)
-                add_dependencies(${_proj}_lrelease update_translations)
-                add_dependencies(${_proj} update_translations)
-            endif()
-        endif()
-    ")
 endif()
 
 # 打包项目
@@ -821,6 +780,7 @@ set(CPACK_PACKAGE_VENDOR                "${PROJECT_NAME}"          ) # 包供应
 set(CPACK_PACKAGE_INSTALL_DIRECTORY     "${PROJECT_NAME}"          ) # 安装目录
 set(CPACK_PACKAGE_DIRECTORY             "${CMAKE_BINARY_DIR}/setup") # 安装文件保存路径
 set(CPACK_PACKAGE_DESCRIPTION_SUMMARY   "${PROJECT_DESC}"          ) # 包摘要
+set(CPACK_PACKAGE_FILE_NAME             "${PROJECT_NAME}"          ) # 输出的文件名
 
 # 包含许可证文件
 if(EXISTS   "${CMAKE_CURRENT_SOURCE_DIR}/LICENSE")

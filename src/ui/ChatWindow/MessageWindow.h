@@ -33,6 +33,9 @@ public:
     // 传入头像 ID，自动从本地或网络加载头像
     void show_avatar_id(const QString&avatar_id);
 
+    // 添加聊天内容到对话内
+    void add_message(const std::shared_ptr<SyncMessage>&sync_message);
+
     // void update_messages(Messages messages);
     // void append_message (Message  message );
     // void update_ui();

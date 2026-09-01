@@ -470,6 +470,7 @@ using ::TaoTieChat::SyncSubTypeContactGadget::SyncSubTypeContact;
 using ::TaoTieChat::SyncSubTypeGroupGadget::SyncSubTypeGroup;
 using ::TaoTieChat::SyncSubTypeMessageGadget::SyncSubTypeMessage;
 using ::TaoTieChat::SyncTypeGadget::SyncType;
+using ::TaoTieChat::Timestamp;
 #elif defined(ENABLE_SERVER)  // ENABLE_SERVER
 // server
 #include "taotie_chat.grpc.pb.h"

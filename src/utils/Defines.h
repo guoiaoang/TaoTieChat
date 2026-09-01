@@ -121,11 +121,18 @@ using contact_reply_callback = std::function  <void(const contact_reply_params&,
 using get_contact_request_params   = std::shared_ptr<AuthRequest            >;
 using get_contact_request_reply    = std::optional  <GetContactRequestsReply>;
 using get_contact_request_callback = std::function  <void(const get_contact_request_params&, const get_contact_request_reply&)>;
+// 获取最好的消息 ID
 // rpc GetLastID(AuthRequest) returns (GetLastIDReply) {}
 using get_last_id_params   = std::shared_ptr<AuthRequest   >;
 using get_last_id_reply    = std::optional  <GetLastIDReply>;
 using get_last_id_callback = std::function  <void(const get_last_id_params&, const get_last_id_reply&)>;
+// 消息同步
 // rpc Sync(stream SyncRequest) returns (stream SyncReply) {}
 using sync_params   = std::shared_ptr<SyncRequest>;
 using sync_reply    = std::optional  <SyncReply  >;
 using sync_callback = std::function  <void(const sync_params&, const sync_reply&)>;
+// 发送消息
+// rpc SendMessage(MessageContext) returns (MessageReply) {}
+using send_message_params   = std::shared_ptr<MessageContext>;
+using send_message_reply    = std::optional  <MessageReply  >;
+using send_message_callback = std::function  <void(const send_message_params&, const send_message_reply&)>;

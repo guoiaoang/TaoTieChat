@@ -308,10 +308,10 @@ MessageDelegate::ItemGeometry MessageDelegate::itemGeometry(const QStyleOptionVi
 
         // =================================================================== //
 
-        auto account_id = Accounts::instance().get_current_account()->baseInfo().accountId();
+        auto current_account_id = Accounts::instance().get_current_account()->baseInfo().accountId();
 
         // g.isMe = index.data(ChatModel::IsMeRole).toBool();
-        g.isMe = message_context->userId() == account_id;
+        g.isMe = message_context->senderAccountId() == current_account_id;
 
         // 去掉两头头像宽度后中间的宽度。
         // 头像位置对聊天类消息（文本/图片/文件）一致
@@ -428,8 +428,22 @@ void MessageDelegate::paint(QPainter *painter, const QStyleOptionViewItem &optio
     do {
         if (!check_is_message_context(index)) { break; }
 
-        const auto message_context = index.data(ENUMS::role_item_data()).value<std::shared_ptr<TaoTieChat::MessageContext>>();
+        const auto message_context = index.data(ENUMS::role_item_data()).value<std::shared_ptr<MessageContext>>();
+        // 发送的内容
         const QString short_text = message_context->hasShortText() ? message_context->shortText() : QString();
+        // 发送的时间
+        QString send_time = (message_context->hasTimestamp() & message_context->timestamp().hasTimestamp()) ? 
+            message_context->timestamp().timestamp().toDateTime().toString(QStringLiteral("HH:mm:SS")) : "";
+        // 发送者账号 ID
+        QString sender_account_id = message_context->senderAccountId();
+        // 发送者账号信息
+        const auto sender_contact = Accounts::instance().get_contact(sender_account_id);
+        // 发送者头像ID
+        QString sender_avatar_id = sender_contact->hasBaseInfo() ? sender_contact->baseInfo().avatarId() : "";
+        // 发送者头像图片
+        QPixmap sender_avatar_pixamp = Accounts::instance().get_avatar(sender_avatar_id);
+        // 发送者显示名称
+        QString sender_name = sender_contact->hasBaseInfo() ? sender_contact->baseInfo().nickname() : "";
 
         // =================================================================== //
 
@@ -444,44 +458,6 @@ void MessageDelegate::paint(QPainter *painter, const QStyleOptionViewItem &optio
             painter->restore();
             return;
         }
-
-        // const QString sender = index.data(ChatModel::SenderRole).toString();
-        QString sender;
-        if (message_context->hasUserId()) {
-            auto contact = Accounts::instance().get_contact(message_context->userId());
-            // 如果是好友就获取备注
-            if (!g.isMe && contact->hasFriendInfo() && !contact->friendInfo().notes().isEmpty()) {
-                sender = contact->friendInfo().notes();
-            }
-            // 没有备注尝试获取昵称
-            else if (contact->hasBaseInfo() && !contact->baseInfo().nickname().isEmpty()) {
-                sender = contact->baseInfo().nickname();
-            }
-#ifdef _DEBUG
-            // 尝试获取用户 ID
-            else if (contact->hasBaseInfo() && !contact->baseInfo().userId().isEmpty()) {
-                sender = contact->baseInfo().userId();
-            }
-            // 尝试获取账号 ID
-            else if (contact->hasBaseInfo() && !contact->baseInfo().accountId().isEmpty()) {
-                sender = contact->baseInfo().accountId();
-            }
-#endif // _DEBUG
-        }
-        // const QString time = index.data(ChatModel::TimeRole).toDateTime().toString(QStringLiteral("HH:mm"));
-        QString time;
-        if (message_context->hasTimestamp() & message_context->timestamp().hasTimestamp()) {
-            time = message_context->timestamp().timestamp().toDateTime().toString(QStringLiteral("HH:mm:SS"));
-        }
-        QString avatar_id;
-        if (message_context->hasUserId()) {
-            auto contact = Accounts::instance().get_contact(message_context->userId());
-            if (contact->hasBaseInfo() && !contact->baseInfo().avatarId().isEmpty()) {
-                avatar_id = contact->baseInfo().avatarId();
-            }
-        }
-        QPixmap avatar_pixamp = Accounts::instance().get_avatar(avatar_id);
-
         // ---- 发送者 + 时间 ----
         QFont metaFont = option.font;
         metaFont.setPointSizeF(metaFont.pointSizeF() * 0.85);
@@ -491,7 +467,7 @@ void MessageDelegate::paint(QPainter *painter, const QStyleOptionViewItem &optio
                             option.rect.top() + kRowVMargin,
                             g.viewWidth - 2 * (kListMargin + kAvatarSize + kAvatarSpacing),
                             kMetaLineHeight);
-        painter->drawText(metaRect, g.isMe ? Qt::AlignRight : Qt::AlignLeft, QStringLiteral("%1  %2").arg(sender, time));
+        painter->drawText(metaRect, g.isMe ? Qt::AlignRight : Qt::AlignLeft, QStringLiteral("%1  %2").arg(sender_name, send_time));
 
         // ---- 头像（圆形 + 姓氏首字） ----
         // painter->setPen(Qt::NoPen);
@@ -503,7 +479,7 @@ void MessageDelegate::paint(QPainter *painter, const QStyleOptionViewItem &optio
         // painter->setFont(avatarFont);
         // painter->setPen(Qt::white);
         // painter->drawText(g.avatarRect, Qt::AlignCenter, sender.left(1));
-        painter->drawPixmap(g.avatarRect.toRect(), avatar_pixamp);
+        painter->drawPixmap(g.avatarRect.toRect(), sender_avatar_pixamp);
 
         // ---- 气泡背景（圆角矩形，主题色；文本/图片/文件共用） ----
         QPainterPath path;
@@ -526,7 +502,7 @@ void MessageDelegate::paint(QPainter *painter, const QStyleOptionViewItem &optio
             return;
         }
 
-        if (g.isFile) {
+        else if (g.isFile) {
             // ---- 文件卡片：图标 + 文件名 + 大小 ----
             const QRectF iconRect(g.bubbleRect.left() + kBubbleHPad, g.bubbleRect.top() + (g.bubbleRect.height() - kFileIconSize) / 2.0, kFileIconSize, kFileIconSize);
             if (const auto *style = option.widget ? option.widget->style() : qApp->style()) {

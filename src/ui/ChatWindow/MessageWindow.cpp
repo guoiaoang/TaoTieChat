@@ -186,6 +186,33 @@ void MessageWindow::show_avatar_id(const QString&avatar_id) {
     NetworkClient::instance().download_file(avatar_id, qMax(qint64(0), downloaded_size), callback_download_file_notify);
 }
 
+// 添加聊天内容到对话内
+void MessageWindow::add_message(const std::shared_ptr<SyncMessage>&sync_message) {
+    do {
+        // 无效数据
+        if (sync_message->clientMessageId  ().isEmpty()) { break; }
+        if (sync_message->senderAccountId  ().isEmpty()) { break; }
+        if (sync_message->receiverAccountId().isEmpty()) { break; }
+        if (!sync_message->hasTimestamp() && !sync_message->timestamp().hasTimestamp()) { break; }
+        if (!sync_message->hasText() || !sync_message->text().hasShortText()) { break; }
+
+        // 读取数据
+        auto client_message_id   = sync_message->clientMessageId  ();
+        auto sender_account_id   = sync_message->senderAccountId  ();
+        auto receiver_account_id = sync_message->receiverAccountId();
+        auto timestamp           = sync_message->timestamp        ();
+        auto short_text = (sync_message->hasText() && sync_message->text().hasShortText()) ? sync_message->text().shortText() : "";
+
+        auto message_context = std::make_shared<MessageContext>();
+        message_context->setSenderAccountId(sender_account_id);
+        message_context->setClientMessageId(client_message_id);
+        message_context->setTimestamp(timestamp);
+        message_context->setAccountId(receiver_account_id);
+        message_context->setShortText(short_text);
+        m_message_model->add_message(message_context);
+    } while (false);
+}
+
 bool MessageWindow::eventFilter(QObject *watched, QEvent *event) {
     // 如果是按键消息，那么先获取按键
     QKeyEvent  * key_event   = event->type() == QEvent::KeyPress         ? static_cast<QKeyEvent  *>(event) : nullptr;
@@ -363,14 +390,36 @@ void MessageWindow::slot_button_send() {
     timestamp.setTimestamp(pb_timestamp);
 
     auto message_context = std::make_shared<MessageContext>();
-    message_context->setTimestamp(timestamp);
+    message_context->setRequestUserAuth(*Accounts::instance().get_auth_request().get());
+    message_context->setSenderAccountId(Accounts::instance().get_current_account()->baseInfo().accountId());
     message_context->setClientMessageId(Utils::get_new_uuid_string());
-    message_context->setUserId(Accounts::instance().get_current_account()->baseInfo().accountId());
+    message_context->setTimestamp(timestamp);
+    message_context->setAccountId(get_contact()->baseInfo().accountId());
     message_context->setShortText(text_plain);
-    if (m_message_model->add_message(message_context)) {
-        m_ui->textEdit->clear();
-        m_ui->list_messages->scrollToBottom();
-    }
+
+    // qDebug().noquote().nospace() << "addr : " << (void *)&message_context << ", context : " << *message_context.get();
+
+    if (!m_message_model->add_message(message_context)) { return; }
+    m_ui->textEdit->clear();
+    m_ui->list_messages->scrollToBottom();
+
+    // 通知服务器
+    send_message_callback callback_send_message = [this](const send_message_params&params_send_message, const send_message_reply&reply_send_message) {
+        // 消息发送失败
+        if (!reply_send_message || !reply_send_message->hasResult() || !reply_send_message->result().hasSuccessCode()) {
+            QString error_message = tr("Failed to send contact reply.");
+            if (reply_send_message && reply_send_message->hasResult()) {
+                error_message += tr("\n\ncode : 0x%1\nmessage : %2")
+                                     .arg(int64_t(reply_send_message->result().errorCode()), 8, 16, QChar('0'))  // 16 进制显示，宽度 8 位，不足补 0
+                                     .arg(reply_send_message->result().message());
+            }
+            qDebug().noquote().nospace() << "error message : " << error_message;
+            // QMessageBox::information(this, tr("Error"), error_message, QMessageBox::StandardButton::Ok);
+            // TODO:显示重新发送按钮
+            return;
+        }
+    };
+    NetworkClient::instance().send_message(message_context, callback_send_message);
 }
 
 void MessageWindow::slot_open_link(const QString &href) {

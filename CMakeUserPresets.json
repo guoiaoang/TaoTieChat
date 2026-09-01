@@ -21,7 +21,6 @@
                 "SDK_ROOT"    : "C:/app/dev/WindowsKits/10",
                 "VC_VERSION"  : "14.44.35207",
                 "SDK_VERSION" : "10.0.26100.0",
-                "PROJECT_NAME": "TaoTieChat",
                 "BUILD_ARCH"  : "x64",
                 "BUILD_TYPE"  : "Debug",
                 "HTTP_PROXY"  : "http://127.0.0.1:2080",

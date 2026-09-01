@@ -694,11 +694,17 @@ message : %2</source>
         <translation type="obsolete">头像图片下载失败。</translation>
     </message>
     <message>
+        <location filename="../ui/ChatWindow/MessageWindow.cpp" line="380"/>
+        <source>Failed to send contact reply.</source>
+        <translation type="unfinished">好友申请回复失败。</translation>
+    </message>
+    <message>
+        <location filename="../ui/ChatWindow/MessageWindow.cpp" line="382"/>
         <source>
 
 code : 0x%1
 message : %2</source>
-        <translation type="obsolete">
+        <translation type="unfinished">
 
 错误代码 : 0x%1
 错误消息 : %2</translation>
@@ -711,27 +717,27 @@ message : %2</source>
 <context>
     <name>NetworkClient</name>
     <message>
-        <location filename="../network/NetworkClient.cpp" line="824"/>
+        <location filename="../network/NetworkClient.cpp" line="883"/>
         <source>open file error.</source>
         <translation>文件打开失败。</translation>
     </message>
     <message>
-        <location filename="../network/NetworkClient.cpp" line="836"/>
+        <location filename="../network/NetworkClient.cpp" line="895"/>
         <source>Failed to seek upload file</source>
         <translation>文件读取失败</translation>
     </message>
     <message>
-        <location filename="../network/NetworkClient.cpp" line="851"/>
+        <location filename="../network/NetworkClient.cpp" line="910"/>
         <source>Failed to read upload file</source>
         <translation>文件读取失败</translation>
     </message>
     <message>
-        <location filename="../network/NetworkClient.cpp" line="917"/>
+        <location filename="../network/NetworkClient.cpp" line="976"/>
         <source>Failed to open file for md5 calculation: %1</source>
         <translation>无法校验文件 : %1</translation>
     </message>
     <message>
-        <location filename="../network/NetworkClient.cpp" line="1132"/>
+        <location filename="../network/NetworkClient.cpp" line="1191"/>
         <source>Download completed: %1</source>
         <translation>文件已下载。下载位置：%1</translation>
     </message>

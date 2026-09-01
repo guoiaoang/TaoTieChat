@@ -403,7 +403,7 @@ bool ChatWindow::network_status_sync() {
 
                 // 服务端数据异常或无更新时 `hasContacts() == false`
                 if (sync_tag.type() == SyncType::SYNC_CONTACTS && sync_reply_body.hasContacts()) {
-                    for (auto sync_contact : sync_reply_body.contacts().contact()) {
+                    for (auto&sync_contact : sync_reply_body.contacts().contact()) {
                         // 更新联系人信息
                         // qDebug().nospace().noquote() << "Sync ContactInfo for AccountId : " << contact_info.baseInfo().accountId();
                         if (sync_contact.subType() == SyncSubTypeContact::SYNC_CONTACT_REUQEST) {
@@ -452,7 +452,14 @@ bool ChatWindow::network_status_sync() {
                     }
                 }
                 // 服务端只区分了 SyncType::MESSAGES，文件也是 SyncType::MESSAGES 的一个子类型，需要客户端手动测试
-                else if (sync_tag.type() == SyncType::SYNC_MESSAGES) {
+                else if (sync_tag.type() == SyncType::SYNC_MESSAGES && sync_reply_body.hasMessages()) {
+                    for (auto&message : sync_reply_body.messages().message()) {
+                        // 信息未必来自同一对话，暂不处理为批量添加
+                        add_message(std::make_shared<SyncMessage>(message));
+                    }
+                    // auto add_messages = [&](const std::shared_ptr<SyncMessages> sync_messages){
+                    // };
+                    // add_messages(std::make_shared<SyncMessages>(sync_reply_body.messages()));
                     // if (sync_reply_body.hasMessages()) {
                     //     for (auto message : sync_reply_body.messages().messages()) {
                     //         // 更新消息
@@ -520,16 +527,17 @@ void ChatWindow::on_show_add_menu() {
     m_menu_add->popup(QPoint(pos.x() - w, pos.y()));
 }
 
-void ChatWindow::on_chat_room_item_selected(const QModelIndex &index) {
-    qDebug() << "index : " << index;
-}
+// void ChatWindow::on_chat_room_item_selected(const QModelIndex &index) {
+//     qDebug() << "index : " << index;
+// }
 
-void ChatWindow::on_chat_room_item_activated(const QModelIndex &index) {
-    qDebug() << "index : " << index;
-}
+// void ChatWindow::on_chat_room_item_activated(const QModelIndex &index) {
+//     qDebug() << "index : " << index;
+// }
 
 void ChatWindow::add_chat_room(const std::shared_ptr<ContactInfo>&contact_info) {
     // qDebug() << "contact : " << ContactManager(contact).get_nick_name();
+    m_chatroom_model->add_contact_chatroom_row(contact_info);
 }
 
 void ChatWindow::show_chat_room_messages(const std::shared_ptr<ContactInfo>&contact_info) {
@@ -788,6 +796,71 @@ void ChatWindow::handle_chatroom_item_clicked(const QModelIndex &index) {
             m_ui->stacked_contact_detail->addWidget(target_message_window);
         }
         m_ui->stacked_contact_detail->setCurrentWidget(target_message_window);
+    } while (false);
+}
+
+// 添加聊天内容到对话内
+void ChatWindow::add_message(const std::shared_ptr<SyncMessage>&sync_message) {
+    do {
+        // 无效数据
+        if (!sync_message->hasText() || !sync_message->text().hasShortText()) { break; }
+        if (sync_message->serverMessageId  ().isEmpty()) { break; }
+        if (sync_message->clientMessageId  ().isEmpty()) { break; }
+        if (sync_message->senderAccountId  ().isEmpty()) { break; }
+        if (sync_message->receiverAccountId().isEmpty()) { break; }
+
+        // 读取数据
+        auto subtype = sync_message->subType();
+        auto text = (sync_message->hasText() && sync_message->text().hasShortText()) ? sync_message->text().shortText() : "";
+        auto server_message_id   = sync_message->serverMessageId  ();
+        auto client_message_id   = sync_message->clientMessageId  ();
+        auto sender_account_id   = sync_message->senderAccountId  ();
+        auto receiver_account_id = sync_message->receiverAccountId();
+        auto timestamp           = sync_message->timestamp        ();
+
+        // receiver_account_id 为当前账号 ID 或对话 ID
+        auto current_account_id = Accounts::instance().get_current_account()->baseInfo().accountId();
+        QString account_id_show = receiver_account_id;
+        // 如果收发都是自己
+        ;    if (receiver_account_id == sender_account_id && current_account_id == receiver_account_id) { account_id_show = current_account_id; }
+        // 如果发是自己
+        else if (current_account_id == sender_account_id  ) { account_id_show = receiver_account_id; }
+        // 如果收是自己
+        else if (current_account_id == receiver_account_id) { account_id_show = sender_account_id  ; }
+        // 收发都不是自己，那么收应该为对话 ID
+        // else { ... }
+
+        // 查找窗口提取数据
+        MessageWindow* target_message_window = nullptr;
+        for (int idx = 0; idx < m_ui->stacked_contact_detail->count(); ++idx) {
+            // 获取窗口
+            MessageWindow* message_window = dynamic_cast<MessageWindow*>(m_ui->stacked_contact_detail->widget(idx));
+            if (!message_window) { continue; }
+            // 获取信息
+            auto contact_widget = message_window->get_contact();
+            if (!contact_widget) { continue; }
+            if (!contact_widget->hasBaseInfo()) { continue; }
+            auto account_id_widget = contact_widget->baseInfo().accountId();
+            // 比较存储
+            if (account_id_show != account_id_widget) { continue; }
+            target_message_window = message_window;
+            break;
+        }
+        auto contact_show = Accounts::instance().get_contact(account_id_show);
+        // 找不到窗口时进行添加
+        if (!target_message_window && contact_show) {
+            target_message_window = new MessageWindow;
+            target_message_window->set_contact(contact_show);
+            m_ui->stacked_contact_detail->addWidget(target_message_window);
+        }
+        // 不需要切换显示
+        // m_ui->stacked_contact_detail->setCurrentWidget(target_message_window);
+        target_message_window->add_message(sync_message);
+
+        // 添加对话
+        add_chat_room(contact_show);
+
+        // TODO:如果显示末尾消息时，添加新消息后也需要滑动到底部
     } while (false);
 }
 

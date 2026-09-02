@@ -203,10 +203,11 @@ void MessageWindow::show_avatar_id(const QString&avatar_id) {
 // 添加聊天内容到对话内
 void MessageWindow::add_message(const std::shared_ptr<SyncMessage>&sync_message) {
     do {
+        if (!sync_message) { break; }
         // 无效数据
-        if (sync_message->clientMessageId  ().isEmpty()) { break; }
-        if (sync_message->senderAccountId  ().isEmpty()) { break; }
-        if (sync_message->receiverAccountId().isEmpty()) { break; }
+        if ( sync_message->clientMessageId  ().isEmpty()) { break; }
+        if ( sync_message->senderAccountId  ().isEmpty()) { break; }
+        if ( sync_message->receiverAccountId().isEmpty()) { break; }
         if (!sync_message->hasTimestamp() && !sync_message->timestamp().hasTimestamp()) { break; }
         if (!sync_message->hasText() || !sync_message->text().hasShortText()) { break; }
 
@@ -226,9 +227,6 @@ void MessageWindow::add_message(const std::shared_ptr<SyncMessage>&sync_message)
 
         // 5. 向 Model 追加新消息
 
-        // TODO:获取上一条消息，如果消息间隔大于30分钟则添加一条时间提示
-        // message_context->add
-
         // 读取数据
         auto client_message_id   = sync_message->clientMessageId  ();
         auto sender_account_id   = sync_message->senderAccountId  ();
@@ -236,10 +234,48 @@ void MessageWindow::add_message(const std::shared_ptr<SyncMessage>&sync_message)
         auto timestamp           = sync_message->timestamp        ();
         auto short_text = (sync_message->hasText() && sync_message->text().hasShortText()) ? sync_message->text().shortText() : "";
 
+        // 获取上一条消息，如果消息间隔大于 2 分钟则添加一条时间提示
+        bool need_timestamp = false;
+        // 没有任何消息时需要在顶部添加时间提示
+        if (m_message_model->row_count() <= 0) { need_timestamp = true; }
+        // 有历史消息时进行时间戳比较
+        else {
+            do {
+                if (!timestamp.hasTimestamp()) { break; }
+                auto message_datetime = timestamp.timestamp().toDateTime();
+                if (!message_datetime.isValid()) { break; }
+
+                auto last_message = m_message_model->get_last_message();
+                if (!last_message) { break; }
+                if (!last_message->hasTimestamp()) { break; }
+                if (!last_message->timestamp().hasTimestamp()) { break; }
+                auto last_datetime = last_message->timestamp().timestamp().toDateTime();
+                if (!last_datetime.isValid()) { break; }
+                // 如果时间间隔在 2 分钟及以上
+                if (message_datetime - last_datetime >= std::chrono::minutes(2)) {
+                    need_timestamp = true;
+                }
+            } while(false);
+        }
+        if (need_timestamp) {
+            auto message_timestamp = std::make_shared<MessageContext>();
+            // 系统消息不需要发送者 ID
+            message_timestamp->setSenderAccountId("");
+            // 使用时间戳生成客户端消息 ID
+            message_timestamp->setClientMessageId(QString("timestamp_%1;").arg(timestamp.timestamp().toDateTime().toMSecsSinceEpoch()));
+            message_timestamp->setTimestamp(timestamp);                     // 使用消息的时间
+            message_timestamp->setMessageType(MessageType::SystemMessage);  // 标记为系统消息
+            message_timestamp->setAccountId(receiver_account_id);           // 对话 ID  // 当前函数已经代表找的了正确的对话记录
+            message_timestamp->setShortText("");                            // 时间戳不需要内容
+            m_message_model->add_message(message_timestamp);
+        }
+
+        // 消息内容
         auto message_context = std::make_shared<MessageContext>();
         message_context->setSenderAccountId(sender_account_id);
         message_context->setClientMessageId(client_message_id);
         message_context->setTimestamp(timestamp);
+        message_context->setMessageType(MessageType::ChatMessage);  // 标记为用户消息
         message_context->setAccountId(receiver_account_id);
         message_context->setShortText(short_text);
         m_message_model->add_message(message_context);

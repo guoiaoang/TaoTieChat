@@ -163,6 +163,7 @@ void MessageDelegate::clearCache() {
     resetSelection(); // 行号即将失效，选区一并清除
 }
 
+// 判断是否是支持的数据类型
 bool check_is_message_context(const QModelIndex &index) {
     if (!index.isValid()) { return false; }
     const QVariant variant_data = index.data(ENUMS::role_item_data());
@@ -182,7 +183,20 @@ QTextDocument *MessageDelegate::createDocument(const QModelIndex &index, const Q
         if (!check_is_message_context(index)) { break; }
 
         const auto message_context = index.data(ENUMS::role_item_data()).value<std::shared_ptr<TaoTieChat::MessageContext>>();
-        const QString short_text = message_context->hasShortText() ? message_context->shortText() : QString();
+        QString short_text = message_context->hasShortText() ? message_context->shortText() : QString();
+
+        // =================================================================== //
+
+        // 如果是系统消息，判断是否自动显示格式化的时间
+        if (message_context->messageType() == MessageType::SystemMessage
+            && message_context->clientMessageId().startsWith("timestamp_", Qt::CaseSensitivity::CaseInsensitive)
+            && short_text.isEmpty()
+            && message_context->hasTimestamp()
+            && message_context->timestamp().hasTimestamp()
+            && message_context->timestamp().timestamp().toDateTime().isValid()
+        ) {
+            short_text = Utils::format_smart_time(message_context->timestamp().timestamp().toDateTime());
+        }
 
         // =================================================================== //
 
@@ -305,6 +319,21 @@ MessageDelegate::ItemGeometry MessageDelegate::itemGeometry(const QStyleOptionVi
 
         const auto message_context = index.data(ENUMS::role_item_data()).value<std::shared_ptr<TaoTieChat::MessageContext>>();
         const QString short_text = message_context->hasShortText() ? message_context->shortText() : QString();
+        g.isSystem = message_context->messageType() == MessageType::SystemMessage;
+
+        // =================================================================== //
+
+        // qDebug().noquote().nospace() << "message_context : " << *message_context.get();
+
+        // 系统提示消息
+        if (g.isSystem) {
+            // 系统消息：整行可用宽度，居中绘制
+            const qreal maxTextW = g.viewWidth - 2 * kListMargin;
+            g.doc = acquireDocument(index, maxTextW, option.font);
+            const qreal w = g.doc->size().width();
+            g.docOrigin = QPointF(option.rect.left() + (g.viewWidth - w) / 2.0, option.rect.top() + kRowVMargin);
+            break;
+        }
 
         // =================================================================== //
 
@@ -321,20 +350,13 @@ MessageDelegate::ItemGeometry MessageDelegate::itemGeometry(const QStyleOptionVi
         // const qreal maxBubbleW = qMax<qreal>(kMinTextWidth, availW * kMaxBubblePct / 100.0);
         const qreal maxBubbleW = qMax<qreal>(kMinTextWidth, availW);
         const qreal metaTop = option.rect.top() + kRowVMargin;
-        g.avatarRect = QRectF(g.isMe ? g.viewWidth - kListMargin - kAvatarSize : option.rect.left() + kListMargin, metaTop + kMetaLineHeight, kAvatarSize, kAvatarSize);
-
-        // 系统提示消息
-        if (g.isSystem) {
-            // 系统消息：整行可用宽度，居中绘制
-            const qreal maxTextW = g.viewWidth - 2 * kListMargin;
-            g.doc = acquireDocument(index, maxTextW, option.font);
-            const qreal w = g.doc->size().width();
-            g.docOrigin = QPointF(option.rect.left() + (g.viewWidth - w) / 2.0, option.rect.top() + kRowVMargin);
-            break;
-        }
+        // 非群组时不需要显示昵称
+        bool per_message_show_nickname = false;
+        auto context_offset_y = per_message_show_nickname ? kMetaLineHeight : 0;
+        g.avatarRect = QRectF(g.isMe ? g.viewWidth - kListMargin - kAvatarSize : option.rect.left() + kListMargin, metaTop + context_offset_y, kAvatarSize, kAvatarSize);
 
         // 文本消息
-        else if (g.isText) {
+        if (g.isText) {
             // 普通文本消息
             g.doc = acquireDocument(index, maxBubbleW, option.font);
 
@@ -396,8 +418,11 @@ QSize MessageDelegate::sizeHint(const QStyleOptionViewItem &option, const QModel
         return QSize(g.viewWidth, int(kRowVMargin * 2 + docH + 0.5));
     }
 
+    // 非群组时不需要显示昵称
+    bool per_message_show_nickname = false;
+    auto context_offset_y = per_message_show_nickname ? kMetaLineHeight : 0;
     const qreal bodyH = qMax<qreal>(g.bubbleRect.height(), qreal(kAvatarSize));
-    return QSize(g.viewWidth, int(kRowVMargin * 2 + kMetaLineHeight + bodyH + 0.5));
+    return QSize(g.viewWidth, int(kRowVMargin * 2 + context_offset_y + bodyH + 0.5));
 }
 
 void MessageDelegate::paintDocument(QPainter *painter, const ItemGeometry &g, const QModelIndex &index) const {
@@ -428,29 +453,6 @@ void MessageDelegate::paint(QPainter *painter, const QStyleOptionViewItem &optio
     do {
         if (!check_is_message_context(index)) { break; }
 
-        const auto message_context = index.data(ENUMS::role_item_data()).value<std::shared_ptr<MessageContext>>();
-        // 发送的内容
-        const QString short_text = message_context->hasShortText() ? message_context->shortText() : QString();
-        // 发送的时间
-        QString send_time;
-        if (message_context->hasTimestamp() & message_context->timestamp().hasTimestamp()) {
-            auto datetime = message_context->timestamp().timestamp().toDateTime();
-            datetime.setTimeZone(QTimeZone::utc());
-            send_time = Utils::format_smart_time(datetime);
-        }
-        // 发送者账号 ID
-        QString sender_account_id = message_context->senderAccountId();
-        // 发送者账号信息
-        const auto sender_contact = Accounts::instance().get_contact(sender_account_id);
-        // 发送者头像ID
-        QString sender_avatar_id = sender_contact->hasBaseInfo() ? sender_contact->baseInfo().avatarId() : "";
-        // 发送者头像图片
-        QPixmap sender_avatar_pixamp = Accounts::instance().get_avatar(sender_avatar_id);
-        // 发送者显示名称
-        QString sender_name = sender_contact->hasBaseInfo() ? sender_contact->baseInfo().nickname() : "";
-
-        // =================================================================== //
-
         painter->save();
         painter->setRenderHint(QPainter::Antialiasing, true);
 
@@ -462,27 +464,60 @@ void MessageDelegate::paint(QPainter *painter, const QStyleOptionViewItem &optio
             painter->restore();
             return;
         }
-        // ---- 发送者 + 时间 ----
-        QFont metaFont = option.font;
-        metaFont.setPointSizeF(metaFont.pointSizeF() * 0.85);
-        painter->setFont(metaFont);
-        painter->setPen(m_theme.metaText);
-        const QRectF metaRect(option.rect.left() + kListMargin + kAvatarSize + kAvatarSpacing,
-                            option.rect.top() + kRowVMargin,
-                            g.viewWidth - 2 * (kListMargin + kAvatarSize + kAvatarSpacing),
-                            kMetaLineHeight);
-        painter->drawText(metaRect, g.isMe ? Qt::AlignRight : Qt::AlignLeft, QStringLiteral("%1  %2").arg(sender_name, send_time));
 
-        // ---- 头像（圆形 + 姓氏首字） ----
-        // painter->setPen(Qt::NoPen);
-        // painter->setBrush(avatarColor(sender));
-        // painter->drawEllipse(g.avatarRect);
-        // QFont avatarFont = option.font;
-        // avatarFont.setBold(true);
-        // avatarFont.setPointSizeF(avatarFont.pointSizeF() * 1.15);
-        // painter->setFont(avatarFont);
-        // painter->setPen(Qt::white);
-        // painter->drawText(g.avatarRect, Qt::AlignCenter, sender.left(1));
+        // =================================================================== //
+
+        const auto message_context = index.data(ENUMS::role_item_data()).value<std::shared_ptr<MessageContext>>();
+        // 发送的内容
+        const QString short_text = message_context->hasShortText() ? message_context->shortText() : QString();
+        // 发送者账号 ID
+        QString sender_account_id = message_context->senderAccountId();
+        // 发送者账号信息
+        const auto sender_contact = Accounts::instance().get_contact(sender_account_id);
+        // 发送者头像ID
+        QString sender_avatar_id = sender_contact->hasBaseInfo() ? sender_contact->baseInfo().avatarId() : "";
+        // 发送者头像图片
+        QPixmap sender_avatar_pixamp = Accounts::instance().get_avatar(sender_avatar_id);
+
+        // 在群组中才需要绘制昵称，私聊中可以不显示
+        bool per_message_show_nickname  = false;
+        // 不必每条消息都显示时间
+        bool per_message_show_timestamp = false;
+        // 要显示的内容
+        QString per_message_tips;
+        // 获取显示名称
+        if (per_message_show_nickname) {
+            // 获取发送者的显示名称
+            QString sender_name = sender_contact->hasBaseInfo() ? sender_contact->baseInfo().nickname() : "";
+            per_message_tips += sender_name;
+        }
+        // 追加时间戳
+        if (per_message_show_timestamp) {
+            // 发送的时间
+            QString send_time;
+            if (message_context->hasTimestamp() & message_context->timestamp().hasTimestamp()) {
+                auto datetime = message_context->timestamp().timestamp().toDateTime();
+                datetime.setTimeZone(QTimeZone::utc());
+                send_time = Utils::format_smart_time(datetime);
+            }
+            if (!per_message_tips.isEmpty() && !send_time.isEmpty()) { per_message_tips += " "; }
+            per_message_tips += send_time;
+        }
+        // 绘制昵称+时间戳
+        if (!per_message_tips.isEmpty()) {
+            // ---- 发送者 + 时间 ----
+            QFont metaFont = option.font;
+            metaFont.setPointSizeF(metaFont.pointSizeF() * 0.85);
+            painter->setFont(metaFont);
+            painter->setPen(m_theme.metaText);
+            auto x = option.rect.left() + kListMargin + kAvatarSize + kAvatarSpacing;
+            auto y = option.rect.top () + kRowVMargin;
+            auto w = g.viewWidth - 2 * (kListMargin + kAvatarSize + kAvatarSpacing);
+            auto h = kMetaLineHeight;
+            const QRectF metaRect(x, y, w, h);
+            painter->drawText(metaRect, g.isMe ? Qt::AlignRight : Qt::AlignLeft, per_message_tips);
+        }
+        // 画头像
         painter->drawPixmap(g.avatarRect.toRect(), sender_avatar_pixamp);
 
         // ---- 气泡背景（圆角矩形，主题色；文本/图片/文件共用） ----

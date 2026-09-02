@@ -274,7 +274,7 @@ void ChatWindow::init() {
     //     // m_chatroom_proxy->setFilterKeyColumn(0); // 仅过滤第 0 列
     //     // m_chatroom_proxy->setFilterRole(ENUMS::role_item_data()); // 或 Qt::UserRole 自定义数据角色
     //     m_chatroom_proxy->setFilterCaseSensitivity(Qt::CaseInsensitive);
-    //     m_chatroom_proxy->setFilterFixedString(text); 
+    //     m_chatroom_proxy->setFilterFixedString(text);
     // });
 
     // 添加好友分组
@@ -795,11 +795,12 @@ void ChatWindow::handle_chatroom_item_clicked(const QModelIndex &index) {
 void ChatWindow::add_message(const std::shared_ptr<SyncMessage>&sync_message) {
     do {
         // 无效数据
+        if (!sync_message) { break; }
         if (!sync_message->hasText() || !sync_message->text().hasShortText()) { break; }
-        if (sync_message->serverMessageId  ().isEmpty()) { break; }
-        if (sync_message->clientMessageId  ().isEmpty()) { break; }
-        if (sync_message->senderAccountId  ().isEmpty()) { break; }
-        if (sync_message->receiverAccountId().isEmpty()) { break; }
+        if ( sync_message->serverMessageId  ().isEmpty()) { break; }
+        if ( sync_message->clientMessageId  ().isEmpty()) { break; }
+        if ( sync_message->senderAccountId  ().isEmpty()) { break; }
+        if ( sync_message->receiverAccountId().isEmpty()) { break; }
 
         // 读取数据
         auto subtype = sync_message->subType();

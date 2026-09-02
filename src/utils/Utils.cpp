@@ -1010,6 +1010,7 @@ QDebug operator<<(QDebug debug, const MessageContext&req) {
     ;                               debug.nospace() << "sender_account_id:" << req.senderAccountId() << ",";
     ;                               debug.nospace() << "client_message_id:" << req.clientMessageId() << ",";
     if (req.hasTimestamp      ()) { debug.nospace() << "timestamp:"         << req.timestamp      () << ","; }
+    ;                               debug.nospace() << "message_type:"      << req.messageType    () << ",";
     ;                               debug.nospace() << "oneof chat_room {";
     ;    if (req.hasAccountId ()) { debug.nospace() << "account_id:"        << req.accountId      () << ","; }
     else if (req.hasGroupId   ()) { debug.nospace() << "group_id:"          << req.groupId        () << ","; }

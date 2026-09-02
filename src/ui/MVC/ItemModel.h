@@ -850,7 +850,7 @@ public:
     TreeItemData* add_message(const std::shared_ptr<MessageContext>&message_context) {
         // 先获取消息列表，再进行排序，查找插入位置，与上一条消息间隔时间过长时添加一条时间提示
 
-        // 去重
+        // 根据客户端生成的消息 ID 进行去重
         auto client_message_id = message_context->clientMessageId();
         for (auto&item : data_root()->get_item_childs()) {
             for (auto&column : item->get_data_columns()) {
@@ -866,11 +866,11 @@ public:
 
         // 获取子节点列表
         auto item_childs = data_root()->get_item_childs();
-        // 查找插入位置
-        auto ite = item_childs.begin();
-        for ( ; ite != item_childs.end(); ++ite) {
-            ;
-        }
+        // // 查找插入位置
+        // auto ite = item_childs.begin();
+        // for ( ; ite != item_childs.end(); ++ite) {
+        //     // TODO:可以插入非末尾位置
+        // }
 
         // 填充数据
         auto text_diaplay = QString(); // get_display_name(in_contact);
@@ -886,7 +886,8 @@ public:
         var_item[Qt::DecorationRole] = icon_init(); // 设置默认图标样式，实际不使用
 
         // 插入
-        auto row_item = std::distance(item_childs.begin(), ite);
+        // auto row_item = std::distance(item_childs.begin(), ite);
+        auto row_item = (int)item_childs.size();
         const QModelIndex parent_index = QModelIndex(); // get_item_message_index(chatroom);
         beginInsertRows(parent_index, row_item, row_item);
         // 需要支持按位置插入
@@ -912,6 +913,8 @@ public:
         if (!column_variant.canConvert<std::shared_ptr<MessageContext>>()) { return nullptr; }
         return column_variant.value<std::shared_ptr<MessageContext>>();
     }
+
+    auto row_count() { return data_root()->row_count(); }
 
     int get_item_message_row(const TreeItemData*item_message) const {
         if (!item_message) { return -1; }
@@ -947,7 +950,7 @@ protected:
         return QSortFilterProxyModel::filterAcceptsRow(source_row, source_parent);
         // // 获取原始 Model 的 index
         // QModelIndex index = sourceModel()->index(source_row, 0, source_parent);
-        
+
         // // 获取自定义数据（例如在线状态）
         // bool is_online = index.data(CustomRoles::OnlineRole).toBool();
         // QString name   = index.data(Qt::DisplayRole).toString();

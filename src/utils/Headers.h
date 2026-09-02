@@ -465,6 +465,7 @@ using SyncClient    = ::TaoTieChat::SyncService::Client;
 using ::TaoTieChat::ContactReplyCodeGadget::ContactReplyCode;
 using ::TaoTieChat::ErrorCodeGadget::ErrorCode;
 using ::TaoTieChat::FileStatusCodeGadget::FileStatusCode;
+using ::TaoTieChat::MessageTypeGadget::MessageType;
 using ::TaoTieChat::PermissionCodeGadget::PermissionCode;
 using ::TaoTieChat::SuccessCodeGadget::SuccessCode;
 using ::TaoTieChat::SyncSubTypeContactGadget::SyncSubTypeContact;

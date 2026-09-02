@@ -12,6 +12,7 @@ class ContactWindow;
 class ContactInfo;
 class ChatroomModel;
 class MessageWindow;
+class ChatroomProxy;
 
 namespace Ui {
 class ChatWindow;
@@ -121,8 +122,9 @@ private:
     std::shared_ptr<QMenu  > m_menu_add        ;
     std::shared_ptr<QAction> m_action_add      ;
     std::shared_ptr<QAction> m_action_create   ;
-    // model/view/delegate
+    // model/view/delegate/proxy
     std::shared_ptr<ChatroomModel> m_chatroom_model  ;
+    std::shared_ptr<ChatroomProxy> m_chatroom_proxy  ;
     std::shared_ptr<ContactModel > m_contact_model   ;
     std::shared_ptr<ItemDelegate > m_contact_delegate;
     std::shared_ptr<SearchWindow > m_search_window   ;

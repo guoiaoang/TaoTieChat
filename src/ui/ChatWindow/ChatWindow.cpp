@@ -43,6 +43,7 @@ void ChatWindow::release_resources() {
     //
     m_cache_self_info  .reset();
     m_cache_self_avatar.reset();
+    m_chatroom_proxy   .reset();
 
     // 清除好友关系等
     // Accounts::instance().set_current_account(std::make_shared<ContactInfo>());  // 登录时会使用该内容，不能在这里清除
@@ -71,10 +72,11 @@ void ChatWindow::init() {
     m_menu_add         = std::make_shared<QMenu  >();
     m_action_add       = std::make_shared<QAction>();
     m_action_create    = std::make_shared<QAction>();
-    // model/view
+    // model/view/proxy
     m_chatroom_model   = std::make_shared<ChatroomModel>();
     m_contact_model    = std::make_shared<ContactModel >();
     m_contact_delegate = std::make_shared<ItemDelegate >();
+    m_chatroom_proxy   = std::make_shared<ChatroomProxy>();
 
     // 连接消息
     connect(m_ui->navigate_button_avatar   , &QToolButton::clicked, this, &ChatWindow::slot_button_navigate_avatar ); // 点击了头像按钮
@@ -249,7 +251,11 @@ void ChatWindow::init() {
     connect(m_ui->page_list_contact->selectionModel(), &QItemSelectionModel::currentChanged, this, &ChatWindow::handle_contact_selection_changed);
 
     // chatroom
-    m_ui->page_list_chat_room->setModel(m_chatroom_model.get());
+    m_chatroom_proxy->setSourceModel(m_chatroom_model.get());  // 将原始 Model 设置给代理 Model
+    // m_chatroom_proxy->sort(0, Qt::AscendingOrder); // 按第 0 列升序排序
+    m_chatroom_proxy->sort(0, Qt::DescendingOrder); // 按第 0 列倒序排序
+    m_chatroom_proxy->setDynamicSortFilter(true);  // 开启动态排序（当 Model 内部数据改变时，自动重新排序）
+    m_ui->page_list_chat_room->setModel(m_chatroom_proxy.get());  // 这里传入 Proxy Model
     m_ui->page_list_chat_room->setItemDelegate(m_contact_delegate.get());
     m_ui->page_list_chat_room->setHeaderHidden(true); // 隐藏表头，看起来更像 QQ 列表
     m_ui->page_list_chat_room->setIndentation(0); // m_ui->page_list_contact->indentation() / 2);  // 设置分组缩进  // 必须
@@ -262,6 +268,14 @@ void ChatWindow::init() {
     m_ui->page_list_detail->setMinimumWidth(400);
     // 使用 currentChanged 信号支持键盘上下键导航和鼠标点击  // 需要先 setModel 才能连接
     connect(m_ui->page_list_chat_room->selectionModel(), &QItemSelectionModel::currentChanged, this, &ChatWindow::handle_chatroom_selection_changed);
+    // // 绑定搜索框文本改变信号
+    // connect(m_ui->edit_search, &QLineEdit::textChanged, this, [this](const QString &text) {
+    //     // 设置过滤关键词（区分/不区分大小写）
+    //     // m_chatroom_proxy->setFilterKeyColumn(0); // 仅过滤第 0 列
+    //     // m_chatroom_proxy->setFilterRole(ENUMS::role_item_data()); // 或 Qt::UserRole 自定义数据角色
+    //     m_chatroom_proxy->setFilterCaseSensitivity(Qt::CaseInsensitive);
+    //     m_chatroom_proxy->setFilterFixedString(text); 
+    // });
 
     // 添加好友分组
     m_contact_model->add_group(ENUMS::ItemGroupType::REQUEST);
@@ -772,36 +786,6 @@ void ChatWindow::handle_chatroom_item_clicked(const QModelIndex &index) {
         if (!contact_show->hasBaseInfo()) { break; }
         auto account_id_show = contact_show->baseInfo().accountId();
 
-        // // 先查找或添加对话
-        // // slot_button_navigate_message();
-        // auto chatroom_data = std::make_shared<ChatroomData>();
-        // chatroom_data->contact = contact_show;
-        // m_chatroom_model->add_contact_chatroom_row(chatroom_data);
-
-        // // 查找窗口提取数据
-        // MessageWindow* target_message_window = nullptr;
-        // for (int idx = 0; idx < m_ui->stacked_contact_detail->count(); ++idx) {
-        //     // 获取窗口
-        //     MessageWindow* message_window = dynamic_cast<MessageWindow*>(m_ui->stacked_contact_detail->widget(idx));
-        //     if (!message_window) { continue; }
-        //     // 获取信息
-        //     auto contact_widget = message_window->get_contact();
-        //     if (!contact_widget) { continue; }
-        //     if (!contact_widget->hasBaseInfo()) { continue; }
-        //     auto account_id_widget = contact_widget->baseInfo().accountId();
-        //     // 比较存储
-        //     if (account_id_show != account_id_widget) { continue; }
-        //     target_message_window = message_window;
-        //     break;
-        // }
-        // // 找不到窗口时进行添加
-        // if (!target_message_window) {
-        //     target_message_window = new MessageWindow;
-        //     target_message_window->set_contact(contact_show);
-        //     m_ui->stacked_contact_detail->addWidget(target_message_window);
-        //     // 连接更新信号
-        //     connect(target_message_window, &MessageWindow::signal_new_message, this, [this](){});
-        // }
         MessageWindow* target_message_window = get_message_window(account_id_show);
         m_ui->stacked_contact_detail->setCurrentWidget(target_message_window);
     } while (false);
@@ -837,31 +821,6 @@ void ChatWindow::add_message(const std::shared_ptr<SyncMessage>&sync_message) {
         else if (current_account_id == receiver_account_id) { account_id_show = sender_account_id  ; }
         // 收发都不是自己，那么收应该为对话 ID
         // else { ... }
-
-        // // 查找窗口提取数据
-        // MessageWindow* target_message_window = nullptr;
-        // for (int idx = 0; idx < m_ui->stacked_contact_detail->count(); ++idx) {
-        //     // 获取窗口
-        //     MessageWindow* message_window = dynamic_cast<MessageWindow*>(m_ui->stacked_contact_detail->widget(idx));
-        //     if (!message_window) { continue; }
-        //     // 获取信息
-        //     auto contact_widget = message_window->get_contact();
-        //     if (!contact_widget) { continue; }
-        //     if (!contact_widget->hasBaseInfo()) { continue; }
-        //     auto account_id_widget = contact_widget->baseInfo().accountId();
-        //     // 比较存储
-        //     if (account_id_show != account_id_widget) { continue; }
-        //     target_message_window = message_window;
-        //     break;
-        // }
-        // auto contact_show = Accounts::instance().get_contact(account_id_show);
-        // // 找不到窗口时进行添加
-        // if (!target_message_window && contact_show) {
-        //     target_message_window = new MessageWindow;
-        //     target_message_window->set_contact(contact_show);
-        //     m_ui->stacked_contact_detail->addWidget(target_message_window);
-        //     connect(target_message_window, &MessageWindow::signal_new_message, this, [this](){});
-        // }
 
         MessageWindow* target_message_window = get_message_window(account_id_show);
         // 不需要切换显示
@@ -979,29 +938,6 @@ void ChatWindow::slot_message_to(const std::shared_ptr<ContactInfo>&contact_show
     if (!contact_show->hasBaseInfo()) { return; }
     auto account_id_show = contact_show->baseInfo().accountId();
 
-    // // 查找窗口提取数据
-    // MessageWindow* target_message_window = nullptr;
-    // for (int index = 0; index < m_ui->stacked_contact_detail->count(); ++index) {
-    //     // 获取窗口
-    //     MessageWindow* message_window = dynamic_cast<MessageWindow*>(m_ui->stacked_contact_detail->widget(index));
-    //     if (!message_window) { continue; }
-    //     // 获取信息
-    //     auto contact_widget = message_window->get_contact();
-    //     if (!contact_widget) { continue; }
-    //     if (!contact_widget->hasBaseInfo()) { continue; }
-    //     auto account_id_widget = contact_widget->baseInfo().accountId();
-    //     // 比较存储
-    //     if (account_id_show != account_id_widget) { continue; }
-    //     target_message_window = message_window;
-    //     break;
-    // }
-    // // 找不到窗口时进行添加
-    // if (!target_message_window) {
-    //     target_message_window = new MessageWindow;
-    //     target_message_window->set_contact(contact_show);
-    //     m_ui->stacked_contact_detail->addWidget(target_message_window);
-    //     connect(target_message_window, &MessageWindow::signal_new_message, this, [this](){});
-    // }
     MessageWindow* target_message_window = get_message_window(account_id_show);
     m_ui->stacked_contact_detail->setCurrentWidget(target_message_window);
 }
@@ -1068,6 +1004,8 @@ void ChatWindow::update_last_message(const QString&chatroom_id, const std::share
     auto short_text = last_message->hasShortText() ? last_message->shortText() : "";
     auto datatime = last_message->hasTimestamp() && last_message->timestamp().hasTimestamp() ? last_message->timestamp().timestamp().toDateTime() : QDateTime{};
     m_chatroom_model->update_last_message(chatroom_id, short_text, datatime);  // 界面更新应由model更新数据触发
+    // // 对聊天列表进行排序
+    // m_chatroom_model->sort(0);
 }
 
 void ChatWindow::update_contact_avatar(const QString&avatar_id, bool local_only) {

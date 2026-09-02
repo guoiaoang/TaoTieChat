@@ -280,7 +280,6 @@ public:
             data_root()->add_child(item_group);
             // return item_group;
         }
-        auto column_index = 0;
         auto text_diaplay = QMetaEnum::fromType<ENUMS::ItemGroupType>().valueToKey(static_cast<int>(group_type));
         std::map<int, QVariant> var_item;
         var_item[ENUMS::role_item_type()] = QVariant::fromValue<ENUMS::ItemDataType>(ENUMS::ItemDataType::GROUP);
@@ -297,7 +296,7 @@ public:
         var_item[Qt::DecorationRole] = icon_init(); // 设置默认图标样式
         auto row = static_cast<int>(data_root()->get_item_childs().size());
         beginInsertRows(QModelIndex(), row, row);
-        auto item_group = data_root()->add_child(new TreeItemData(column_index, var_item));
+        auto item_group = data_root()->add_child(new TreeItemData(get_data_column(), var_item));
         endInsertRows();
         return item_group;
     }
@@ -369,7 +368,6 @@ public:
         }
 
         // 分组节点添加成员  // 未校验重复
-        auto column_index = 0;
         auto text_diaplay = account_id;
         std::map<int, QVariant> var_item;
         var_item[ENUMS::role_item_type()] = QVariant::fromValue<ENUMS::ItemDataType>(ENUMS::ItemDataType::CONTACT);
@@ -436,8 +434,8 @@ public:
         const QModelIndex parent_index = index_group(group_type);
         beginInsertRows(parent_index, row_item, row_item);
         // 需要支持按位置插入
-        // auto item_member = item_group->add_child(new TreeItemData(column_index, var_item));
-        auto item_member = item_group->insert_child(pos_insert, new TreeItemData(column_index, var_item));
+        // auto item_member = item_group->add_child(new TreeItemData(get_data_column(), var_item));
+        auto item_member = item_group->insert_child(pos_insert, new TreeItemData(get_data_column(), var_item));
         endInsertRows();
         return item_member;
 
@@ -637,7 +635,6 @@ public:
         TreeItemData*item_group = data_root();
 
         // 分组节点添加成员  // 未校验重复
-        auto column_index = 0;
         auto text_diaplay = account_id;
         std::map<int, QVariant> var_item;
         var_item[ENUMS::role_item_type()] = QVariant::fromValue<ENUMS::ItemDataType>(ENUMS::ItemDataType::CONTACT);
@@ -651,7 +648,7 @@ public:
         var_item[Qt::DecorationRole] = icon_init(); // 设置默认图标样式，实际不使用
         auto row = static_cast<int>(item_group->get_item_childs().size());
         beginInsertRows(QModelIndex(), row, row);
-        auto item_member = item_group->add_child(new TreeItemData(column_index, var_item));
+        auto item_member = item_group->add_child(new TreeItemData(get_data_column(), var_item));
         endInsertRows();
         return item_member;
     }
@@ -673,6 +670,14 @@ public:
 class ChatroomModel : public TreeModel {
 public:
     using TreeModel::TreeModel;
+
+    // void sort(int column, Qt::SortOrder order = Qt::AscendingOrder) override {
+    //     do {
+    //         if (column != get_data_column()) { break; }
+    //         // 判断类型 ...
+    //     } while(false);
+    //     TreeModel::sort(column, order);
+    // }
 
 private:
 
@@ -705,7 +710,6 @@ private:
             return display_name;
         };
         // 填充数据
-        constexpr auto column_index = 0;
         auto text_diaplay = get_display_name(chatroom_data->contact);
         std::map<int, QVariant> var_item;
         var_item[ENUMS::role_item_type()] = QVariant::fromValue<ENUMS::ItemDataType>(ENUMS::ItemDataType::CHATROOM);
@@ -723,7 +727,7 @@ private:
         const QModelIndex parent_index = get_item_chatroom_index(chatroom);
         beginInsertRows(parent_index, row_item, row_item);
         // 需要支持按位置插入
-        chatroom = data_root()->insert_child(row_item, new TreeItemData(column_index, var_item));
+        chatroom = data_root()->insert_child(row_item, new TreeItemData(get_data_column(), var_item));
         endInsertRows();
         return chatroom;
     }
@@ -816,7 +820,7 @@ public:
         TreeItemData* chatroom = get_contact_chatroom_item(chatroom_id);
         if (!chatroom) { return; }
         // 获取节点
-        auto column_data = chatroom->get_column_data(0);
+        auto column_data = chatroom->get_column_data(get_data_column());
         if (!column_data.size()) { return; }
         // 判断类型
         auto item_data = column_data.at(ENUMS::role_item_data());
@@ -835,7 +839,7 @@ public:
         emit dataChanged(index, index);
     }
 
-// private:
+private:
 //     std::map<QString, TreeItemData*> m_cache_chatrooms;
 };
 
@@ -869,7 +873,6 @@ public:
         }
 
         // 填充数据
-        constexpr auto column_index = 0;
         auto text_diaplay = QString(); // get_display_name(in_contact);
         std::map<int, QVariant> var_item;
         var_item[ENUMS::role_item_type()] = QVariant::fromValue<ENUMS::ItemDataType>(ENUMS::ItemDataType::MESSAGE);
@@ -887,7 +890,7 @@ public:
         const QModelIndex parent_index = QModelIndex(); // get_item_message_index(chatroom);
         beginInsertRows(parent_index, row_item, row_item);
         // 需要支持按位置插入
-        TreeItemData* item_message = data_root()->insert_child(row_item, new TreeItemData(column_index, var_item));
+        TreeItemData* item_message = data_root()->insert_child(row_item, new TreeItemData(get_data_column(), var_item));
         endInsertRows();
         return item_message;
         return nullptr;
@@ -902,7 +905,7 @@ public:
         auto last_row_data = data_root()->row_data(last_row_index);
         if (!last_row_data) { return nullptr; }
         // 获取列中的数据
-        auto column_data = last_row_data->get_column_data(0);
+        auto column_data = last_row_data->get_column_data(get_data_column());
         if ( column_data.empty()) { return nullptr; }
         // 解析列中的数据
         auto column_variant = column_data.at(ENUMS::role_item_data());
@@ -935,3 +938,55 @@ private:
     }
 
 };
+
+class ChatroomProxy : public QSortFilterProxyModel {
+public:
+protected:
+    // 过滤函数
+    bool filterAcceptsRow(int source_row, const QModelIndex &source_parent) const override {
+        return QSortFilterProxyModel::filterAcceptsRow(source_row, source_parent);
+        // // 获取原始 Model 的 index
+        // QModelIndex index = sourceModel()->index(source_row, 0, source_parent);
+        
+        // // 获取自定义数据（例如在线状态）
+        // bool is_online = index.data(CustomRoles::OnlineRole).toBool();
+        // QString name   = index.data(Qt::DisplayRole).toString();
+
+        // // 仅显示在线且符合搜索关键字的联系人
+        // return is_online && name.contains(filterRegularExpression());
+    }
+
+    // 仅比较时间
+    // 排序函数，该函数返回正序，由 `QSortFilterProxyModel::sort(0, Qt::AscendingOrder);` 设置为倒序
+    bool lessThan(const QModelIndex &left_index, const QModelIndex &right_index) const {
+        do {
+            // 校验 index
+            if (!left_index .isValid()) { break; }
+            if (!right_index.isValid()) { break; }
+            // 只处理第 0 列
+            if ( left_index .column() != get_data_column()) { break; }
+            if ( right_index.column() != get_data_column()) { break; }
+            // 获取列中存储的数据
+            auto left_data  = left_index .data(ENUMS::role_item_data());
+            auto right_data = right_index.data(ENUMS::role_item_data());
+            // 校验数据是否可用
+            if (!left_data .isValid()) { break; }
+            if (!right_data.isValid()) { break; }
+            // 校验数据类型
+            if (!left_data .canConvert<std::shared_ptr<ChatroomData>>()) { break; }
+            if (!right_data.canConvert<std::shared_ptr<ChatroomData>>()) { break; }
+            // 获取实际数据
+            auto left_chatroom  = left_data .value<std::shared_ptr<ChatroomData>>();
+            auto right_chatroom = right_data.value<std::shared_ptr<ChatroomData>>();
+            if (!left_chatroom ) { break; }
+            if (!right_chatroom) { break; }
+            // 获取时间
+            if (!left_chatroom ->datetime.isValid()) { break; }
+            if (!right_chatroom->datetime.isValid()) { break; }
+            return left_chatroom->datetime < right_chatroom->datetime;  // 正序
+        } while(false);
+        return QSortFilterProxyModel::lessThan(left_index, right_index);
+        // return QString::localeAwareCompare(left_name, right_name) < 0;
+    }
+};
+

@@ -429,6 +429,62 @@ std::shared_ptr<ContactInfo> get_contact_info(const std::shared_ptr<ContactInfos
     return std::make_shared<ContactInfo>();
 }
 
+// ====================================================================== //
+
+// 时间戳转字符串
+// 1. [今天, now] -> hh:mm
+// 2. [昨天, 今天) -> 昨天 hh:mm
+// 3. [一周内， 昨天) -> 周一 hh:mm
+// 4. [本年内，一周内) -> MM/dd
+// 5. [本年前，本年内) -> yyyy/MM/dd
+QString format_smart_time(const QDateTime &datetime) {
+    static const QMap<int, QString> week_names = {
+        {1, QObject::tr("Mon")},  // 周一  // Monday
+        {2, QObject::tr("Tue")},  // 周二  // Tuesday
+        {3, QObject::tr("Wed")},  // 周三  // Wednesday
+        {4, QObject::tr("Thu")},  // 周四  // Thursday
+        {5, QObject::tr("Fri")},  // 周五  // Friday
+        {6, QObject::tr("Sat")},  // 周六  // Saturday
+        {7, QObject::tr("Sun")},  // 周日  // Sunday
+    };
+
+    if (!datetime.isValid()) {
+        return QString();
+    }
+
+    // 将传入时间转换为本地时间的日期（确保跨时区比较准确）
+    QDateTime local_datetime = datetime.toLocalTime();
+    QDate target_date  = local_datetime.date();
+    QDate current_date = QDate::currentDate();
+
+    // 计算目标日期与今天的天数差 (例如：今天是 10 号，target 是 9 号，则 days_to_today 为 1)
+    qint64 days_to_today = target_date.daysTo(current_date);
+
+    // 1. 今天：直接显示 hh:mm
+    if (days_to_today == 0) {
+        return local_datetime.toString(QObject::tr("hh:mm"));
+    }
+
+    // 2. 昨天：显示 "昨天 hh:mm"
+    else if (days_to_today == 1) {
+        return QString(QObject::tr("Yesterday %1")).arg(local_datetime.toString(QObject::tr("hh:mm")));
+    }
+
+    // 3. 一周内（过去 2 到 6 天）：显示 "周X hh:mm"
+    else if (days_to_today >= 2 && days_to_today < 7) {
+        QString week_str = week_names.value(target_date.dayOfWeek());
+        return QString(QObject::tr("%1 %2")).arg(week_str, local_datetime.toString(QObject::tr("hh:mm")));
+    }
+
+    // 4. 今年内：显示 MM/dd
+    else if (target_date.year() == current_date.year()) {
+        return local_datetime.toString(QObject::tr("MM/dd"));
+    }
+
+    // 5. 更早之前：显示 yyyy/MM/dd
+    return local_datetime.toString(QObject::tr("yyyy/MM/dd"));
+}
+
 }
 
 namespace Utils::Transform {

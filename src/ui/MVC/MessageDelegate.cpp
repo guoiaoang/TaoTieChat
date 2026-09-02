@@ -436,7 +436,7 @@ void MessageDelegate::paint(QPainter *painter, const QStyleOptionViewItem &optio
         if (message_context->hasTimestamp() & message_context->timestamp().hasTimestamp()) {
             auto datetime = message_context->timestamp().timestamp().toDateTime();
             datetime.setTimeZone(QTimeZone::utc());
-            send_time = datetime.toLocalTime().toString(QStringLiteral("hh:mm:ss"));
+            send_time = Utils::format_smart_time(datetime);
         }
         // 发送者账号 ID
         QString sender_account_id = message_context->senderAccountId();

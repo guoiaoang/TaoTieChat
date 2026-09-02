@@ -73,6 +73,16 @@ std::shared_ptr<ContactInfo> get_contact_info(const std::shared_ptr<ContactInfos
 // 从好友列表中获取第 index 个好友
 std::shared_ptr<ContactInfo> get_contact_info(const std::shared_ptr<ContactInfos>&contact_infos, int index);
 
+// ====================================================================== //
+
+// 时间戳转字符串
+// 1. [今天, now] -> hh:mm
+// 2. [昨天, 今天) -> 昨天 hh:mm
+// 3. [一周内， 昨天) -> 周一 hh:mm
+// 4. [本年内，一周内) -> MM/dd
+// 5. [本年前，本年内) -> yyyy/MM/dd
+QString format_smart_time(const QDateTime &datetime);
+
 } // namespace Utils
 
 // FontIcons

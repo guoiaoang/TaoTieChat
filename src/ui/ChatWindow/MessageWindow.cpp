@@ -226,6 +226,9 @@ void MessageWindow::add_message(const std::shared_ptr<SyncMessage>&sync_message)
 
         // 5. 向 Model 追加新消息
 
+        // TODO:获取上一条消息，如果消息间隔大于30分钟则添加一条时间提示
+        // message_context->add
+
         // 读取数据
         auto client_message_id   = sync_message->clientMessageId  ();
         auto sender_account_id   = sync_message->senderAccountId  ();

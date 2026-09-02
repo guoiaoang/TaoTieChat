@@ -383,7 +383,8 @@ public:
             // 消息时间不应当截断
             auto datetime = chatroom_data->datetime;
             datetime.setTimeZone(QTimeZone::utc());
-            auto last_message_time = datetime.toLocalTime().toString("hh:mm");
+            // auto last_message_time = datetime.toLocalTime().toString("hh:mm");
+            auto last_message_time = Utils::format_smart_time(datetime);
             QFontMetrics metrics_time(style_data->font_time);
             // QString elided_last_messsage = metrics_time.elidedText(last_message_time, Qt::ElideRight, style_data->rect_message.width());
 

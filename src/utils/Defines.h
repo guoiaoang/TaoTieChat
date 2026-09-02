@@ -76,6 +76,9 @@ struct ChatroomData {
     QDateTime datetime;  // last_message_datetime
 };
 
+// 数据只保存在列表中的第 0 列
+static int get_data_column() { return 0; }
+
 // auto callback = std::function<void(int error_code, const QString&error_message, ...)>;
 // using ResultInfo             = std::shared_ptr<SignUpReply>;
 // user register

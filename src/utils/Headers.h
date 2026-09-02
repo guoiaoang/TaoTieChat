@@ -291,6 +291,7 @@ using stm = std::tm;
 #include <QSharedPointer>
 #include <QShortcut>
 #include <QSize>
+#include <QSortFilterProxyModel>
 #include <QSpinBox>
 #include <QSplitter>
 #include <QSslCipher>

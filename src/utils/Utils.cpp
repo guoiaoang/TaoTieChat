@@ -118,8 +118,37 @@ bool rename(QString src, QString dst) {
     // 确保目标文件的父目录存在，如果不存在则自动级联创建
     QDir().mkpath(dstInfo.absolutePath());
 
-    // 无论是文件还是目录，QFile::rename 都能一行搞定，它在底层调用操作系统的重命名 API，效率极高
-    return QFile::rename(src, dst);
+    // // 无论是文件还是目录，QFile::rename 都能一行搞定，它在底层调用操作系统的重命名 API，效率极高
+    // return QFile::rename(src, dst);
+
+//     // QString src = "path/to/src.txt";
+//     // QString dst = "path/to/dst.txt";
+//
+//     // 确保 src 文件确实存在
+//     if (!QFile::exists(src)) {
+//         return false;
+//     }
+//
+//     // 如果 dst 已经存在，先将其删除，否则 rename 必然失败
+//     if (QFile::exists(dst)) {
+//         QFile::remove(dst);
+//     }
+
+    // 使用实例化的对象进行重命名，方便获取错误信息
+    QFile file(src);
+    if (file.rename(dst)) {
+        return true;
+    }
+    // 这里会打印出具体的失败原因，例如 "Permission denied" 或 "File access error"
+    qDebug().noquote().nospace() << QString("failed to rename %1 to %2 with error: %3")
+        .arg(src).arg(dst).arg(file.errorString());
+    // 直接重命名失败时尝试复制
+    if (file.copy(dst)) {
+        return true;
+    }
+    qDebug().noquote().nospace() << QString("failed to copy %1 to %2 with error: %3")
+        .arg(src).arg(dst).arg(file.errorString());
+    return false;
 }
 
 void init_debug_output_format() {
@@ -333,6 +362,26 @@ QPixmap to_round_pixmap(const QPixmap& src, int radius) {
     return dest;
 }
 
+// 添加圆角遮罩
+QImage to_round_image(const QImage& src, int radius) {
+    QImage dest(src.size(), QImage::Format_ARGB32);
+    dest.fill(Qt::transparent); // 1. 先准备一张全透明底图
+
+    QPainter painter(&dest);
+    painter.setRenderHint(QPainter::Antialiasing); // 开启抗锯齿
+
+    // 2. 画出你想要的“形状”（这就是遮罩区域）
+    painter.setBrush(Qt::black);
+    painter.drawRoundedRect(dest.rect(), radius, radius);
+
+    // 3. 关键一步：设置合成模式为“取交集”
+    // SourceIn 模式：只保留新画内容与已有内容重叠的部分
+    painter.setCompositionMode(QPainter::CompositionMode_SourceIn);
+    painter.drawImage(0, 0, src); // 画上原图
+
+    return dest;
+}
+
 // 添加图形遮罩
 QPixmap apply_mask(const QPixmap& source, const QPixmap& mask) {
     // 1. 准备一个结果图，大小与原图一致，初始全透明
@@ -352,6 +401,30 @@ QPixmap apply_mask(const QPixmap& source, const QPixmap& mask) {
     // 4. 画上你的遮罩图片
     // 注意：如果遮罩大小不一致，需要用 scaled 拉伸到原图大小
     painter.drawPixmap(0, 0, mask.scaled(source.size(), Qt::KeepAspectRatioByExpanding, Qt::SmoothTransformation));
+
+    painter.end();
+    return result;
+}
+
+// 添加图形遮罩
+QImage apply_mask(const QImage& source, const QImage& mask) {
+    // 1. 准备一个结果图，大小与原图一致，初始全透明
+    QImage result(source.size(), QImage::Format_ARGB32);
+    result.fill(Qt::transparent);
+
+    QPainter painter(&result);
+    painter.setRenderHint(QPainter::Antialiasing);
+
+    // 2. 先画原图
+    painter.drawImage(0, 0, source);
+
+    // 3. 设置合成模式为 DestinationIn
+    // 效果：原图中只有遮罩图“不透明”的地方会被保留
+    painter.setCompositionMode(QPainter::CompositionMode_DestinationIn);
+
+    // 4. 画上你的遮罩图片
+    // 注意：如果遮罩大小不一致，需要用 scaled 拉伸到原图大小
+    painter.drawImage(0, 0, mask.scaled(source.size(), Qt::KeepAspectRatioByExpanding, Qt::SmoothTransformation));
 
     painter.end();
     return result;
@@ -485,6 +558,25 @@ QString format_smart_time(const QDateTime &datetime) {
     return local_datetime.toString(QObject::tr("yyyy/MM/dd"));
 }
 
+// 获取显示名称的接口
+QString get_display_name(const std::shared_ptr<ContactInfo>&contact_info) {
+    QString display_name;
+    do {
+        if (!contact_info) { break; }
+        // 默认显示昵称
+        if ( contact_info->hasBaseInfo()) {
+            display_name = contact_info->baseInfo().nickname();
+        }
+        // 有备注时显示备注
+        if ( contact_info->hasFriendInfo()) {
+            if (!contact_info->friendInfo().notes().isEmpty()) {
+                display_name = contact_info->friendInfo().notes();
+            }
+        }
+    } while(false);
+    return display_name;
+}
+
 }
 
 namespace Utils::Transform {
@@ -589,6 +681,32 @@ int to_int(const FileStatusCode& file_status_code) {
         return map_file_status_codes.at(file_status_code);
     }
     return 0;
+}
+
+TaoTieChat::Timestamp to_timestamp(const QDateTime&datatime) {
+    // 1. 创建内部的 google::protobuf::Timestamp 对象
+    google::protobuf::Timestamp pb_timestamp;
+    // 2. 获取当前毫秒级时间戳
+    qint64 msecs = datatime.toMSecsSinceEpoch();
+    // 3. 填充秒和纳秒
+    pb_timestamp.setSeconds(msecs / 1000);
+    pb_timestamp.setNanos((msecs % 1000) * 1000000);
+    // 4. 创建包装的 TaoTieChat::Timestamp 并设置内部的 google::protobuf::Timestamp
+    TaoTieChat::Timestamp timestamp;
+    timestamp.setTimestamp(pb_timestamp);
+    return timestamp;
+}
+
+// 字节数 → 人类可读大小（KB/MB/GB）
+QString human_size(qint64 bytes) {
+    if (bytes < 1024) {
+        return QStringLiteral("%1 B").arg(bytes);
+    }
+    const char *units[] = { "KB", "MB", "GB", "TB" };
+    double v = double(bytes);
+    int u = -1;
+    do { v /= 1024.0; ++u; } while (v >= 1024.0 && u < 3);
+    return QStringLiteral("%1 %2").arg(QString::number(v, 'f', 1), QLatin1String(units[u]));
 }
 
 }

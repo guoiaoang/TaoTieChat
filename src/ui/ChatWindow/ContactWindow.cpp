@@ -113,10 +113,11 @@ void ContactWindow::show_contact(const std::shared_ptr<ContactInfo>&contact_info
     qDebug().noquote().nospace() << "contactInfo: " << Utils::Transform::to_string(contact_info);
 
     // 文本信息
-    auto base_info   = contact_info->baseInfo();
-    auto friend_info = contact_info->hasFriendInfo() ? contact_info->friendInfo() : ContactInfoFriend{};
-    auto self_info   = contact_info->hasSelfInfo  () ? contact_info->selfInfo  () : ContactInfoSelf  {};
-    set_text(m_ui->edit_nickname_big, base_info  .nickname   ()          );
+    auto base_info    = contact_info->baseInfo();
+    auto friend_info  = contact_info->hasFriendInfo() ? contact_info->friendInfo() : ContactInfoFriend{};
+    auto self_info    = contact_info->hasSelfInfo  () ? contact_info->selfInfo  () : ContactInfoSelf  {};
+    auto display_name = Utils::get_display_name(contact_info);
+    set_text(m_ui->edit_nickname_big, display_name);
     set_text(m_ui->edit_nickname    , base_info  .nickname   ()          );
     set_text(m_ui->edit_userid      , base_info  .userId     ()          );
     set_text(m_ui->edit_region      , base_info  .region     ()          );
@@ -587,8 +588,8 @@ void ContactWindow::show_avatar_id(const QString&avatar_id) {
         // 下载成功，文件已保存到本地，可以直接显示了
         show_avatar(get_local_avatar_id_pixmap(notify.id + ";size:128*128"));
     };
-    qint64 downloaded_size = QFileInfo(Database::instance().get_local_file_id_path(avatar_id)).size();
-    NetworkClient::instance().download_file(avatar_id, qMax(qint64(0), downloaded_size), callback_download_file_notify);
+    QString notify_id = QString("notify ContactWindow::show_avatar_id %1").arg(avatar_id);
+    NetworkClient::instance().download_file(avatar_id, notify_id, callback_download_file_notify);
 }
 
 // 弹窗选择新的头像图片

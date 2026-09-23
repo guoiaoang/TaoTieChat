@@ -18,46 +18,6 @@
 #include "MessageDelegate.h"
 #include "Accounts.h"
 
-class ChatModel {
-public:
-    enum Roles {
-        SenderRole = Qt::UserRole + 1,  ///< QString 发送者
-        HtmlRole,                       ///< QString HTML 内容
-        TimeRole,                       ///< QDateTime 时间
-        IsMeRole,                       ///< bool 是否自己
-        TypeRole,                       ///< int ChatMessage::Type
-        ImageRole,                      ///< QImage 原始图片（Image 消息）
-        ImagePathRole,                  ///< QString 图片来源路径（可为空）
-        FileNameRole,                   ///< QString 文件名（File 消息）
-        FilePathRole,                   ///< QString 文件路径（File 消息）
-        FileSizeRole,                   ///< qint64 文件字节数（File 消息）
-    };
-};
-
-struct ChatMessage {
-    enum class Type {
-        Text,    ///< 普通聊天消息（富文本气泡）
-        System,  ///< 系统提示（居中灰色小字）
-        Image,   ///< 图片消息（缩放气泡，来自剪贴板粘贴或文件选择）
-        File,    ///< 文件消息（文件卡片，点击打开所在位置）
-    };
-
-    QString sender;          ///< 发送者昵称
-    QString html;            ///< 消息内容（HTML 片段，纯文本也合法；Text 消息用）
-    QDateTime time;          ///< 发送时间
-    bool isMe = false;       ///< 是否为自己发送（决定气泡左右对齐与配色）
-    Type type = Type::Text;  ///< 消息类型
-
-    // ---- 图片消息（Type::Image） ----
-    QImage image;            ///< 原始位图（QImage 隐式共享，拷贝廉价）
-    QString imageFilePath;   ///< 来源文件路径（粘贴的图片为空；非空时点击可用看图软件打开）
-
-    // ---- 文件消息（Type::File） ----
-    QString fileName;        ///< 显示文件名（含扩展名）
-    QString filePath;        ///< 本地路径（空则"打开所在文件夹"不可用）
-    qint64 fileSize = 0;     ///< 字节数（显示时转成 KB/MB）
-};
-
 namespace {
 
 // ---------- 布局常量（像素） ----------
@@ -87,68 +47,21 @@ int viewportWidth(const QStyleOptionViewItem &option) {
     return option.rect.isValid() ? option.rect.width() : 640;
 }
 
-/// 由昵称确定性生成头像底色（同一人颜色稳定）
-QColor avatarColor(const QString &name) {
-    size_t h = qHash(name);
-    return QColor::fromHsl(int(h % 360), 130, 140);
-}
-
-/// 字节数 → 人类可读大小（KB/MB/GB）
-QString humanSize(qint64 bytes) {
-    if (bytes < 1024) {
-        return QStringLiteral("%1 B").arg(bytes);
-    }
-    const char *units[] = { "KB", "MB", "GB", "TB" };
-    double v = double(bytes);
-    int u = -1;
-    do { v /= 1024.0; ++u; } while (v >= 1024.0 && u < 3);
-    return QStringLiteral("%1 %2").arg(QString::number(v, 'f', 1), QLatin1String(units[u]));
+// 判断是否是支持的数据类型
+bool check_is_message_context(const QModelIndex &index) {
+    if (!index.isValid()) { return false; }
+    const QVariant variant_data = index.data(ENUMS::role_item_data());
+    if (!variant_data.isValid() || !variant_data.canConvert<std::shared_ptr<MessageData::ItemData>>()) { return false; }
+    auto message_data = variant_data.value<std::shared_ptr<MessageData::ItemData>>();
+    if (!message_data) { return false; }
+    // if (!message_data->context) { return false; }
+    return true;
 }
 
 } // namespace
 
-// ---------------------------------------------------------------------------
-// 主题
-// ---------------------------------------------------------------------------
-
-ChatTheme ChatTheme::light() {
-    ChatTheme t;
-    t.viewBg      = QColor(0xF5, 0xF5, 0xF5);
-    t.windowBg    = QColor(0xFA, 0xFA, 0xFA);
-    t.bubbleMe    = QColor(0x95, 0xEC, 0x69);   // 微信绿
-    t.bubbleOther = QColor(0xFF, 0xFF, 0xFF);
-    t.text        = QColor(0x1A, 0x1A, 0x1A);
-    t.systemText  = QColor(0x8A, 0x8A, 0x8A);
-    t.metaText    = QColor(0x9A, 0x9A, 0x9A);
-    t.border      = QColor(0, 0, 0, 25);
-    t.link        = QColor(0x1E, 0x88, 0xE5);
-    t.selBg       = QColor(0x1E, 0x88, 0xE5);
-    t.selText     = QColor(0xFF, 0xFF, 0xFF);
-    return t;
-}
-
-ChatTheme ChatTheme::dark() {
-    ChatTheme t;
-    t.viewBg      = QColor(0x1B, 0x1B, 0x1B);
-    t.windowBg    = QColor(0x20, 0x20, 0x20);
-    t.bubbleMe    = QColor(0x2E, 0x7D, 0x46);   // 暗化的微信绿
-    t.bubbleOther = QColor(0x2C, 0x2C, 0x2C);
-    t.text        = QColor(0xE4, 0xE4, 0xE4);
-    t.systemText  = QColor(0x8A, 0x8A, 0x8A);
-    t.metaText    = QColor(0x8F, 0x8F, 0x8F);
-    t.border      = QColor(255, 255, 255, 30);
-    t.link        = QColor(0x64, 0xB5, 0xF6);
-    t.selBg       = QColor(0x37, 0x62, 0xA8);
-    t.selText     = QColor(0xFF, 0xFF, 0xFF);
-    return t;
-}
-
-// MessageDelegate::MessageDelegate(QObject *parent) : QStyledItemDelegate(parent) {
-//     m_theme = ChatTheme::light();
-// }
-
 MessageDelegate::MessageDelegate(QObject *parent) : ItemDelegateBase(parent) {
-    m_theme = ChatTheme::light();
+    m_theme = MessageData::ChatTheme::light();
 }
 
 MessageDelegate::~MessageDelegate() {
@@ -163,18 +76,7 @@ void MessageDelegate::clearCache() {
     resetSelection(); // 行号即将失效，选区一并清除
 }
 
-// 判断是否是支持的数据类型
-bool check_is_message_context(const QModelIndex &index) {
-    if (!index.isValid()) { return false; }
-    const QVariant variant_data = index.data(ENUMS::role_item_data());
-    if (!variant_data.isValid() || !variant_data.canConvert<std::shared_ptr<TaoTieChat::MessageContext>>()) { return false; }
-    return true;
-}
-
-// ---------------------------------------------------------------------------
-// 文档的创建与获取（缓存核心）
-// ---------------------------------------------------------------------------
-
+// 生成文本消息
 QTextDocument *MessageDelegate::createDocument(const QModelIndex &index, const QFont &font) const {
     auto *doc = new QTextDocument;
     doc->setDocumentMargin(0);  // 边距由气泡矩形自己控制
@@ -182,31 +84,36 @@ QTextDocument *MessageDelegate::createDocument(const QModelIndex &index, const Q
     do {
         if (!check_is_message_context(index)) { break; }
 
-        const auto message_context = index.data(ENUMS::role_item_data()).value<std::shared_ptr<TaoTieChat::MessageContext>>();
-        QString short_text = message_context->hasShortText() ? message_context->shortText() : QString();
+        const auto item_data = index.data(ENUMS::role_item_data()).value<std::shared_ptr<MessageData::ItemData>>();
+        // QString text = item_data->media_type == MessageData::MediaType::TEXT && item_data->text ? item_data->text->text : "";
+        // // QString short_text = message_context->hasShortText() ? message_context->shortText() : QString();
+        // // 如果是系统消息，判断是否自动显示格式化的时间
+        // if (message_context->messageType() == MessageType::SystemMessage
+        //     && message_context->clientMessageId().startsWith("timestamp_", Qt::CaseSensitivity::CaseInsensitive)
+        //     && short_text.isEmpty()
+        //     && message_context->hasTimestamp()
+        //     && message_context->timestamp().hasTimestamp()
+        //     && message_context->timestamp().timestamp().toDateTime().isValid()
+        // ) {
+        //     short_text = Utils::format_smart_time(message_context->timestamp().timestamp().toDateTime());
+        // }
 
-        // =================================================================== //
-
-        // 如果是系统消息，判断是否自动显示格式化的时间
-        if (message_context->messageType() == MessageType::SystemMessage
-            && message_context->clientMessageId().startsWith("timestamp_", Qt::CaseSensitivity::CaseInsensitive)
-            && short_text.isEmpty()
-            && message_context->hasTimestamp()
-            && message_context->timestamp().hasTimestamp()
-            && message_context->timestamp().timestamp().toDateTime().isValid()
-        ) {
-            short_text = Utils::format_smart_time(message_context->timestamp().timestamp().toDateTime());
+        QString text;
+        // 系统的时间戳消息
+        if (item_data->sender_type == MessageData::SenderType::SYSTEM && item_data->media_type == MessageData::MediaType::TIMESTAMP) {
+            text = Utils::format_smart_time(item_data->message_time);
+        }
+        // 系统/用户的纯文本消息
+        else if (item_data->media_type == MessageData::MediaType::TEXT && item_data->text) {
+            text= item_data->text->text;
         }
 
-        // =================================================================== //
-
-        // const QString html = short_text;
-        // doc->setHtml(html);
-        doc->setPlainText(short_text);
+        doc->setPlainText(text);
     } while (false);
     return doc;
 }
 
+// 缓存管理
 QTextDocument *MessageDelegate::acquireDocument(const QModelIndex &index, qreal maxTextWidth, const QFont &font) const {
     const int row = index.row();
     auto it = m_cache.find(row);
@@ -246,6 +153,7 @@ QTextDocument *MessageDelegate::acquireDocument(const QModelIndex &index, qreal 
     return e.doc;
 }
 
+// 生成图片消息
 const QPixmap *MessageDelegate::acquireImage(const QModelIndex &index, qreal maxW, qreal maxH) const {
     const int row = index.row();
     if (!m_cache.contains(row)) {
@@ -258,28 +166,28 @@ const QPixmap *MessageDelegate::acquireImage(const QModelIndex &index, qreal max
 
     do {
         if (!check_is_message_context(index)) { break; }
+        auto message_data  = index.data(ENUMS::role_item_data()).value<std::shared_ptr<MessageData::ItemData>>();
+        // auto item_geometry = itemGeometry(option, index);
+        bool is_system = message_data->sender_type == MessageData::SenderType::SYSTEM;
+        bool is_user   = message_data->sender_type == MessageData::SenderType::USER  ;
+        bool is_text   = message_data->media_type  == MessageData::MediaType ::TEXT  ;
+        bool is_image  = message_data->media_type  == MessageData::MediaType ::IMAGE ;
+        bool is_file   = message_data->media_type  == MessageData::MediaType ::FILE  ;
+        bool is_me     = message_data->is_me;
 
-        const auto message_context = index.data(ENUMS::role_item_data()).value<std::shared_ptr<TaoTieChat::MessageContext>>();
-        const QString short_text = message_context->hasShortText() ? message_context->shortText() : QString();
-
-        // =================================================================== //
-
-        // 原图走模型角色获取（QImage 隐式共享，无拷贝开销）
-        // TODO：未实现图片消息
-        // const QImage img = index.data(ChatModel::ImageRole).value<QImage>();
-        const QImage img = QImage(message_context->shortText());
-        if (img.isNull()) { return nullptr; }
+        if (!is_image) { break; }
+        auto pixmap = message_data->image->pixmap;
+        if (pixmap.isNull()) { return nullptr; }
 
         // 等比缩放到 (maxW, maxH) 以内；小图不放大
-        const qreal scale   = qMin<qreal>(1.0, qMin(maxW / img.width(), maxH / img.height()));
-        const qreal targetW = qMax<qreal>(1.0, img.width() * scale);
-        const qreal targetH = qMax<qreal>(1.0, img.height() * scale);
+        const qreal scale   = qMin<qreal>(1.0, qMin(maxW / pixmap.width(), maxH / pixmap.height()));
+        const qreal targetW = qMax<qreal>(1.0, pixmap.width () * scale);
+        const qreal targetH = qMax<qreal>(1.0, pixmap.height() * scale);
 
         if (entry.pixmap.isNull() || qAbs(entry.pixmapWidth - targetW) > 0.5) {
             // 宽度变化（窗口 resize / 首次布局）：按设备像素比重缩放，保证高 DPI 清晰
             const qreal dpr = qApp->devicePixelRatio();
-            const QImage scaled = img.scaled(qRound(targetW * dpr), qRound(targetH * dpr), Qt::IgnoreAspectRatio, Qt::SmoothTransformation);
-            entry.pixmap = QPixmap::fromImage(scaled);
+            entry.pixmap = pixmap.scaled(qRound(targetW * dpr), qRound(targetH * dpr), Qt::IgnoreAspectRatio, Qt::SmoothTransformation);
             entry.pixmap.setDevicePixelRatio(dpr);
             entry.pixmapWidth = targetW;
             ++m_layoutCount; // 与文档重排版同口径计入统计
@@ -304,104 +212,108 @@ void MessageDelegate::trimCache() const {
 // 几何计算（paint / sizeHint / editorEvent 三处共用，保证一致）
 // ---------------------------------------------------------------------------
 
-MessageDelegate::ItemGeometry MessageDelegate::itemGeometry(const QStyleOptionViewItem &option, const QModelIndex &index) const {
-    ItemGeometry g;
-    g.viewWidth = viewportWidth(option);
-    // const auto type = static_cast<ChatMessage::Type>(index.data(ChatModel::TypeRole).toInt());
-    const auto type = ChatMessage::Type::Text;
-    g.isSystem = type == ChatMessage::Type::System;
-    g.isText   = type == ChatMessage::Type::Text  ;
-    g.isImage  = type == ChatMessage::Type::Image ;
-    g.isFile   = type == ChatMessage::Type::File  ;
-
+std::shared_ptr<MessageDelegate::ItemGeometry> MessageDelegate::itemGeometry(const QStyleOptionViewItem &option, const QModelIndex &index) const {
+    std::shared_ptr<ItemGeometry> item_geometry = std::make_shared<ItemGeometry>();
     do {
         if (!check_is_message_context(index)) { break; }
+        auto message_data  = index.data(ENUMS::role_item_data()).value<std::shared_ptr<MessageData::ItemData>>();
+        // auto item_geometry = itemGeometry(option, index);
+        bool is_system = message_data->sender_type == MessageData::SenderType::SYSTEM;
+        bool is_user   = message_data->sender_type == MessageData::SenderType::USER  ;
+        bool is_text   = message_data->media_type  == MessageData::MediaType ::TEXT  ;
+        bool is_image  = message_data->media_type  == MessageData::MediaType ::IMAGE ;
+        bool is_file   = message_data->media_type  == MessageData::MediaType ::FILE  ;
+        bool is_me     = message_data->is_me;
 
-        const auto message_context = index.data(ENUMS::role_item_data()).value<std::shared_ptr<TaoTieChat::MessageContext>>();
-        const QString short_text = message_context->hasShortText() ? message_context->shortText() : QString();
-        g.isSystem = message_context->messageType() == MessageType::SystemMessage;
-
-        // =================================================================== //
-
-        // qDebug().noquote().nospace() << "message_context : " << *message_context.get();
-
-        // 系统提示消息
-        if (g.isSystem) {
-            // 系统消息：整行可用宽度，居中绘制
-            const qreal maxTextW = g.viewWidth - 2 * kListMargin;
-            g.doc = acquireDocument(index, maxTextW, option.font);
-            const qreal w = g.doc->size().width();
-            g.docOrigin = QPointF(option.rect.left() + (g.viewWidth - w) / 2.0, option.rect.top() + kRowVMargin);
+        item_geometry->viewport_width = viewportWidth(option);
+        // 系统消息：整行可用宽度，居中绘制
+        if (is_system) {
+            const qreal max_width = item_geometry->viewport_width - 2 * kListMargin;
+            item_geometry->text_document = acquireDocument(index, max_width, option.font);
+            const qreal width = item_geometry->text_document->size().width();
+            int origin_x = option.rect.left() + (item_geometry->viewport_width - width) / 2.0;
+            int origin_y = option.rect.top() + kRowVMargin;
+            item_geometry->text_document_origin = QPointF(origin_x, origin_y);
             break;
         }
 
-        // =================================================================== //
-
-        auto current_account_id = Accounts::instance().get_current_account()->baseInfo().accountId();
-
-        // g.isMe = index.data(ChatModel::IsMeRole).toBool();
-        g.isMe = message_context->senderAccountId() == current_account_id;
-
         // 去掉两头头像宽度后中间的宽度。
         // 头像位置对聊天类消息（文本/图片/文件）一致
-        // const int availW = g.viewWidth - 2 * kListMargin - kAvatarSize - kAvatarSpacing;
-        const int availW = g.viewWidth - (kListMargin + kAvatarSize + kAvatarSpacing + kBubbleHPad) * 2;
+        // const int availW = item_geometry->viewport_width - 2 * kListMargin - kAvatarSize - kAvatarSpacing;
+        const int max_width = item_geometry->viewport_width - (kListMargin + kAvatarSize + kAvatarSpacing + kBubbleHPad) * 2;
         // 计算气泡绘制宽度
         // const qreal maxBubbleW = qMax<qreal>(kMinTextWidth, availW * kMaxBubblePct / 100.0);
-        const qreal maxBubbleW = qMax<qreal>(kMinTextWidth, availW);
-        const qreal metaTop = option.rect.top() + kRowVMargin;
+        const qreal max_bubble_width = qMax<qreal>(kMinTextWidth, max_width);
+        const qreal meta_top = option.rect.top() + kRowVMargin;
         // 非群组时不需要显示昵称
         bool per_message_show_nickname = false;
         auto context_offset_y = per_message_show_nickname ? kMetaLineHeight : 0;
-        g.avatarRect = QRectF(g.isMe ? g.viewWidth - kListMargin - kAvatarSize : option.rect.left() + kListMargin, metaTop + context_offset_y, kAvatarSize, kAvatarSize);
+        int rect_avatar_x = message_data->is_me
+            ? item_geometry->viewport_width - kListMargin - kAvatarSize
+            : option.rect.left() + kListMargin;
+        int rect_avatar_y = meta_top + context_offset_y;
+        item_geometry->rect_avatar = QRectF(rect_avatar_x, rect_avatar_y, kAvatarSize, kAvatarSize);
 
         // 文本消息
-        if (g.isText) {
+        if (is_text) {
             // 普通文本消息
-            g.doc = acquireDocument(index, maxBubbleW, option.font);
-
-            const qreal textW = g.doc->size().width();   // == 排版宽度（已含收窄）
-            const qreal textH = g.doc->size().height();
-
-            const qreal bubbleW = textW + 2 * kBubbleHPad;
-            const qreal bubbleH = textH + 2 * kBubbleVPad;
-
-            g.bubbleRect = QRectF(g.isMe ? g.avatarRect.left() - kAvatarSpacing - bubbleW : g.avatarRect.right() + kAvatarSpacing, g.avatarRect.top(), bubbleW, bubbleH);
-            g.docOrigin = QPointF(g.bubbleRect.left() + kBubbleHPad, g.bubbleRect.top() + kBubbleVPad);
+            item_geometry->text_document = acquireDocument(index, max_bubble_width, option.font);
+            const qreal text_width    = item_geometry->text_document->size().width ();   // == 排版宽度（已含收窄）
+            const qreal text_height   = item_geometry->text_document->size().height();
+            const qreal bubble_width  = text_width  + 2 * kBubbleHPad;
+            const qreal bubble_height = text_height + 2 * kBubbleVPad;
+            int bubble_x = message_data->is_me
+                ? item_geometry->rect_avatar.left () - kAvatarSpacing - bubble_width
+                : item_geometry->rect_avatar.right() + kAvatarSpacing;
+            int bubble_y = item_geometry->rect_avatar.top();
+            item_geometry->rect_bubble = QRectF(bubble_x, bubble_y, bubble_width, bubble_height);
+            int origin_x = bubble_x + kBubbleHPad;
+            int origin_y = bubble_y + kBubbleVPad;
+            item_geometry->text_document_origin = QPointF(origin_x, origin_y);
             break;
         }
 
         // 图片消息
-        else if (g.isImage) {
+        else if (is_image) {
             // 图片消息：缩放位图 + 气泡内边距
-            g.image = acquireImage(index, maxBubbleW, kMaxImageHeight);
-            const qreal dpr  = g.image ? g.image->devicePixelRatio() : 1.0;
-            const qreal imgW = g.image ? g.image->width() / dpr : kMinTextWidth;
-            const qreal imgH = g.image ? g.image->height() / dpr : 0;
-            const qreal bubbleW = imgW + 2 * kBubbleHPad;
-            const qreal bubbleH = imgH + 2 * kBubbleVPad;
-            g.bubbleRect = QRectF(g.isMe ? g.avatarRect.left() - kAvatarSpacing - bubbleW : g.avatarRect.right() + kAvatarSpacing, g.avatarRect.top(), bubbleW, bubbleH);
-            g.docOrigin = QPointF(g.bubbleRect.left() + kBubbleHPad, g.bubbleRect.top() + kBubbleVPad);
+            item_geometry->scaled_pixmap = acquireImage(index, max_bubble_width, kMaxImageHeight);
+            const qreal dpr           = item_geometry->scaled_pixmap ? item_geometry->scaled_pixmap->devicePixelRatio() : 1.0;
+            const qreal image_width   = item_geometry->scaled_pixmap ? item_geometry->scaled_pixmap->width () / dpr     : kMinTextWidth;
+            const qreal image_height  = item_geometry->scaled_pixmap ? item_geometry->scaled_pixmap->height() / dpr     : 0;
+            const qreal bubble_width  = image_width  + 2 * kBubbleHPad;
+            const qreal bubble_height = image_height + 2 * kBubbleVPad;
+            int bubble_x = message_data->is_me
+                ? item_geometry->rect_avatar.left () - kAvatarSpacing - bubble_width
+                : item_geometry->rect_avatar.right() + kAvatarSpacing;
+            int bubble_y = item_geometry->rect_avatar.top();
+            int origin_x = bubble_x + kBubbleHPad;
+            int origin_y = bubble_y + kBubbleVPad;
+            item_geometry->rect_bubble = QRectF(bubble_x, bubble_y, bubble_width, bubble_height);
+            item_geometry->text_document_origin = QPointF(origin_x, origin_y);
             break;
         }
 
         // 文件消息
-        else if (g.isFile) {
+        else if (is_file) {
             // 文件消息：固定高度卡片，宽度随文件名自适应（超长省略号）
             const QFontMetrics fm(option.font);
-            const QString name = short_text;
-            // const QString name = index.data(ChatModel::FileNameRole).toString();
-            const int nameSpace = int(maxBubbleW) - 2 * kBubbleHPad - kFileIconSize - kFileIconGap;
-            g.fileName = fm.elidedText(name, Qt::ElideMiddle, qMax(nameSpace, 24));
-            const qreal nameW = fm.horizontalAdvance(g.fileName);
-            const qreal bubbleW = qMax<qreal>(kMinTextWidth, qMin<qreal>(2 * kBubbleHPad + kFileIconSize + kFileIconGap + nameW, maxBubbleW));
-            g.bubbleRect = QRectF(g.isMe ? g.avatarRect.left() - kAvatarSpacing - bubbleW : g.avatarRect.right() + kAvatarSpacing, g.avatarRect.top(), bubbleW, kFileCardHeight);
-            g.fileSize = -1;
-            // g.fileSize = index.data(ChatModel::FileSizeRole).toLongLong();
+            const QString&name = message_data->file->file_name;
+            const int name_space = int(max_bubble_width) - 2 * kBubbleHPad - kFileIconSize - kFileIconGap;
+            item_geometry->fileName = fm.elidedText(name, Qt::ElideMiddle, qMax(name_space, 24));
+            const qreal name_width = fm.horizontalAdvance(item_geometry->fileName);
+            const qreal bubble_width = qMax<qreal>(kMinTextWidth, qMin<qreal>(2 * kBubbleHPad + kFileIconSize + kFileIconGap + name_width, max_bubble_width));
+            int bubble_x = message_data->is_me
+                ? item_geometry->rect_avatar.left () - kAvatarSpacing - bubble_width
+                : item_geometry->rect_avatar.right() + kAvatarSpacing;
+            int bubble_y = item_geometry->rect_avatar.top();
+            // int origin_x = bubble_x + kBubbleHPad;
+            // int origin_y = bubble_y + kBubbleVPad;
+            item_geometry->rect_bubble = QRectF(bubble_x, bubble_y, bubble_width, kFileCardHeight);
+            item_geometry->fileSize = -1;
             break;
         }
     } while (false);
-    return g;
+    return item_geometry;
 }
 
 // ---------------------------------------------------------------------------
@@ -411,95 +323,115 @@ MessageDelegate::ItemGeometry MessageDelegate::itemGeometry(const QStyleOptionVi
 QSize MessageDelegate::sizeHint(const QStyleOptionViewItem &option, const QModelIndex &index) const {
     // 关键时序：sizeHint 先于 paint 被调用。
     // 这里顺便完成文档/图片的创建与排版并写入缓存，paint 阶段直接复用。
-    const ItemGeometry g = itemGeometry(option, index);
+    do {
+        if (!check_is_message_context(index)) { break; }
+        auto message_data  = index.data(ENUMS::role_item_data()).value<std::shared_ptr<MessageData::ItemData>>();
+        auto item_geometry = itemGeometry(option, index);
+        bool is_system = message_data->sender_type == MessageData::SenderType::SYSTEM;
+        bool is_user   = message_data->sender_type == MessageData::SenderType::USER  ;
+        bool is_text   = message_data->media_type  == MessageData::MediaType ::TEXT  ;
+        bool is_image  = message_data->media_type  == MessageData::MediaType ::IMAGE ;
+        bool is_file   = message_data->media_type  == MessageData::MediaType ::FILE  ;
+        bool is_me     = message_data->is_me;
 
-    if (g.isSystem) {
-        const qreal docH = g.doc->size().height();
-        return QSize(g.viewWidth, int(kRowVMargin * 2 + docH + 0.5));
-    }
+        if (is_system) {
+            const qreal text_document_height = item_geometry->text_document->size().height();
+            return QSize(item_geometry->viewport_width, int(kRowVMargin * 2 + text_document_height + 0.5));
+        }
 
-    // 非群组时不需要显示昵称
-    bool per_message_show_nickname = false;
-    auto context_offset_y = per_message_show_nickname ? kMetaLineHeight : 0;
-    const qreal bodyH = qMax<qreal>(g.bubbleRect.height(), qreal(kAvatarSize));
-    return QSize(g.viewWidth, int(kRowVMargin * 2 + context_offset_y + bodyH + 0.5));
+        // 非群组时不需要显示昵称
+        bool per_message_show_nickname = false;
+        auto context_offset_y = per_message_show_nickname ? kMetaLineHeight : 0;
+        const qreal body_height = qMax<qreal>(item_geometry->rect_bubble.height(), qreal(kAvatarSize));
+        return QSize(item_geometry->viewport_width, int(kRowVMargin * 2 + context_offset_y + body_height + 0.5));
+    } while(false);
+    return ItemDelegateBase::sizeHint(option, index);
 }
 
-void MessageDelegate::paintDocument(QPainter *painter, const ItemGeometry &g, const QModelIndex &index) const {
-    // 主题色通过 PaintContext 调色板注入——这是文档能保持主题无关的关键
-    QAbstractTextDocumentLayout::PaintContext ctx;
-    ctx.palette.setColor(QPalette::Text, g.isSystem ? m_theme.systemText : m_theme.text);
-    ctx.palette.setColor(QPalette::Link, m_theme.link);
-    ctx.palette.setColor(QPalette::LinkVisited, m_theme.link);
+void MessageDelegate::paintDocument(QPainter *painter, const QModelIndex &index,
+        const std::shared_ptr<MessageData::ItemData> &message_data,
+        const std::shared_ptr<ItemGeometry>&item_geometry) const {
+    do {
+        // if (!check_is_message_context(index)) { break; }
+        // auto message_data  = index.data(ENUMS::role_item_data()).value<std::shared_ptr<MessageData::ItemData>>();
+        // auto item_geometry = itemGeometry(option, index);
+        bool is_system = message_data->sender_type == MessageData::SenderType::SYSTEM;
+        bool is_user   = message_data->sender_type == MessageData::SenderType::USER  ;
+        bool is_text   = message_data->media_type  == MessageData::MediaType ::TEXT  ;
+        bool is_image  = message_data->media_type  == MessageData::MediaType ::IMAGE ;
+        bool is_file   = message_data->media_type  == MessageData::MediaType ::FILE  ;
+        bool is_me     = message_data->is_me;
 
-    // 文字选区：只对当前选中的那一行生效
-    if (!g.isSystem && m_selRow == index.row() && m_selAnchor != m_selCursor) {
-        QTextCursor c(g.doc);
-        c.setPosition(qMin(m_selAnchor, m_selCursor));
-        c.setPosition(qMax(m_selAnchor, m_selCursor), QTextCursor::KeepAnchor);
+        // 主题色通过 PaintContext 调色板注入——这是文档能保持主题无关的关键
+        QAbstractTextDocumentLayout::PaintContext ctx;
+        ctx.palette.setColor(QPalette::Text, is_system ? m_theme.systemText : m_theme.text);
+        ctx.palette.setColor(QPalette::Link, m_theme.link);
+        ctx.palette.setColor(QPalette::LinkVisited, m_theme.link);
 
-        QAbstractTextDocumentLayout::Selection sel;
-        sel.cursor = c;
-        sel.format.setBackground(m_theme.selBg);
-        sel.format.setForeground(m_theme.selText);
-        ctx.selections.append(sel);
-    }
+        // 文字选区：只对当前选中的那一行生效
+        if (!is_system && m_selRow == index.row() && m_selAnchor != m_selCursor) {
+            QTextCursor text_cursor(item_geometry->text_document);
+            text_cursor.setPosition(qMin(m_selAnchor, m_selCursor));
+            text_cursor.setPosition(qMax(m_selAnchor, m_selCursor), QTextCursor::KeepAnchor);
 
-    painter->translate(g.docOrigin);
-    g.doc->documentLayout()->draw(painter, ctx);
+            QAbstractTextDocumentLayout::Selection selection;
+            selection.cursor = text_cursor;
+            selection.format.setBackground(m_theme.selBg);
+            selection.format.setForeground(m_theme.selText);
+            ctx.selections.append(selection);
+        }
+
+        painter->translate(item_geometry->text_document_origin);
+        item_geometry->text_document->documentLayout()->draw(painter, ctx);
+    } while(false);
 }
 
 void MessageDelegate::paint(QPainter *painter, const QStyleOptionViewItem &option, const QModelIndex &index) const {
     do {
+        if (!painter) { break; }
         if (!check_is_message_context(index)) { break; }
+        auto message_data  = index.data(ENUMS::role_item_data()).value<std::shared_ptr<MessageData::ItemData>>();
+        auto item_geometry = itemGeometry(option, index);
+        bool is_system = message_data->sender_type == MessageData::SenderType::SYSTEM;
+        bool is_user   = message_data->sender_type == MessageData::SenderType::USER  ;
+        bool is_text   = message_data->media_type  == MessageData::MediaType ::TEXT  ;
+        bool is_image  = message_data->media_type  == MessageData::MediaType ::IMAGE ;
+        bool is_file   = message_data->media_type  == MessageData::MediaType ::FILE  ;
+        bool is_me     = message_data->is_me;
 
         painter->save();
         painter->setRenderHint(QPainter::Antialiasing, true);
 
-        const ItemGeometry g = itemGeometry(option, index);
-
         // ---- 系统消息：居中灰字（颜色由主题注入） ----
-        if (g.isSystem) {
-            paintDocument(painter, g, index);
+        if (is_system) {
+            paintDocument(painter, index, message_data, item_geometry);
             painter->restore();
             return;
         }
 
-        // =================================================================== //
-
-        const auto message_context = index.data(ENUMS::role_item_data()).value<std::shared_ptr<MessageContext>>();
-        // 发送的内容
-        const QString short_text = message_context->hasShortText() ? message_context->shortText() : QString();
-        // 发送者账号 ID
-        QString sender_account_id = message_context->senderAccountId();
-        // 发送者账号信息
-        const auto sender_contact = Accounts::instance().get_contact(sender_account_id);
-        // 发送者头像ID
-        QString sender_avatar_id = sender_contact->hasBaseInfo() ? sender_contact->baseInfo().avatarId() : "";
-        // 发送者头像图片
-        QPixmap sender_avatar_pixamp = Accounts::instance().get_avatar(sender_avatar_id);
+        auto display_name = message_data->sender->display_name;
+        QPixmap sender_avatar_pixamp = message_data->sender->avatar_pixmap;
 
         // 在群组中才需要绘制昵称，私聊中可以不显示
-        bool per_message_show_nickname  = false;
+        bool per_message_display_nickname  = false;
         // 不必每条消息都显示时间
-        bool per_message_show_timestamp = false;
+        bool per_message_display_timestamp = false;
         // 要显示的内容
         QString per_message_tips;
         // 获取显示名称
-        if (per_message_show_nickname) {
+        if (per_message_display_nickname) {
             // 获取发送者的显示名称
-            QString sender_name = sender_contact->hasBaseInfo() ? sender_contact->baseInfo().nickname() : "";
-            per_message_tips += sender_name;
+            per_message_tips += display_name;
         }
         // 追加时间戳
-        if (per_message_show_timestamp) {
+        if (per_message_display_timestamp) {
             // 发送的时间
-            QString send_time;
-            if (message_context->hasTimestamp() & message_context->timestamp().hasTimestamp()) {
-                auto datetime = message_context->timestamp().timestamp().toDateTime();
-                datetime.setTimeZone(QTimeZone::utc());
-                send_time = Utils::format_smart_time(datetime);
-            }
+            QString send_time = Utils::format_smart_time(message_data->message_time);
+            // if (message_context->hasTimestamp() & message_context->timestamp().hasTimestamp()) {
+            //     auto datetime = message_context->timestamp().timestamp().toDateTime();
+            //     datetime.setTimeZone(QTimeZone::utc());
+            //     send_time = Utils::format_smart_time(message_data->message_time);
+            // }
             if (!per_message_tips.isEmpty() && !send_time.isEmpty()) { per_message_tips += " "; }
             per_message_tips += send_time;
         }
@@ -512,58 +444,64 @@ void MessageDelegate::paint(QPainter *painter, const QStyleOptionViewItem &optio
             painter->setPen(m_theme.metaText);
             auto x = option.rect.left() + kListMargin + kAvatarSize + kAvatarSpacing;
             auto y = option.rect.top () + kRowVMargin;
-            auto w = g.viewWidth - 2 * (kListMargin + kAvatarSize + kAvatarSpacing);
+            auto w = item_geometry->viewport_width - 2 * (kListMargin + kAvatarSize + kAvatarSpacing);
             auto h = kMetaLineHeight;
             const QRectF metaRect(x, y, w, h);
-            painter->drawText(metaRect, g.isMe ? Qt::AlignRight : Qt::AlignLeft, per_message_tips);
+            painter->drawText(metaRect, is_me ? Qt::AlignRight : Qt::AlignLeft, per_message_tips);
         }
         // 画头像
-        painter->drawPixmap(g.avatarRect.toRect(), sender_avatar_pixamp);
+        painter->drawPixmap(item_geometry->rect_avatar.toRect(), sender_avatar_pixamp);
 
         // ---- 气泡背景（圆角矩形，主题色；文本/图片/文件共用） ----
         QPainterPath path;
-        path.addRoundedRect(g.bubbleRect, kBubbleRadius, kBubbleRadius);
+        path.addRoundedRect(item_geometry->rect_bubble, kBubbleRadius, kBubbleRadius);
         painter->setPen(QPen(m_theme.border, 1));
-        painter->setBrush(g.isMe ? m_theme.bubbleMe : m_theme.bubbleOther);
+        painter->setBrush(is_me ? m_theme.bubbleMe : m_theme.bubbleOther);
         painter->drawPath(path);
 
-        if (g.isImage && g.image) {
+        if (is_text) {
+            // ---- 富文本内容：复用缓存文档排版，颜色/选区由 PaintContext 注入 ----
+            paintDocument(painter, index, message_data, item_geometry);
+        }
+
+        else if (is_image && item_geometry->scaled_pixmap) {
             // ---- 图片：圆角裁剪绘制（缩放位图来自缓存，矢量边框 + 位图内容） ----
-            const qreal dpr = g.image->devicePixelRatio();
-            const QRectF imgRect(g.docOrigin, QSizeF(g.image->width() / dpr, g.image->height() / dpr));
+            const qreal dpr = item_geometry->scaled_pixmap->devicePixelRatio();
+            const QRectF imgRect(item_geometry->text_document_origin, QSizeF(item_geometry->scaled_pixmap->width() / dpr, item_geometry->scaled_pixmap->height() / dpr));
+
             painter->save();
             QPainterPath clip;
             clip.addRoundedRect(imgRect, kBubbleRadius - 3, kBubbleRadius - 3);
             painter->setClipPath(clip);
-            painter->drawPixmap(imgRect.topLeft(), *g.image);
+            painter->drawPixmap(imgRect.topLeft(), *item_geometry->scaled_pixmap);
             painter->restore();
-            painter->restore();
-            return;
+
+            // painter->restore();
+            // return;
         }
 
-        else if (g.isFile) {
+        else if (is_file) {
+            const auto&human_size = message_data->file->human_size;
             // ---- 文件卡片：图标 + 文件名 + 大小 ----
-            const QRectF iconRect(g.bubbleRect.left() + kBubbleHPad, g.bubbleRect.top() + (g.bubbleRect.height() - kFileIconSize) / 2.0, kFileIconSize, kFileIconSize);
-            if (const auto *style = option.widget ? option.widget->style() : qApp->style()) {
-                style->standardIcon(QStyle::SP_FileIcon).paint(painter, iconRect.toRect());
-            }
+            const QRectF iconRect(item_geometry->rect_bubble.left() + kBubbleHPad, item_geometry->rect_bubble.top() + (item_geometry->rect_bubble.height() - kFileIconSize) / 2.0, kFileIconSize, kFileIconSize);
+            message_data->file->file_icon.paint(painter, iconRect.toRect());
+            // if (const auto *style = option.widget ? option.widget->style() : qApp->style()) {
+            //     style->standardIcon(QStyle::SP_FileIcon).paint(painter, iconRect.toRect());
+            // }
 
             const qreal textLeft = iconRect.right() + kFileIconGap;
-            const qreal textW = g.bubbleRect.right() - kBubbleHPad - textLeft;
+            const qreal textW = item_geometry->rect_bubble.right() - kBubbleHPad - textLeft;
             painter->setPen(m_theme.text);
             painter->setFont(option.font);
-            painter->drawText(QRectF(textLeft, g.bubbleRect.top() + kBubbleVPad, textW, 18), Qt::AlignLeft | Qt::AlignVCenter, g.fileName);
+            painter->drawText(QRectF(textLeft, item_geometry->rect_bubble.top() + kBubbleVPad, textW, 18), Qt::AlignLeft | Qt::AlignVCenter, item_geometry->fileName);
             QFont sizeFont = option.font;
             sizeFont.setPointSizeF(sizeFont.pointSizeF() * 0.85);
             painter->setFont(sizeFont);
             painter->setPen(m_theme.metaText);
-            painter->drawText(QRectF(textLeft, g.bubbleRect.top() + kBubbleVPad + 20, textW, 14), Qt::AlignLeft | Qt::AlignVCenter, humanSize(g.fileSize));
-            painter->restore();
-            return;
+            painter->drawText(QRectF(textLeft, item_geometry->rect_bubble.top() + kBubbleVPad + 20, textW, 14), Qt::AlignLeft | Qt::AlignVCenter, human_size);
+            // painter->restore();
+            // return;
         }
-
-        // ---- 富文本内容：复用缓存文档排版，颜色/选区由 PaintContext 注入 ----
-        paintDocument(painter, g, index);
 
         painter->restore();
     } while (false);
@@ -573,20 +511,48 @@ void MessageDelegate::paint(QPainter *painter, const QStyleOptionViewItem &optio
 // 鼠标交互：链接点击 / 文字选择 / 图片与文件点击 / 悬停光标
 // ---------------------------------------------------------------------------
 
-void MessageDelegate::beginSelection(const QModelIndex &index, const ItemGeometry &g, const QPoint &viewportPos) {
-    m_selRow = index.row();
-    // hitTest(FuzzyHit)：返回离该点最近的文档位置（坐标在段落边界外时取最近端）
-    const int pos = qBound(0, int(g.doc->documentLayout()->hitTest(viewportPos - g.docOrigin, Qt::FuzzyHit)), int(g.doc->characterCount()) - 1);
-    m_selAnchor = pos;
-    m_selCursor = pos;
-    m_selecting = true;
-    m_selectedText.clear();
+void MessageDelegate::beginSelection(const QModelIndex &index, const QPoint &viewportPos,
+        const std::shared_ptr<MessageData::ItemData> &message_data,
+        const std::shared_ptr<ItemGeometry>&item_geometry) {
+    do {
+        // if (!check_is_message_context(index)) { break; }
+        // auto message_data  = index.data(ENUMS::role_item_data()).value<std::shared_ptr<MessageData::ItemData>>();
+        // auto item_geometry = itemGeometry(option, index);
+        bool is_system = message_data->sender_type == MessageData::SenderType::SYSTEM;
+        bool is_user   = message_data->sender_type == MessageData::SenderType::USER  ;
+        bool is_text   = message_data->media_type  == MessageData::MediaType ::TEXT  ;
+        bool is_image  = message_data->media_type  == MessageData::MediaType ::IMAGE ;
+        bool is_file   = message_data->media_type  == MessageData::MediaType ::FILE  ;
+        bool is_me     = message_data->is_me;
+
+        m_selRow = index.row();
+        // hitTest(FuzzyHit)：返回离该点最近的文档位置（坐标在段落边界外时取最近端）
+        const int pos = qBound(0, int(item_geometry->text_document->documentLayout()->hitTest(viewportPos - item_geometry->text_document_origin, Qt::FuzzyHit)), int(item_geometry->text_document->characterCount()) - 1);
+        m_selAnchor = pos;
+        m_selCursor = pos;
+        m_selecting = true;
+        m_selectedText.clear();
+    } while(false);
 }
 
-void MessageDelegate::extendSelection(const ItemGeometry &g, const QPoint &viewportPos) {
-    const int pos = qBound(0, int(g.doc->documentLayout()->hitTest(viewportPos - g.docOrigin, Qt::FuzzyHit)), int(g.doc->characterCount()) - 1);
-    m_selCursor = pos;
-    syncSelectedText(g.doc);
+void MessageDelegate::extendSelection(const QModelIndex &index, const QPoint &viewportPos,
+        const std::shared_ptr<MessageData::ItemData> &message_data,
+        const std::shared_ptr<ItemGeometry>&item_geometry) {
+    do {
+        // if (!check_is_message_context(index)) { break; }
+        // auto message_data  = index.data(ENUMS::role_item_data()).value<std::shared_ptr<MessageData::ItemData>>();
+        // auto item_geometry = itemGeometry(option, index);
+        bool is_system = message_data->sender_type == MessageData::SenderType::SYSTEM;
+        bool is_user   = message_data->sender_type == MessageData::SenderType::USER  ;
+        bool is_text   = message_data->media_type  == MessageData::MediaType ::TEXT  ;
+        bool is_image  = message_data->media_type  == MessageData::MediaType ::IMAGE ;
+        bool is_file   = message_data->media_type  == MessageData::MediaType ::FILE  ;
+        bool is_me     = message_data->is_me;
+
+        const int pos = qBound(0, int(item_geometry->text_document->documentLayout()->hitTest(viewportPos - item_geometry->text_document_origin, Qt::FuzzyHit)), int(item_geometry->text_document->characterCount()) - 1);
+        m_selCursor = pos;
+        syncSelectedText(item_geometry->text_document);
+    } while(false);
 }
 
 void MessageDelegate::syncSelectedText(QTextDocument *doc) {
@@ -612,51 +578,49 @@ void MessageDelegate::resetSelection() {
 
 bool MessageDelegate::editorEvent(QEvent *event, QAbstractItemModel *model, const QStyleOptionViewItem &option, const QModelIndex &index) {
     do {
-        if (!check_is_message_context(index)) { break; }
-
-        const auto message_context = index.data(ENUMS::role_item_data()).value<std::shared_ptr<TaoTieChat::MessageContext>>();
-        const QString short_text = message_context->hasShortText() ? message_context->shortText() : QString();
+        // 只需处理鼠标事件
+        if (event->type() != QEvent::MouseButtonPress && event->type() != QEvent::MouseMove && event->type() != QEvent::MouseButtonRelease) { break; }
 
         // =================================================================== //
 
-        // const auto type = static_cast<ChatMessage::Type>(index.data(ChatModel::TypeRole).toInt());
-        const auto type = ChatMessage::Type::Text;
+        if (!check_is_message_context(index)) { break; }
+        auto message_data  = index.data(ENUMS::role_item_data()).value<std::shared_ptr<MessageData::ItemData>>();
+        auto item_geometry = itemGeometry(option, index);
+        bool is_system = message_data->sender_type == MessageData::SenderType::SYSTEM;
+        bool is_user   = message_data->sender_type == MessageData::SenderType::USER  ;
+        bool is_text   = message_data->media_type  == MessageData::MediaType ::TEXT  ;
+        bool is_image  = message_data->media_type  == MessageData::MediaType ::IMAGE ;
+        bool is_file   = message_data->media_type  == MessageData::MediaType ::FILE  ;
+        bool is_me     = message_data->is_me;
+
+        // =================================================================== //
+
         auto *view = const_cast<QAbstractItemView *>(qobject_cast<const QAbstractItemView *>(option.widget));
 
+        const QMouseEvent *mouse_event = static_cast<const QMouseEvent *>(event);
+        auto pos_mouse = mouse_event->pos();
+
         if (event->type() == QEvent::MouseButtonPress) {
-            const auto *me = static_cast<const QMouseEvent *>(event);
-            if (me->button() != Qt::LeftButton) { break; }
+            if (mouse_event->button() != Qt::LeftButton) { break; }
 
             m_selecting = false;
-            m_pendingLink.clear();
-            m_pendingImage.clear();
-            m_pendingFile.clear();
-            m_pressViewportPos = me->pos();
-            const ItemGeometry g = itemGeometry(option, index);
+            m_pendingLink .clear();
+            m_pressViewportPos = pos_mouse;
 
-            if (g.bubbleRect.contains(me->pos())) {
-                if (type == ChatMessage::Type::Text) {
-                    const QString anchor = g.doc->documentLayout()->anchorAt(me->pos() - g.docOrigin);
+            if (item_geometry->rect_bubble.contains(pos_mouse)) {
+                if (is_text) {
+                    const QString anchor = item_geometry->text_document->documentLayout()
+                        ->anchorAt(pos_mouse - item_geometry->text_document_origin);
                     if (!anchor.isEmpty()) {
                         // 按在链接上：先记录，松开时若未拖动才触发（见 Release 分支）
                         m_pendingLink = anchor;
                     }
                     else {
                         // 按在正文上：开始文字选择
-                        beginSelection(index, g, me->pos());
+                        beginSelection(index, pos_mouse, message_data, item_geometry);
                         if (view) { view->viewport()->update(); }
                         return true; // 消费掉按下，避免视图做出其他反应
                     }
-                }
-                else if (type == ChatMessage::Type::File) {
-                    // 文件卡片可点击（打开所在位置）
-                    // m_pendingFile = index.data(ChatModel::FilePathRole).toString();
-                    m_pendingFile = short_text;
-                }
-                else if (type == ChatMessage::Type::Image) {
-                    // 有来源路径的图片可点击（用看图软件打开）
-                    // m_pendingImage = index.data(ChatModel::ImagePathRole).toString();
-                    m_pendingImage = short_text;
                 }
             }
             else if (m_selRow >= 0) {
@@ -668,19 +632,14 @@ bool MessageDelegate::editorEvent(QEvent *event, QAbstractItemModel *model, cons
         }
 
         else if (event->type() == QEvent::MouseMove) {
-            const auto *me = static_cast<const QMouseEvent *>(event);
-            const ItemGeometry g = itemGeometry(option, index);
-
             // 位移超过阈值视为拖动：取消各类“待触发点击”
-            if ((me->pos() - m_pressViewportPos).manhattanLength() > kDragThreshold) {
+            if ((pos_mouse - m_pressViewportPos).manhattanLength() > kDragThreshold) {
                 m_pendingLink.clear();
-                m_pendingImage.clear();
-                m_pendingFile.clear();
             }
 
             // 拖动选择中：延伸选区并重绘
             if (m_selecting && index.row() == m_selRow) {
-                extendSelection(g, me->pos());
+                extendSelection(index, pos_mouse, message_data, item_geometry);
                 if (view) { view->viewport()->update(); }
                 return true;
             }
@@ -688,16 +647,16 @@ bool MessageDelegate::editorEvent(QEvent *event, QAbstractItemModel *model, cons
             // 悬停光标：链接/文件/可点图片→手型，正文→文本光标，其余→箭头
             if (view) {
                 Qt::CursorShape shape = Qt::ArrowCursor;
-                if (g.bubbleRect.contains(me->pos())) {
-                    if (type == ChatMessage::Type::Text) {
-                        const QString anchor = g.doc->documentLayout()->anchorAt(me->pos() - g.docOrigin);
+                if (item_geometry->rect_bubble.contains(pos_mouse)) {
+                    if (is_text) {
+                        const QString anchor = item_geometry->text_document->documentLayout()
+                            ->anchorAt(pos_mouse - item_geometry->text_document_origin);
                         shape = anchor.isEmpty() ? Qt::IBeamCursor : Qt::PointingHandCursor;
                     }
-                    else if (type == ChatMessage::Type::File) {
+                    else if (is_file) {
                         shape = Qt::PointingHandCursor;
                     }
-                    // else if (type == ChatMessage::Type::Image && !index.data(ChatModel::ImagePathRole).toString().isEmpty()) {
-                    else if (type == ChatMessage::Type::Image) {
+                    else if (is_image) {
                         shape = Qt::PointingHandCursor;
                     }
                 }
@@ -706,27 +665,29 @@ bool MessageDelegate::editorEvent(QEvent *event, QAbstractItemModel *model, cons
             break;
         }
 
+        // 需要判断在气泡内抬起才能触发打开文件的动作
         else if (event->type() == QEvent::MouseButtonRelease) {
-            const auto *me = static_cast<const QMouseEvent *>(event);
-            if (me->button() == Qt::LeftButton) {
+            if (mouse_event->button() == Qt::LeftButton) {
                 if (m_selecting) {
                     m_selecting = false; // 选区保留，等待复制/右键操作
                     return true;
                 }
-                if (!m_pendingLink.isEmpty()) {
-                    emit linkActivated(m_pendingLink);
-                    m_pendingLink.clear();
-                    return true;
-                }
-                if (!m_pendingFile.isEmpty()) {
-                    emit fileActivated(m_pendingFile);
-                    m_pendingFile.clear();
-                    return true;
-                }
-                if (!m_pendingImage.isEmpty()) {
-                    emit imageActivated(m_pendingImage);
-                    m_pendingImage.clear();
-                    return true;
+                if (item_geometry->rect_bubble.contains(pos_mouse)) {
+                    if (!m_pendingLink.isEmpty()) {
+                        emit signal_open_link(m_pendingLink);
+                        m_pendingLink.clear();
+                        return true;
+                    }
+                    // 图片默认为应用内插件查看
+                    else if (is_image) {
+                        emit signal_open_data(message_data);
+                        return true;
+                    }
+                    // 其他文件默认为打开文件夹
+                    else if (is_file) {
+                        emit signal_open_file(message_data);
+                        return true;
+                    }
                 }
             }
             break;
@@ -743,9 +704,14 @@ bool MessageDelegate::editorEvent(QEvent *event, QAbstractItemModel *model, cons
 void MessageDelegate::showContextMenu(QAbstractItemView *view, const QModelIndex &index, const QPoint &globalPos, const QPoint &viewportPos) {
     do {
         if (!check_is_message_context(index)) { break; }
-
-        const auto message_context = index.data(ENUMS::role_item_data()).value<std::shared_ptr<TaoTieChat::MessageContext>>();
-        const QString short_text = message_context->hasShortText() ? message_context->shortText() : QString();
+        auto message_data  = index.data(ENUMS::role_item_data()).value<std::shared_ptr<MessageData::ItemData>>();
+        // auto item_geometry = itemGeometry(option, index);
+        bool is_system = message_data->sender_type == MessageData::SenderType::SYSTEM;
+        bool is_user   = message_data->sender_type == MessageData::SenderType::USER  ;
+        bool is_text   = message_data->media_type  == MessageData::MediaType ::TEXT  ;
+        bool is_image  = message_data->media_type  == MessageData::MediaType ::IMAGE ;
+        bool is_file   = message_data->media_type  == MessageData::MediaType ::FILE  ;
+        bool is_me     = message_data->is_me;
 
         // =================================================================== //
 
@@ -754,91 +720,106 @@ void MessageDelegate::showContextMenu(QAbstractItemView *view, const QModelIndex
         option.widget = view;
         option.rect = view->visualRect(index);
         option.font = view->font();
-        const ItemGeometry g = itemGeometry(option, index);
 
-        // ---- 文件消息 ----
-        if (g.isFile) {
-            // const QString path = index.data(ChatModel::FilePathRole).toString();
-            const QString path = short_text;
+        auto item_geometry = itemGeometry(option, index);
+
+        // 文本消息
+        if (is_text) {
+            QString anchor;
+            if (!is_system && item_geometry->rect_bubble.contains(viewportPos)) {
+                anchor = item_geometry->text_document->documentLayout()->anchorAt(viewportPos - item_geometry->text_document_origin);
+            }
+
             QMenu menu(view);
-            QAction *openAct = menu.addAction(QStringLiteral("打开所在文件夹"));
-            openAct->setEnabled(QFileInfo::exists(path));
-            QAction *copyPathAct = menu.addAction(QStringLiteral("复制路径"));
+            const bool hasSelection = (m_selRow == index.row()) && !m_selectedText.isEmpty();
+
+            // 命中超链接：优先展示复制链接
+            if (!anchor.isEmpty()) {
+                QAction *copyLinkAct = menu.addAction(tr("Copy link address"));  // 复制链接地址
+                if (menu.exec(globalPos) == copyLinkAct) {
+                    QApplication::clipboard()->setText(anchor);
+                }
+                return;
+            }
+
+            QAction *copySelAct = menu.addAction(tr("Copy selected text"));  // 复制选中文字
+            copySelAct->setEnabled(hasSelection);
+            menu.addSeparator();
+            QAction *selectAllAct = menu.addAction(tr("Select this entire message"));  // 全选本条消息
+            QAction *copyAllAct = menu.addAction(tr("Copy the entire message"));  // 复制整条消息
 
             const QAction *chosen = menu.exec(globalPos);
-            if (chosen == openAct) {
-                emit fileActivated(path);
+            if (chosen == copySelAct) {
+                QApplication::clipboard()->setText(m_selectedText);
             }
-            else if (chosen == copyPathAct) {
-                // QApplication::clipboard()->setText(index.data(ChatModel::FileNameRole).toString());
-                QApplication::clipboard()->setText(short_text);
-            }
-            return;
-        }
-
-        // ---- 图片消息 ----
-        if (g.isImage) {
-            // const QImage img = index.data(ChatModel::ImageRole).value<QImage>();
-            const QImage img = QImage(short_text);
-            QMenu menu(view);
-            QAction *copyAct = menu.addAction(QStringLiteral("复制图片"));
-            copyAct->setEnabled(!img.isNull());
-            QAction *saveAct = menu.addAction(QStringLiteral("另存为…"));
-            saveAct->setEnabled(!img.isNull());
-
-            const QAction *chosen = menu.exec(globalPos);
-            if (chosen == copyAct) {
-                QApplication::clipboard()->setImage(img);
-            }
-            else if (chosen == saveAct) {
-                const QString path = QFileDialog::getSaveFileName(view, QStringLiteral("保存图片"), QStringLiteral("image.png"), QStringLiteral("PNG (*.png)"));
-                if (!path.isEmpty()) {
-                    img.save(path, "PNG");
+            else if (chosen == selectAllAct) {
+                // 整条消息全选：借用 QTextCursor 的 Document 选择范围
+                if (item_geometry && item_geometry->text_document) {
+                    QTextCursor text_cursor(item_geometry->text_document);
+                    text_cursor.select(QTextCursor::Document);
+                    m_selRow    = index.row();
+                    m_selAnchor = text_cursor.selectionStart();
+                    m_selCursor = text_cursor.selectionEnd();
+                    syncSelectedText(item_geometry->text_document);
+                    if (view->viewport()) { view->viewport()->update(); }
                 }
             }
-            return;
+            else if (chosen == copyAllAct) {
+                if (item_geometry && item_geometry->text_document) {
+                    QApplication::clipboard()->setText(item_geometry->text_document->toPlainText());
+                }
+            }
+            break;
         }
 
-        // ---- 文本消息（原有逻辑） ----
-        // 命中检测：右键处是否在链接上
-        QString anchor;
-        if (!g.isSystem && g.bubbleRect.contains(viewportPos)) {
-            anchor = g.doc->documentLayout()->anchorAt(viewportPos - g.docOrigin);
-        }
+        // 暂不支持的内容类型
+        if (!is_file && !is_image) { break; }
+
+        // 图片 / 文件
+        const QString&file_path = message_data && message_data->file ? message_data->file->file_path : "";
+        bool is_file_exists = QFileInfo::exists(file_path);
 
         QMenu menu(view);
-        const bool hasSelection = (m_selRow == index.row()) && !m_selectedText.isEmpty();
+        QAction *action_open_data   = menu.addAction(tr("Open data"  ));  // 查看数据
+        QAction *action_copy_data   = menu.addAction(tr("Copy data"  ));  // 复制数据
+        QAction *action_separator_1 = menu.addSeparator();
+        QAction *action_open_file   = menu.addAction(tr("Open file"  ));  // 打开文件
+        QAction *action_open_folder = menu.addAction(tr("Open folder"));  // 打开所在文件夹
+        QAction *action_save_to     = menu.addAction(tr("Save To..." ));  // 保存到...
+        QAction *action_separator_2 = menu.addSeparator();
+        QAction *action_copy_file   = menu.addAction(tr("Copy file"  ));  // 复制文件到剪切板
+        QAction *action_copy_path   = menu.addAction(tr("Copy path"  ));  // 复制路径
 
-        if (!anchor.isEmpty()) {
-            QAction *copyLinkAct = menu.addAction(QStringLiteral("复制链接地址"));
-            if (menu.exec(globalPos) == copyLinkAct) {
-                QApplication::clipboard()->setText(anchor);
-            }
-            return;
+        // 统一设置可用状态
+        action_open_data  ->setEnabled(is_file_exists);
+        action_copy_data  ->setEnabled(is_file_exists);
+        action_open_file  ->setEnabled(is_file_exists);
+        action_open_folder->setEnabled(is_file_exists);
+        action_save_to    ->setEnabled(is_file_exists);
+        action_copy_file  ->setEnabled(is_file_exists);
+        action_copy_path  ->setEnabled(is_file_exists);
+
+        // 根据类型调整菜单
+        if (is_image) {
+            action_open_data->setText(tr("View Image"));  // 查看图片
+            action_copy_data->setText(tr("Copy Image"));  // 查看图片
+        }
+        else {
+            menu.removeAction(action_open_data  );
+            menu.removeAction(action_copy_data  );
+            menu.removeAction(action_separator_1);
         }
 
-        QAction *copySelAct = menu.addAction(QStringLiteral("复制选中文字"));
-        copySelAct->setEnabled(hasSelection);
-        menu.addSeparator();
-        QAction *selectAllAct = menu.addAction(QStringLiteral("全选本条消息"));
-        QAction *copyAllAct = menu.addAction(QStringLiteral("复制整条消息"));
-
+        // 弹出菜单的处理
         const QAction *chosen = menu.exec(globalPos);
-        if (chosen == copySelAct) {
-            QApplication::clipboard()->setText(m_selectedText);
-        }
-        else if (chosen == selectAllAct) {
-            // 整条消息全选：借用 QTextCursor 的 Document 选择范围
-            QTextCursor c(g.doc);
-            c.select(QTextCursor::Document);
-            m_selRow = index.row();
-            m_selAnchor = c.selectionStart();
-            m_selCursor = c.selectionEnd();
-            syncSelectedText(g.doc);
-            view->viewport()->update();
-        }
-        else if (chosen == copyAllAct) {
-            QApplication::clipboard()->setText(g.doc->toPlainText());
-        }
+        if (!chosen) { break; }
+
+        ;    if (chosen == action_open_data  ) { emit signal_open_data  (message_data); }  // 使用内部插件打开
+        else if (chosen == action_copy_data  ) { emit signal_copy_data  (message_data); }  // 复制文件内容到剪切板，比如图像内容
+        else if (chosen == action_open_file  ) { emit signal_open_file  (message_data); }  // 使用系统默认的应用程序打开文件
+        else if (chosen == action_open_folder) { emit signal_open_folder(message_data); }  // 打开文件所在文件夹
+        else if (chosen == action_save_to    ) { emit signal_save_to    (message_data); }  // 文件复制到指定目录
+        else if (chosen == action_copy_file  ) { emit signal_copy_file  (message_data); }  // 复制文件到剪切板，可在资源管理器中粘贴
+        else if (chosen == action_copy_path  ) { emit signal_copy_path  (message_data); }  // 复制文件路径到剪切板
     } while (false);
 }

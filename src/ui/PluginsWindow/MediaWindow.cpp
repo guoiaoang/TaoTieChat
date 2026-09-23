@@ -45,20 +45,20 @@ MediaWindow::MediaWindow(QWidget *parent)
     init_action(m_action_window_full_screen, m_icons.icon.fullscreen   , tr("Full Screen"  ), QKeySequence(QKeySequence::FullScreen), true, true , true , false);  // 全屏显示
     init_action(m_action_window_pin        , m_icons.icon.pin          , tr("Pin"          ), QKeySequence(                        ), true, true , true , false);  // 窗口置顶
 
-    QObject::connect(m_action_media_open        , &QAction::triggered, this, &MediaWindow::on_media_open        );
-    QObject::connect(m_action_media_save        , &QAction::triggered, this, &MediaWindow::on_media_save        );
-    QObject::connect(m_action_media_save_as     , &QAction::triggered, this, &MediaWindow::on_media_save_as     );
-    QObject::connect(m_action_media_prev        , &QAction::triggered, this, &MediaWindow::on_media_prev        );
-    QObject::connect(m_action_media_next        , &QAction::triggered, this, &MediaWindow::on_media_next        );
-    QObject::connect(m_action_media_fit         , &QAction::triggered, this, &MediaWindow::on_media_fit         );
-    QObject::connect(m_action_media_zoom_in     , &QAction::triggered, this, &MediaWindow::on_media_zoom_in     );
-    QObject::connect(m_action_media_zoom_out    , &QAction::triggered, this, &MediaWindow::on_media_zoom_out    );
-    QObject::connect(m_action_media_normal_size , &QAction::triggered, this, &MediaWindow::on_media_normal_size );
-    QObject::connect(m_action_window_full_screen, &QAction::triggered, this, &MediaWindow::on_window_full_screen);
-    QObject::connect(m_action_window_pin        , &QAction::triggered, this, &MediaWindow::on_window_pin        );
+    QObject::connect(m_action_media_open        , &QAction::triggered, this, &MediaWindow::slot_media_open        );
+    QObject::connect(m_action_media_save        , &QAction::triggered, this, &MediaWindow::slot_media_save        );
+    QObject::connect(m_action_media_save_as     , &QAction::triggered, this, &MediaWindow::slot_media_save_as     );
+    QObject::connect(m_action_media_prev        , &QAction::triggered, this, &MediaWindow::slot_media_prev        );
+    QObject::connect(m_action_media_next        , &QAction::triggered, this, &MediaWindow::slot_media_next        );
+    QObject::connect(m_action_media_fit         , &QAction::triggered, this, &MediaWindow::slot_media_fit         );
+    QObject::connect(m_action_media_zoom_in     , &QAction::triggered, this, &MediaWindow::slot_media_zoom_in     );
+    QObject::connect(m_action_media_zoom_out    , &QAction::triggered, this, &MediaWindow::slot_media_zoom_out    );
+    QObject::connect(m_action_media_normal_size , &QAction::triggered, this, &MediaWindow::slot_media_normal_size );
+    QObject::connect(m_action_window_full_screen, &QAction::triggered, this, &MediaWindow::slot_window_full_screen);
+    QObject::connect(m_action_window_pin        , &QAction::triggered, this, &MediaWindow::slot_window_pin        );
 
     // static inline QMetaObject::Connection QObject::connect<...>(const QAction *sender, void (QAction::*signal)(bool checked), const MediaWindow *context, void (MediaWindow::*&&slot)(), Qt::ConnectionType type = Qt::AutoConnection)
-    // connect(m_action_open.get(), &QAction::triggered, this, &MediaWindow::on_media_open);
+    // connect(m_action_open.get(), &QAction::triggered, this, &MediaWindow::slot_media_open);
 
     auto make_separator = [this]() -> QAction * {
         QAction *action = new QAction(this);
@@ -131,9 +131,9 @@ MediaWindow::MediaWindow(QWidget *parent)
 MediaWindow::~MediaWindow() {
 }
 
-// TODO: 简化，同源文件缩放
+// TODO:会被多次重复调用，建议添加缓存或过滤操作
 void MediaWindow::show_media(const std::shared_ptr<MediaInfo>&media_info) {
-    QString str_title_right = QApplication::applicationName() + "Media View";
+    QString str_title_right = QString("%1 %2").arg(QApplication::applicationName()).arg(tr("Media View"));
     if(!media_info) {
         // reset
         m_ui->label->setPixmap(QPixmap());
@@ -143,9 +143,22 @@ void MediaWindow::show_media(const std::shared_ptr<MediaInfo>&media_info) {
 
     QPixmap media_pixmap = media_info->media_pixmap;
     if(media_pixmap.isNull()) {
-        media_pixmap.load(media_info->media_path);
+        // 缓存，防止缩放时多次从磁盘读取文件。最多仅需保存最近的一张照片。
+        static QMap<QString, QPixmap> s_cache_pixmap;
+
+        // 如果有缓存就不再读取文件
+        if (!media_info->media_path.isEmpty() && s_cache_pixmap.contains(media_info->media_path)) {
+            media_pixmap = s_cache_pixmap.value(media_info->media_path);
+        }
+        else {
+            s_cache_pixmap.clear();  // 清除缓存
+            QFileInfo file_info(media_info->media_path);
+            media_pixmap.load(media_info->media_path);
+            s_cache_pixmap[media_info->media_path] = media_pixmap;
+        }
     }
 
+    // TODO:添加缓存
     if(m_fit_to_window) {
         // 更新缩放图片：使其适应 Label 大小，并保持纵横比
         // Qt::KeepAspectRatio 保证图片不变形
@@ -176,31 +189,19 @@ void MediaWindow::show_media(const std::shared_ptr<MediaInfo>&media_info) {
 
     // title
     auto play_list_count = m_media_infos.size();
-    QString str_media_title = media_info->media_path;
+    QString str_media_title = QFileInfo(media_info->media_path).fileName();  // 仅显示文件名
     if(str_media_title.isEmpty()) {
         str_media_title = media_info->media_name;
     }
     QString str_index_count;
     if(m_media_infos.size() > 1) {
-        str_index_count == QString("[%1 / %2]").arg(m_media_current_index).arg(play_list_count);
+        str_index_count == tr("[%1 / %2]").arg(m_media_current_index).arg(play_list_count);
     }
     QString str_title_left;
     if(!str_media_title.isEmpty()) {
         str_title_left = str_index_count + str_media_title + " - ";
     }
     this->setWindowTitle(str_title_left + str_title_right);
-    return;
-
-    // // 更新缩放图片：使其适应 ScrollArea 的 viewport 大小，并保持纵横比
-    // // 使用 scrollArea->viewport()->size() 而不是 label->size()
-    // // 这样当窗口缩小时，图片也会相应缩小
-    // // Qt::KeepAspectRatio 保证图片不变形
-    // // Qt::SmoothTransformation 保证缩放后的图片清晰（消除锯齿）
-    // QSize viewport_size = ui->scrollArea->viewport()->size();
-    // QPixmap pixmap_scaled = m_media_pixmap.scaled(viewport_size, Qt::KeepAspectRatio, Qt::SmoothTransformation);
-    // ui->label->setPixmap(pixmap_scaled);
-    // ui->label->resize(pixmap_scaled.size()); // 调整 label 大小以匹配图片
-    // return true;
 }
 
 void MediaWindow::set_play_list(const std::vector<std::shared_ptr<MediaInfo>>&play_list) {
@@ -217,7 +218,7 @@ const std::vector<std::shared_ptr<MediaInfo>> MediaWindow::get_play_list() const
     return m_media_infos;
 }
 
-void MediaWindow::on_media_open() {
+void MediaWindow::slot_media_open() {
     QFileDialog dialog(this, tr("Open File"));
     QFileDialog::AcceptMode acceptMode = QFileDialog::AcceptOpen;
 
@@ -253,17 +254,38 @@ void MediaWindow::on_media_open() {
     while (dialog.exec() == QDialog::Accepted && !loadFile(dialog.selectedFiles().first())) {}
 }
 
-void MediaWindow::on_media_save() {
+void MediaWindow::slot_media_save() {
     // QFileInfo file_info(m_media_path);
 }
 
-void MediaWindow::on_media_save_as() {
+void MediaWindow::slot_media_save_as() {
+    // 源文件信息
+    std::shared_ptr<MediaInfo> media_info;
+    if(!m_media_infos.empty() && m_media_current_index >= 0 && m_media_current_index < int64_t(m_media_infos.size())) {
+        media_info = m_media_infos.at(m_media_current_index);
+    }
+    QString media_path   = media_info ? media_info->media_path : "";
+    QFileInfo file_info(media_path);
+    QString media_suffix = file_info.suffix().toLower();
+    bool is_file_exists  = !media_path.isEmpty() && file_info.exists();
+
+    // 默认文件名和后缀
+    // 如果源文件存在，默认使用源文件的名字，否则给一个默认名称
+    QString default_suffix    = !media_suffix.isEmpty() ? media_suffix : "jpg";
+    // `TaotieChat_ + 时间戳 + .后缀` --> `TaotieChat_20260918T001423M976Z+0800.jpg`
+    QString time_str  = QDateTime::currentDateTimeUtc().toLocalTime().toString("yyyyMMdd'T'hhmmss'M'zzz'Z'tt");
+    QString time_name = QString("TaotieChat_%1.%2").arg(time_str).arg(default_suffix);
+    QString default_file_name = is_file_exists ? file_info.fileName() : time_name;
+
+    // 弹窗
     QFileDialog dialog(this, tr("Save File As"));
     QFileDialog::AcceptMode acceptMode = QFileDialog::AcceptSave;
 
+    // 设置默认目录
     const QStringList picturesLocations = QStandardPaths::standardLocations(QStandardPaths::PicturesLocation);
     dialog.setDirectory(picturesLocations.isEmpty() ? QDir::currentPath() : picturesLocations.last());
 
+    // 添加类型过滤
     QStringList mimeTypeFilters;
     const QByteArrayList supportedMimeTypes = acceptMode == QFileDialog::AcceptOpen ? QImageReader::supportedMimeTypes() : QImageWriter::supportedMimeTypes();
     for (const QByteArray &mimeTypeName : supportedMimeTypes) {
@@ -271,69 +293,100 @@ void MediaWindow::on_media_save_as() {
     }
     mimeTypeFilters.sort();
     dialog.setMimeTypeFilters(mimeTypeFilters);
-    dialog.selectMimeTypeFilter("image/jpeg");
-    if (acceptMode == QFileDialog::AcceptSave) {
-        dialog.setDefaultSuffix("jpg");
-    }
 
-    auto saveFile = [this](const QString &fileName) {
-        QPixmap pixmap;
-        if(!m_media_infos.empty() && m_media_current_index >= 0 && m_media_current_index <= int64_t(m_media_infos.size())) {
-            m_media_infos.at(m_media_current_index)->media_pixmap;
-        }
-        if(pixmap.isNull()) {
-            pixmap = m_ui->label->pixmap();
-        }
-        if(!pixmap.save(fileName)) {
-            QMessageBox::information(this, QGuiApplication::applicationDisplayName(), tr("Cannot write %1").arg(QDir::toNativeSeparators(fileName)));
-            return false;
-        }
-        const QString message = tr(R"(Wrote "%1")").arg(QDir::toNativeSeparators(fileName));
+    // 设置当前的类型过滤
+    // 动态根据源文件后缀设置默认文件名、后缀与 MIME 筛选器
+    // 根据后缀匹配默认的 MIME 类型（如 png -> image/png, jpg -> image/jpeg）
+    QMimeDatabase mime_database;
+    QMimeType mime_type = mime_database.mimeTypeForFile(media_path, QMimeDatabase::MatchExtension);
+    QString select_filter = mime_type.isValid() && mimeTypeFilters.contains(mime_type.name()) ? mime_type.name() : "image/jpeg";
+    dialog.selectMimeTypeFilter(select_filter);
+
+    // 设置默认弹出的文件名
+    dialog.selectFile(default_file_name);
+    // 设置用户如果不输入后缀时的自动补全后缀
+    dialog.setDefaultSuffix(default_suffix);
+
+    if (dialog.exec() == QDialog::Accepted) {
+        // 保存文件的信息
+        const QString save_path         = dialog.selectedFiles().first();
+        const QString save_suffix       = QFileInfo(save_path).suffix().toLower();
+        const QString natinve_save_path = QDir::toNativeSeparators(save_path);
+        const QString message_successed = tr(R"(Wrote Success : "%1")").arg(QDir::toNativeSeparators(natinve_save_path));
+        const QString message_failed    = tr(R"(Cannot write : %1)"   ).arg(QDir::toNativeSeparators(natinve_save_path));
+        bool is_save_ok = false;
+        do {
+            if (save_path.isEmpty() || save_suffix.isEmpty()) { break; }  // 实际不会被触发
+
+            // 保存时需要再次校验源文件信息
+            std::shared_ptr<MediaInfo> media_info;
+            if(!m_media_infos.empty() && m_media_current_index >= 0 && m_media_current_index < int64_t(m_media_infos.size())) {
+                media_info = m_media_infos.at(m_media_current_index);
+            }
+            QString media_path   = media_info ? media_info->media_path : "";
+            QFileInfo file_info(media_path);
+            QString media_suffix = file_info.suffix().toLower();
+            bool is_file_exists  = !media_path.isEmpty() && file_info.exists();
+
+            // 文件存在且同后缀时，直接复制文件即可
+            if (is_file_exists && save_suffix == media_suffix) {
+                is_save_ok = QFile::copy(media_path, save_path);
+            }
+            // 文件后缀不一致时需要加载转码保存
+            else if (is_file_exists && save_suffix == media_suffix) {
+                QImage image(media_path);
+                is_save_ok = image.save(save_path);
+            }
+            // 传入的是图像时(文件不存在时)
+            else if (media_info && !media_info->media_pixmap.isNull()) {
+                is_save_ok = media_info->media_pixmap.save(save_path);
+            }
+        } while (false);
+        // 界面提示
+        const QString message = is_save_ok ? message_successed : message_failed;
         statusBar()->showMessage(message);
-        return true;
-    };
-
-    while (dialog.exec() == QDialog::Accepted && !saveFile(dialog.selectedFiles().first())) {}
+        QMessageBox::information(this, QGuiApplication::applicationDisplayName(), message);
+    }
 }
 
-void MediaWindow::on_media_prev() {
+void MediaWindow::slot_media_prev() {
     if(m_media_current_index > 0) {
         m_media_current_index--;
         show_media(m_media_infos.at(m_media_current_index));
     }
 }
 
-void MediaWindow::on_media_next() {
+void MediaWindow::slot_media_next() {
     if(m_media_current_index < int64_t(m_media_infos.size()) - 1) {
         m_media_current_index++;
         show_media(m_media_infos.at(m_media_current_index));
     }
 }
 
-void MediaWindow::on_media_fit(bool checked) {
+void MediaWindow::slot_media_fit(bool checked) {
     m_fit_to_window = true;
     show_media(m_media_infos.at(m_media_current_index));
 }
 
-void MediaWindow::on_media_zoom_in() {
+void MediaWindow::slot_media_zoom_in() {
     m_fit_to_window = false;
     m_scale_factory *= 1.25;
     show_media(m_media_infos.at(m_media_current_index));
 }
 
-void MediaWindow::on_media_zoom_out() {
+void MediaWindow::slot_media_zoom_out() {
     m_fit_to_window = false;
     m_scale_factory /= 1.25;
     show_media(m_media_infos.at(m_media_current_index));
 }
 
-void MediaWindow::on_media_normal_size () {
+void MediaWindow::slot_media_normal_size () {
     m_fit_to_window = false;
     m_scale_factory = 1.0;
     show_media(m_media_infos.at(m_media_current_index));
 }
 
-void MediaWindow::on_window_full_screen(bool checked) {
+void MediaWindow::slot_window_full_screen(bool checked) {
     // 用于恢复之前的窗口大小状态
     static auto window_state_old = this->windowState();
     if(m_action_window_full_screen->isChecked()) {
@@ -362,7 +415,7 @@ void MediaWindow::on_window_full_screen(bool checked) {
     }
 }
 
-void MediaWindow::on_window_pin(bool checked) {
+void MediaWindow::slot_window_pin(bool checked) {
     if(m_action_window_pin->isChecked()) {
         this->setWindowFlags(windowFlags() | Qt::WindowStaysOnTopHint);
         m_action_window_pin ->setIcon(m_icons.icon.pin_off);
@@ -376,10 +429,7 @@ void MediaWindow::on_window_pin(bool checked) {
 
 bool MediaWindow::eventFilter(QObject *watched, QEvent *event) {
     if(event->type() == QEvent::Resize) {
-        if(watched == m_ui->label) {
-            show_media(m_media_infos.at(m_media_current_index));
-        }
-        else if(watched == m_ui->scrollArea->viewport()) {
+        if(watched == m_ui->label || watched == m_ui->scrollArea->viewport()) {
             show_media(m_media_infos.at(m_media_current_index));
         }
     }

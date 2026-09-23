@@ -6,30 +6,7 @@
 #include <QColor>
 
 #include "ItemDelegate.h"
-
-/**
- * @brief 主题描述：所有绘制颜色集中于此，深/浅色各一套。
- *
- * 设计要点：QTextDocument 缓存是“主题无关”的——HTML 中不写死任何
- * 正文颜色，颜色在 paint 阶段通过 QAbstractTextDocumentLayout::PaintContext
- * 的调色板注入。因此切换深/浅色主题时缓存完全不用失效重建。
- */
-struct ChatTheme {
-    QColor viewBg;      ///< 消息列表背景
-    QColor windowBg;    ///< 工具栏/输入栏等面板背景
-    QColor bubbleMe;    ///< 我的气泡背景
-    QColor bubbleOther; ///< 对方气泡背景
-    QColor text;        ///< 正文默认颜色
-    QColor systemText;  ///< 系统消息颜色
-    QColor metaText;    ///< 发送者/时间行颜色
-    QColor border;      ///< 气泡描边
-    QColor link;        ///< 超链接颜色
-    QColor selBg;       ///< 文字选区高亮背景
-    QColor selText;     ///< 文字选区高亮前景
-
-    static ChatTheme light();
-    static ChatTheme dark();
-};
+#include "Defines.h"
 
 /**
  * @brief 聊天消息委托：QTextDocument 解析结果缓存 + 按需重排版
@@ -62,20 +39,26 @@ struct ChatTheme {
 class MessageDelegate : public ItemDelegateBase {
     Q_OBJECT
 
+private:
+    struct DocEntry;
+    struct ItemGeometry;
+
 public:
     explicit MessageDelegate(QObject *parent = nullptr);
     ~MessageDelegate() override;
 
     const ENUMS::ItemDataType item_type() const { return ENUMS::ItemDataType::CHATROOM; };
 
+public:
     void paint(QPainter *painter, const QStyleOptionViewItem &option, const QModelIndex &index) const override;
     QSize sizeHint(const QStyleOptionViewItem &option, const QModelIndex &index) const override;
     bool editorEvent(QEvent *event, QAbstractItemModel *model, const QStyleOptionViewItem &option, const QModelIndex &index) override;
 
+public:
     /// ---- 主题 ----
     /// 文档与主题无关（颜色绘制时注入），切换主题无需清缓存。
-    void setTheme(const ChatTheme &theme) { m_theme = theme; }
-    const ChatTheme &theme() const { return m_theme; }
+    void setTheme(const MessageData::ChatTheme &theme) { m_theme = theme; }
+    const MessageData::ChatTheme &theme() const { return m_theme; }
 
     /// ---- 文字选择 ----
     /// 当前选中文字（跨段落换行已转为 '\n'），无选择时为空
@@ -101,42 +84,17 @@ public slots:
     void clearCache();
 
 signals:
-    /// 用户点击了消息中的超链接
-    void linkActivated(const QString &href);
-    /// 用户点击了图片消息（有来源路径时才会发射）
-    void imageActivated(const QString &filePath);
-    /// 用户点击了文件卡片（打开所在文件夹）
-    void fileActivated(const QString &filePath);
+    void signal_open_link  (const QString &href);
+    void signal_open_file  (const std::shared_ptr<MessageData::ItemData> &message_data);
+    void signal_open_folder(const std::shared_ptr<MessageData::ItemData> &message_data);
+    void signal_open_data  (const std::shared_ptr<MessageData::ItemData> &message_data);
+    void signal_copy_data  (const std::shared_ptr<MessageData::ItemData> &message_data);
+    void signal_copy_file  (const std::shared_ptr<MessageData::ItemData> &message_data);
+    void signal_copy_path  (const std::shared_ptr<MessageData::ItemData> &message_data);
+    void signal_save_to    (const std::shared_ptr<MessageData::ItemData> &message_data);
 
 private:
-    struct DocEntry {
-        QTextDocument *doc = nullptr; ///< Text/System：解析后的文档
-        QPixmap pixmap;               ///< Image：按当前宽度缩放后的位图
-        qreal naturalWidth = -1;      ///< 不换行时的自然宽度（创建时测得，用于气泡自适应收窄）
-        qreal textWidth = -1;         ///< 当前排版宽度；-1 表示尚未排版
-        qreal pixmapWidth = -1;       ///< 当前图片逻辑宽度；-1 表示尚未缩放
-        qint64 lastUsed = 0;          ///< LRU 代际号
-    };
-
-    /// 一个条目的完整绘制几何信息（paint / sizeHint / editorEvent 共用，
-    /// 保证三者对同一行的布局计算完全一致）
-    struct ItemGeometry {
-        bool isSystem = false;
-        bool isMe = false;
-        bool isText  = false;        ///< 文本消息
-        bool isImage = false;        ///< 图片消息
-        bool isFile  = false;        ///< 文件消息
-        int viewWidth = 0;           ///< 视口宽度（决定气泡最大宽度）
-        QTextDocument *doc = nullptr;
-        const QPixmap *image = nullptr;  ///< 图片消息：缩放后的位图（缓存条目持有）
-        QString fileName;            ///< 文件消息：已按宽度省略的显示名
-        qint64 fileSize = 0;         ///< 文件消息：字节数
-        QRectF avatarRect;
-        QRectF bubbleRect;
-        QPointF docOrigin;           ///< 文档/图片内容在 viewport 坐标系中的原点
-    };
-
-    ItemGeometry itemGeometry(const QStyleOptionViewItem &option, const QModelIndex &index) const;
+    std::shared_ptr<ItemGeometry> itemGeometry(const QStyleOptionViewItem &option, const QModelIndex &index) const;
 
     /// 取（或按需创建）某行的文档，并保证其已按目标宽度排版。
     /// 命中缓存且宽度未变 → 零开销直接返回。
@@ -152,28 +110,57 @@ private:
     void trimCache() const;
 
     /// 用 PaintContext 调色板绘制文档（主题色 + 文字选区高亮都在这里注入）
-    void paintDocument(QPainter *painter, const ItemGeometry &g, const QModelIndex &index) const;
+    void paintDocument(QPainter *painter, const QModelIndex &index,
+        const std::shared_ptr<MessageData::ItemData> &message_data,
+        const std::shared_ptr<ItemGeometry>&item_geometry) const;
 
     // ---- 文字选择状态 ----
-    void beginSelection(const QModelIndex &index, const ItemGeometry &g, const QPoint &viewportPos);
-    void extendSelection(const ItemGeometry &g, const QPoint &viewportPos);
+    void beginSelection(const QModelIndex &index, const QPoint &viewportPos,
+        const std::shared_ptr<MessageData::ItemData> &message_data,
+        const std::shared_ptr<ItemGeometry>&item_geometry);
+    void extendSelection(const QModelIndex &index, const QPoint &viewportPos,
+        const std::shared_ptr<MessageData::ItemData> &message_data,
+        const std::shared_ptr<ItemGeometry>&item_geometry);
     void syncSelectedText(QTextDocument *doc);
 
+private:
     int m_selRow = -1;       ///< 选区所在行
     int m_selAnchor = -1;    ///< 选区锚点（按下处）文档位置
     int m_selCursor = -1;    ///< 选区光标（当前处）文档位置
     bool m_selecting = false;///< 是否正处于拖动选择中
     QString m_selectedText;  ///< 已选文字缓存（U+2029 已替换为 '\n'）
     QString m_pendingLink;   ///< 按下时命中的链接（松开时若未拖动则触发）
-    QString m_pendingImage;  ///< 按下时命中的图片路径（有路径才记录）
-    QString m_pendingFile;   ///< 按下时命中的文件路径
     QPoint m_pressViewportPos; ///< 按下位置（用于区分点击与拖动）
+
+    /// 一个条目的完整绘制几何信息（paint / sizeHint / editorEvent 共用，
+    /// 保证三者对同一行的布局计算完全一致）
+    struct ItemGeometry {
+        QImage source_image;
+        QString fileName;            ///< 文件消息：已按宽度省略的显示名
+        qint64 fileSize = 0;         ///< 文件消息：字节数
+        //
+        int      viewport_width = 0;      ///< 视口宽度（决定气泡最大宽度）
+        QPointF  text_document_origin;          ///< 文档/图片内容在 viewport 坐标系中的原点
+        QRectF   rect_avatar;
+        QRectF   rect_bubble;
+        const QPixmap *scaled_pixmap = nullptr;  ///< 图片消息：缩放后的位图（缓存条目持有）
+        QTextDocument *text_document = nullptr;
+    };
+
+    struct DocEntry {
+        QTextDocument *doc = nullptr; ///< Text/System：解析后的文档
+        QPixmap pixmap;               ///< Image：按当前宽度缩放后的位图
+        qreal naturalWidth = -1;      ///< 不换行时的自然宽度（创建时测得，用于气泡自适应收窄）
+        qreal textWidth = -1;         ///< 当前排版宽度；-1 表示尚未排版
+        qreal pixmapWidth = -1;       ///< 当前图片逻辑宽度；-1 表示尚未缩放
+        qint64 lastUsed = 0;          ///< LRU 代际号
+    };
 
     mutable QHash<int, DocEntry> m_cache; ///< key: row
     mutable qint64 m_generation = 0;      ///< LRU 代际计数器
     mutable qint64 m_createCount = 0;     ///< 统计：创建次数
     mutable qint64 m_layoutCount = 0;     ///< 统计：重排版次数
-    ChatTheme m_theme;
+    MessageData::ChatTheme m_theme;
 
     static constexpr int kMaxCachedDocs = 200;
 };

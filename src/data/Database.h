@@ -29,7 +29,8 @@ public:
     private:
         QMap<QString, QString> m_file_id_path_map;
         QString m_map_file_dir  = Utils::app_data_path();
-        QString m_map_file_name = "file_id_path_map.txt";
+        QString m_map_file_name = "map_file_id_path.ini";
+        QString m_section_name  = "file_ids";
         // QString m_map_file_path =  m_map_file_dir + "/" +  m_map_file_name;
         bool m_inited = false;  // 未初始化时修改配置路径不需要保存，否则即使为空也要保存
     };

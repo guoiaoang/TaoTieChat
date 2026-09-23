@@ -43,6 +43,9 @@ QIcon to_icon(const QString&text, const QPen&pen = QPen(Qt::white), const QSize 
 // 用于头像
 QPixmap to_pixmap(const QString&text, const QSize size = QSize(128, 128));
 
+// 获取显示名称的接口
+QString get_display_name(const std::shared_ptr<ContactInfo>&contact_info);
+
 // ====================================================================== //
 // 内存中展开布局器 In-Memory Layout Expander  // 窗口不需要显示即可应用实际布局
 // 1. 不要使用 QSplitter，会导致自动调整大小
@@ -53,8 +56,12 @@ void in_memory_layout_expander(const QWidget*widget);
 void widget_raise(QWidget*widget);
 // 添加圆角遮罩
 QPixmap to_round_pixmap(const QPixmap& src, int radius = 10);
+// 添加圆角遮罩
+QImage  to_round_image(const QImage& src, int radius = 10);
 // 添加图形遮罩
 QPixmap apply_mask(const QPixmap& source, const QPixmap& mask);
+// 添加图形遮罩
+QImage apply_mask(const QImage& source, const QImage& mask);
 
 // ====================================================================== //
 // 获取随机字符串作为全局唯一的 ID
@@ -281,6 +288,9 @@ QString to_string(SuccessCode code);
 QString to_string(ErrorCode   code);
 QString to_string(FileStatusCode file_status_code);
 int to_int(const FileStatusCode& file_status_code);
+TaoTieChat::Timestamp to_timestamp(const QDateTime&datatime);
+QString human_size(qint64 bytes); // 字节数 → 人类可读大小（KB/MB/GB）
+
 }
 
 // 将支持 qDebug() 的对象转换为字符串
@@ -617,7 +627,7 @@ public:
             m_active_tasks.remove(id);
         }
     }
-    bool has_task(const QString&id) {
+    bool has_task(const T&id) {
         return m_active_tasks.contains(id);
     }
 private:

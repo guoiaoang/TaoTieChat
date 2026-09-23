@@ -37,17 +37,17 @@ signals:
     void media_changed(const QPixmap&pixmap);
 
 public slots:
-    void on_media_open        (            );
-    void on_media_save        (            );
-    void on_media_save_as     (            );
-    void on_media_prev        (            );
-    void on_media_next        (            );
-    void on_media_fit         (bool checked);
-    void on_media_zoom_in     (            );
-    void on_media_zoom_out    (            );
-    void on_media_normal_size (            );
-    void on_window_full_screen(bool checked);
-    void on_window_pin        (bool checked);
+    void slot_media_open        (            );
+    void slot_media_save        (            );
+    void slot_media_save_as     (            );
+    void slot_media_prev        (            );
+    void slot_media_next        (            );
+    void slot_media_fit         (bool checked);
+    void slot_media_zoom_in     (            );
+    void slot_media_zoom_out    (            );
+    void slot_media_normal_size (            );
+    void slot_window_full_screen(bool checked);
+    void slot_window_pin        (bool checked);
 
 private:
     // UI 组件

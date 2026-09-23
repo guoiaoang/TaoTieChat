@@ -307,10 +307,10 @@ public:
             if (!index.isValid()) { return; }
             auto var_data = index.data(ENUMS::role_item_data());
             if (!var_data.isValid()) { return; }
-            if (!var_data.canConvert<std::shared_ptr<ChatroomData>>()) { return; }
-            auto chatroom_data = var_data.value<std::shared_ptr<ChatroomData>>();
+            if (!var_data.canConvert<std::shared_ptr<ChatroomData::ItemData>>()) { return; }
+            auto chatroom_data = var_data.value<std::shared_ptr<ChatroomData::ItemData>>();
             if (!chatroom_data) { return; }
-            if (!chatroom_data->contact) { return; }
+            // if (!chatroom_data->contact) { return; }
         }
 
         QStyleOptionViewItem opt = option;
@@ -344,49 +344,55 @@ public:
 
             // 获取数据内容
             auto var_data   = index.data(ENUMS::role_item_data());
-            auto chatroom_data = var_data.value<std::shared_ptr<ChatroomData>>();
-            auto contact = chatroom_data->contact;
+            auto chatroom_data = var_data.value<std::shared_ptr<ChatroomData::ItemData>>();
 
-            // 获取头像  // 圆角头像
-            static std::map<QString, QPixmap> map_cacha_avatar;
-            auto avatar_id  = contact->baseInfo().avatarId();
-            if (!map_cacha_avatar.contains(avatar_id)) {
-                auto avatar_file_path = Database::instance().get_local_file_id_path(avatar_id + ";size:128*128");
-                auto pixmap_avatar_source = QPixmap(avatar_file_path);
-                if(pixmap_avatar_source.isNull()) {
-                    // 修改图标大小
-                    int height_item = opt.decorationSize.height();
-                    int height_icon = (height_item * group_height_scale());
-                    opt.decorationSize = QSize(height_icon, height_icon);
-
-                    // 根据颜色和大小生成图标
-                    QColor color_icon = opt.palette.color(QPalette::Text);  // 指定固定的颜色
-                    static Utils::FontIcons icon_font = Utils::FontIcons();
-                    if (icon_font.size.avatar != opt.decorationSize || icon_font.color.normal != color_icon) {
-                        icon_font.size.avatar = opt.decorationSize;
-                        icon_font.color.normal = color_icon;
-                        icon_font.update();
+            auto get_avatar_rounded = [](const std::shared_ptr<ChatroomData::ItemData>&chatroom_data, int radius) -> const QImage {
+                // 获取头像  // 圆角头像  // 头像更新后需要这里清除缓存
+                struct CacheChatroomData {
+                    std::shared_ptr<ChatroomData::ItemData> data;
+                    int radius = -1;
+                    QImage image;
+                };
+                static std::map<QString, CacheChatroomData> s_caches;
+                if (!chatroom_data) { return QImage(); }
+                const auto& chatroom_id = chatroom_data->chatroom_id;
+                // clean
+                do {
+                    if (!s_caches.contains(chatroom_id)) { break; }
+                    auto&cache = s_caches[chatroom_id];
+                    if (!cache.data) { break; }
+                    const auto&data = cache.data;
+                    // 圆角、id、路径不同均需更新
+                    if (cache.radius      != radius                     ||
+                        data->avatar_id   != chatroom_data->avatar_id   ||
+                        data->avatar_path != chatroom_data->avatar_path ||
+                        data->avatar_image.isNull() ||
+                        cache.image.isNull()
+                    ) {
+                        s_caches.erase(chatroom_id);
                     }
-
-                    QIcon&ico_show = icon_font.icon.contacts;
-                    pixmap_avatar_source = QPixmap(ico_show.pixmap(opt.decorationSize, QIcon::Normal));
+                } while (false);
+                // set
+                if (!s_caches.contains(chatroom_id)) {
+                    auto&cache   = s_caches[chatroom_id];
+                    cache.data   = std::make_shared<ChatroomData::ItemData>(*chatroom_data);  // 拷贝复制
+                    cache.radius = radius;
+                    cache.image  = Utils::to_round_image(cache.data->avatar_image, radius);
                 }
-                auto pixmap_avatar = Utils::to_round_pixmap(pixmap_avatar_source, style_data->rect_avatar.width() / 2);
-                map_cacha_avatar[avatar_id] = pixmap_avatar;
-            }
-            // 头像
-            auto pixmap_avatar = map_cacha_avatar[avatar_id];
+                return s_caches[chatroom_id].image;
+            };
+            const auto& image_avatar = get_avatar_rounded(chatroom_data, style_data->rect_avatar.width() / 2);
             // 提示消息
-            auto last_message_text = chatroom_data->text;
+            auto last_message_text = chatroom_data->last_message_text;
             QFontMetrics metrics_signature(style_data->font_signature);
             QString elided_last_messsage = metrics_signature.elidedText(last_message_text, Qt::ElideRight, style_data->rect_message.width());
             // 消息时间不应当截断
-            auto datetime = chatroom_data->datetime;
-            datetime.setTimeZone(QTimeZone::utc());
-            // auto last_message_time = datetime.toLocalTime().toString("hh:mm");
-            auto last_message_time = Utils::format_smart_time(datetime);
+            // auto datetime = chatroom_data->last_message_datetime;
+            // datetime.setTimeZone(QTimeZone::utc());
+            // // auto last_message_time = datetime.toLocalTime().toString("hh:mm");
+            // auto last_message_time = Utils::format_smart_time(datetime);
+            const auto& last_message_time = chatroom_data->display_datetime;
             QFontMetrics metrics_time(style_data->font_time);
-            // QString elided_last_messsage = metrics_time.elidedText(last_message_time, Qt::ElideRight, style_data->rect_message.width());
 
             // 调整宽度
             QRect rect_nickname_last = style_data->rect_nickname;
@@ -399,30 +405,23 @@ public:
             rect_nickname_last.setRight(rect_time_last.left() - 5);
 
             // 昵称
-            auto nickname = contact->baseInfo().nickname();
-            QFontMetrics metrics_nickname(style_data->font_nickname);
-            QString elided_nickname = metrics_nickname.elidedText(nickname, Qt::ElideRight, rect_nickname_last.width());
-
-// #ifdef _DEBUG
-//         QString deebug_suffix = " aaabbbcccdddeeefffggghhhiiijjjkkklllmmmnnnooopppqqqrrrssstttuuuvvvwwwxxxyyyzzz";
-//         nickname  += deebug_suffix;
-//         signature += deebug_suffix;
-// #endif // _DEBUG
+            const auto& display_name = chatroom_data->display_name;
+            QFontMetrics metrics_display_name(style_data->font_nickname);
+            QString elided_display_name = metrics_display_name.elidedText(display_name, Qt::ElideRight, rect_nickname_last.width());
 
             painter->save();
             painter->translate(option.rect.topLeft()); // 将画布原点移到 (x, y)
 
             // 绘制头像
-            painter->drawPixmap(style_data->rect_avatar, pixmap_avatar);
+            painter->drawImage(style_data->rect_avatar, image_avatar);
             // 绘制昵称
             painter->setFont(style_data->font_nickname);
             painter->setPen(option.state & QStyle::State_Selected ? option.palette.highlightedText().color() : option.palette.text().color());
-            painter->drawText(rect_nickname_last, Qt::AlignLeft | Qt::AlignVCenter, elided_nickname);
+            painter->drawText(rect_nickname_last, Qt::AlignLeft | Qt::AlignVCenter, elided_display_name);
             // 绘制签名内容
             painter->setFont(style_data->font_signature);
             painter->setPen(option.state & QStyle::State_Selected ? option.palette.highlightedText().color() : QColor(100, 100, 100));
-            // painter->drawText(style_data->rect_message, Qt::AlignLeft | Qt::AlignVCenter, elided_signature);
-            painter->drawText(style_data->rect_message, Qt::AlignLeft | Qt::AlignVCenter, last_message_text);
+            painter->drawText(style_data->rect_message, Qt::AlignLeft | Qt::AlignVCenter, elided_last_messsage);
             painter->drawText(rect_time_last, Qt::AlignRight | Qt::AlignVCenter, last_message_time);
 
 #ifdef _DEBUG

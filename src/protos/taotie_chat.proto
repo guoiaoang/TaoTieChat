@@ -556,18 +556,28 @@ message MessageContext {
             // 消息内容均不能为空
             oneof    content {
               // 客户端需要注意不同字符串类型占用的空间大小不一致的问题
-              string short_text   = 21;  // 短文本消息内容  // [0, 8192) 个字节以内的文本消息内容
-              // FileContent long_text = 6;  // 长文本消息内容  // [8192, ...) 个字节以上的文本消息内容。
+              string      short_text = 21;  // 短文本消息内容  // [0, 8192) 个字节以内的文本消息内容
+              FileContent long_text  = 22;  // 长文本消息内容  // [8192, ...) 个字节以上的文本消息内容。
+              string      file_id    = 24;  // 文件 ID        // 文件上传成功后才发送该消息
+              // FileContent file      = 23; // 文件消息内容
               // FileContent image     = 7;  // 图片消息内容
               // FileContent audio     = 8;  // 音频消息内容
               // FileContent video     = 9;  // 视频消息内容
-              // FileContent file      = 10;  // 文件消息内容
               // 单内容格式/多内容格式，自定义格式/使用 xml
               // 通过特殊标记来区分文本和表情等非文本内容
               // `hello[::emoji::smaile]world[::img::earth.png],listen[::audio::hi.mp3]and view[::audio::heard.mp4]`
               // [] 中的内容表示特殊消息，格式为 `::type::data`，其中 type 可以是 emoji、img、audio、video、file 等，data 则是对应的内容，如表情名称、图片文件名、音频文件名等
               // MuiltMessage muilt_message = 11;  // 混合消息
             }
+}
+
+// 文件上传下载时需要的信息
+message FileContent {
+  string         path        = 1;  // 文件路径
+  string         hash        = 2;  // 文件哈希
+  int64          total_size  = 3;  // 文件大小
+  int64          ud_size     = 4;  // 已上传/下载的大小
+  FileStatusCode file_status = 5;  // 传输状态
 }
 
 // 消息回应，返回服务端消息 ID 和时间戳，用于消息同步
@@ -654,6 +664,7 @@ enum SyncSubTypeGroup {
 enum SyncSubTypeMessage {
   SYNC_MESSAGE_UNSET = 0;
   SYNC_MESSAGE_TEXT  = 1;
+  SYNC_MESSAGE_FILE  = 2;
 }
 
 // -------------------------------- GetLastID -------------------------------- //
@@ -810,13 +821,32 @@ message SyncMessage {
   Timestamp            timestamp           = 7;  // 服务端落库时间
   oneof                info {
     SyncMessageText    text                = 8;  // 文本消息
+    SyncMessageFile    file                = 9;  // 文件消息
   }
 }
 
+// 文本消息内容
 message SyncMessageText {
   oneof    info {
     string short_text        = 1;  // 文本消息内容
   }
+}
+
+// 文件类型
+enum FileType {
+  FILE_TYPE_UNSPECIFIED = 0;
+  FILE_TYPE_IMAGE = 1;
+  FILE_TYPE_AUDIO = 2;
+  FILE_TYPE_VIDEO = 3;
+};
+
+// 文件消息内容
+message SyncMessageFile {
+  string file_id     = 1;  // 文件 ID
+  string file_name   = 2;  // 文件名称
+  string file_md5    = 3;  // 文件哈希
+  int64  file_size   = 4;  // 文件大小
+  // FileType file_type = 5;  // 文件类型
 }
 
 // ------------------------------ SyncReplyBody ------------------------------ //

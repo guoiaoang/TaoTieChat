@@ -79,7 +79,7 @@ public:
     // TODO:upload_file 应该封装在子线程中
     bool upload_file  (const QString&file_path, network_file_io_notify_callback& callback_upload_file_notify  );
     // TODO:download_file 应该封装在子线程中
-    bool download_file(const QString&file_id  , qint64 downloaded_size, network_file_io_notify_callback& callback_download_file_notify);
+    bool download_file(const QString&file_id, const QString&notify_id, network_file_io_notify_callback& callback_download_file_notify);
 
 signals:
     // 文件下载成功通知

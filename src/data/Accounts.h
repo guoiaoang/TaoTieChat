@@ -74,25 +74,25 @@ public:
 
         Utils::create_dirs(Utils::get_dir(config_path()));  // 确保目录存在
 
-        mINI::INIFile file(config_path().toStdString());
-        mINI::INIStructure ini;
-        file.read(ini);
-        ini[user_section_sz]["token"          ] = auth_opt->token   .toStdString();
-        ini[user_section_sz]["password"       ] = auth_opt->password.toStdString();
-        ini[user_section_sz]["rember_password"] = auth_opt->rember_password ? "true" : "false";
-        ini[user_section_sz]["auto_login"     ] = auth_opt->auto_login      ? "true" : "false";
-        file.write(ini);
+        mINI::INIFile ini_file(config_path().toStdString());
+        mINI::INIStructure ini_data;
+        ini_file.read(ini_data);
+        ini_data[user_section_sz]["token"          ] = auth_opt->token   .toStdString();
+        ini_data[user_section_sz]["password"       ] = auth_opt->password.toStdString();
+        ini_data[user_section_sz]["rember_password"] = auth_opt->rember_password ? "true" : "false";
+        ini_data[user_section_sz]["auto_login"     ] = auth_opt->auto_login      ? "true" : "false";
+        ini_file.write(ini_data);
         return true;
     }
 
     static std::vector<std::shared_ptr<AuthOpt>> load() {
         std::vector<std::shared_ptr<AuthOpt>> auth_opts;
 
-        mINI::INIFile file(config_path().toStdString());
-        mINI::INIStructure ini;
-        file.read(ini);
+        mINI::INIFile ini_file(config_path().toStdString());
+        mINI::INIStructure ini_data;
+        ini_file.read(ini_data);
 
-        for (auto const& ite_section : ini) {
+        for (auto const& ite_section : ini_data) {
             auto const& section    = ite_section.first;
             if(section.starts_with(m_username_prefix().toUtf8().toStdString().data())) {
                 auto auth_opt             = std::make_shared<AuthOpt>();

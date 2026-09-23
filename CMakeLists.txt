@@ -11,6 +11,8 @@ cmake_minimum_required(VERSION   3.10)
 
 # =================================   set   ================================= #
 
+set(ENABLE_TEST OFF)
+
 # --------------------------------   预配置   -------------------------------- #
 include(${CMAKE_CURRENT_SOURCE_DIR}/src/cmake/pre_config.cmake)
 

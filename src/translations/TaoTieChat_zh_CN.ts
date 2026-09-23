@@ -209,12 +209,12 @@
         <translation>创建群</translation>
     </message>
     <message>
-        <location filename="../ui/ChatWindow/ChatWindow.cpp" line="514"/>
+        <location filename="../ui/ChatWindow/ChatWindow.cpp" line="499"/>
         <source>Failed to download avatar.</source>
         <translation>头像图片下载失败。</translation>
     </message>
     <message>
-        <location filename="../ui/ChatWindow/ChatWindow.cpp" line="515"/>
+        <location filename="../ui/ChatWindow/ChatWindow.cpp" line="500"/>
         <source>
 
 code : 0x%1
@@ -549,39 +549,117 @@ message : %2</source>
         <translation>工具栏</translation>
     </message>
     <message>
-        <location filename="../ui/PluginsWindow/MediaWindow.cpp" line="221"/>
+        <location filename="../ui/PluginsWindow/MediaWindow.cpp" line="136"/>
+        <source>Media View</source>
+        <translation>媒体文件查看</translation>
+    </message>
+    <message>
+        <location filename="../ui/PluginsWindow/MediaWindow.cpp" line="198"/>
+        <source>[%1 / %2]</source>
+        <translation>[%1 / %2]</translation>
+    </message>
+    <message>
+        <location filename="../ui/PluginsWindow/MediaWindow.cpp" line="222"/>
         <source>Open File</source>
         <translation>打开文件</translation>
     </message>
     <message>
-        <location filename="../ui/PluginsWindow/MediaWindow.cpp" line="242"/>
+        <location filename="../ui/PluginsWindow/MediaWindow.cpp" line="243"/>
         <source>Cannot load %1</source>
         <translation>无法加载 %1</translation>
     </message>
     <message>
-        <location filename="../ui/PluginsWindow/MediaWindow.cpp" line="248"/>
+        <location filename="../ui/PluginsWindow/MediaWindow.cpp" line="249"/>
         <source>Opened &quot;%1&quot;, %2x%3, Depth: %4</source>
         <translation>已打开 &quot;%1&quot;, %2x%3，深度： %4</translation>
     </message>
     <message>
-        <location filename="../ui/PluginsWindow/MediaWindow.cpp" line="261"/>
+        <location filename="../ui/PluginsWindow/MediaWindow.cpp" line="281"/>
         <source>Save File As</source>
         <translation>文件另存为</translation>
     </message>
     <message>
-        <location filename="../ui/PluginsWindow/MediaWindow.cpp" line="288"/>
-        <source>Cannot write %1</source>
-        <translation>无法保存文件 %1</translation>
+        <location filename="../ui/PluginsWindow/MediaWindow.cpp" line="315"/>
+        <source>Wrote Success : &quot;%1&quot;</source>
+        <translation>保存成功 ： &quot;%1&quot;</translation>
     </message>
     <message>
-        <location filename="../ui/PluginsWindow/MediaWindow.cpp" line="291"/>
-        <source>Wrote &quot;%1&quot;</source>
-        <translation>保存文件 &quot;%1&quot;</translation>
+        <location filename="../ui/PluginsWindow/MediaWindow.cpp" line="316"/>
+        <source>Cannot write : %1</source>
+        <translation>保存失败 ： %1</translation>
     </message>
     <message>
         <location filename="../ui/PluginsWindow/MediaWindow.ui" line="20"/>
         <source>MediaWindow</source>
         <translation>媒体窗口</translation>
+    </message>
+</context>
+<context>
+    <name>MessageDelegate</name>
+    <message>
+        <location filename="../ui/MVC/MessageDelegate.cpp" line="789"/>
+        <source>Copy path</source>
+        <translation>复制路径</translation>
+    </message>
+    <message>
+        <location filename="../ui/MVC/MessageDelegate.cpp" line="736"/>
+        <source>Copy link address</source>
+        <translation>复制链接地址</translation>
+    </message>
+    <message>
+        <location filename="../ui/MVC/MessageDelegate.cpp" line="743"/>
+        <source>Copy selected text</source>
+        <translation>复制选中文字</translation>
+    </message>
+    <message>
+        <location filename="../ui/MVC/MessageDelegate.cpp" line="746"/>
+        <source>Select this entire message</source>
+        <translation>全选本条消息</translation>
+    </message>
+    <message>
+        <location filename="../ui/MVC/MessageDelegate.cpp" line="747"/>
+        <source>Copy the entire message</source>
+        <translation>复制整条消息</translation>
+    </message>
+    <message>
+        <location filename="../ui/MVC/MessageDelegate.cpp" line="781"/>
+        <source>Open data</source>
+        <translation>打开文件内容</translation>
+    </message>
+    <message>
+        <location filename="../ui/MVC/MessageDelegate.cpp" line="782"/>
+        <source>Copy data</source>
+        <translation>复制文件内容</translation>
+    </message>
+    <message>
+        <location filename="../ui/MVC/MessageDelegate.cpp" line="784"/>
+        <source>Open file</source>
+        <translation>打开文件</translation>
+    </message>
+    <message>
+        <location filename="../ui/MVC/MessageDelegate.cpp" line="785"/>
+        <source>Open folder</source>
+        <translation>打开文件夹</translation>
+    </message>
+    <message>
+        <location filename="../ui/MVC/MessageDelegate.cpp" line="786"/>
+        <source>Save To...</source>
+        <translation>保存到...</translation>
+    </message>
+    <message>
+        <location filename="../ui/MVC/MessageDelegate.cpp" line="788"/>
+        <source>Copy file</source>
+        <translation>复制文件</translation>
+    </message>
+    <message>
+        <location filename="../ui/MVC/MessageDelegate.cpp" line="802"/>
+        <source>View Image</source>
+        <translation>查看图片</translation>
+    </message>
+    <message>
+        <location filename="../ui/MVC/MessageDelegate.cpp" line="803"/>
+        <source>Copy Image</source>
+        <translation>复制图片</translation>
     </message>
 </context>
 <context>
@@ -642,19 +720,47 @@ message : %2</source>
         <translation>发送</translation>
     </message>
     <message>
-        <location filename="../ui/ChatWindow/MessageWindow.cpp" line="48"/>
+        <location filename="../ui/ChatWindow/MessageWindow.cpp" line="54"/>
         <source>Allowed character length: %1
 Current input character length: %2</source>
         <translation>允许发送的字符长度：%1
 当前输入的字符长度：%2</translation>
     </message>
     <message>
-        <location filename="../ui/ChatWindow/MessageWindow.cpp" line="460"/>
+        <location filename="../ui/ChatWindow/MessageWindow.cpp" line="434"/>
+        <source>Select file to send</source>
+        <translation>选择要发送的文件</translation>
+    </message>
+    <message>
+        <location filename="../ui/ChatWindow/MessageWindow.cpp" line="434"/>
+        <source>All files (*.*)</source>
+        <translation>所有文件 (*.*)</translation>
+    </message>
+    <message>
+        <location filename="../ui/ChatWindow/MessageWindow.cpp" line="548"/>
+        <source>Failed to upload avatar.
+
+code : 0x%1
+message : %2</source>
+        <translation>更新头像失败。
+
+错误代码 : 0x%1
+错误消息 : %2</translation>
+    </message>
+    <message>
+        <location filename="../ui/ChatWindow/MessageWindow.cpp" line="788"/>
+        <source>Save to...</source>
+        <translation>保存到...</translation>
+    </message>
+    <message>
+        <location filename="../ui/ChatWindow/MessageWindow.cpp" line="529"/>
+        <location filename="../ui/ChatWindow/MessageWindow.cpp" line="626"/>
         <source>Failed to send chat message.</source>
         <translation>发送聊天消息失败。</translation>
     </message>
     <message>
-        <location filename="../ui/ChatWindow/MessageWindow.cpp" line="462"/>
+        <location filename="../ui/ChatWindow/MessageWindow.cpp" line="531"/>
+        <location filename="../ui/ChatWindow/MessageWindow.cpp" line="628"/>
         <source>
 
 code : 0x%1
@@ -688,7 +794,7 @@ message : %2</source>
         <translation>无法校验文件 : %1</translation>
     </message>
     <message>
-        <location filename="../network/NetworkClient.cpp" line="1191"/>
+        <location filename="../network/NetworkClient.cpp" line="1193"/>
         <source>Download completed: %1</source>
         <translation>文件已下载。下载位置：%1</translation>
     </message>

@@ -155,39 +155,47 @@ void Database::FileIDPathMap::set_config_dir(const QString& config_dir) {
 bool Database::FileIDPathMap::reload() {
     m_inited = true;
     m_file_id_path_map.clear();
+
     // 暂时将映射序列化存到本地
-    QString m_map_file_path =  m_map_file_dir + "/" +  m_map_file_name;
-    QFile file(m_map_file_path);
-    if(file.open(QIODevice::ReadOnly | QIODevice::Text)) {
-        QTextStream in(&file);
-        while(!in.atEnd()) {
-            QString line = in.readLine();
-            QStringList parts = line.split("=");
-            if(parts.size() == 2) {
-                QString id = parts[0].trimmed();
-                QString path = parts[1].trimmed();
-                m_file_id_path_map[id] = path;
-            }
+    QString map_file_path =  m_map_file_dir + "/" +  m_map_file_name;
+
+    mINI::INIFile ini_file(map_file_path.toStdString());
+    mINI::INIStructure ini_data;
+    // 加载数据时读取失败即可返回错误
+    if (!ini_file.read(ini_data)) { return false; }
+
+    if ( ini_data.has(m_section_name.toStdString())) {
+        const auto&section_data = ini_data[m_section_name.toStdString()];
+        for (const auto&kv : section_data) {
+            auto file_id       = QString::fromStdString(kv.first ).trimmed();
+            auto path_relative = QString::fromStdString(kv.second).trimmed();
+            auto path_full     = QDir(m_map_file_dir).absoluteFilePath(path_relative);
+            m_file_id_path_map[file_id] = path_full;
         }
-        file.close();
     }
     return true;
 }
 
 bool Database::FileIDPathMap::save() {
-    if(!m_inited) { return false; }  // 没有初始化时调用不必保存，防止出现无用文件
-    QString m_map_file_path =  m_map_file_dir + "/" +  m_map_file_name;
-    Utils::create_dirs(Utils::get_dir(m_map_file_path));
-    QFile file(m_map_file_path);
-    if(file.open(QIODevice::WriteOnly | QIODevice::Text)) {
-        QTextStream out(&file);
-        for(auto it = m_file_id_path_map.begin(); it != m_file_id_path_map.end(); ++it) {
-            out << it.key() << " = " << it.value() << "\n";
-        }
-        file.close();
-        return true;
+    // 没有初始化时调用不必保存，防止出现无用文件
+    if(!m_inited) { return false; }
+
+    QString map_file_path =  m_map_file_dir + "/" +  m_map_file_name;
+    Utils::create_dirs(Utils::get_dir(map_file_path));
+
+    mINI::INIFile ini_file(map_file_path.toStdString());
+    mINI::INIStructure ini_data;
+    // if (!ini_file.read(ini_data)) { return false; }
+    // 没有文件时会读取失败，但需要继续保存
+    ini_file.read(ini_data);
+
+    for(auto it = m_file_id_path_map.begin(); it != m_file_id_path_map.end(); ++it) {
+        // 计算 it.value() 相对于 m_map_file_dir 的路径
+        QString path_relative = QDir(m_map_file_dir).relativeFilePath(it.value());
+        ini_data[m_section_name.toStdString()][it.key().toStdString()] = path_relative.toStdString();
     }
-    return false;
+    if (!ini_file.write(ini_data)) { return false; };  // 写入失败才返回错误
+    return true;
 }
 
 QString Database::FileIDPathMap::get_local_file_id_path(const QString&file_id) {

@@ -34,9 +34,11 @@ public:
     void show_avatar_id(const QString&avatar_id);
 
     // 添加聊天内容到对话内
-    void add_message(const std::shared_ptr<SyncMessage>&sync_message);
+    bool add_message(const std::shared_ptr<MessageData::ItemData>&message_data);
     // 获取最后一条消息以便列表显示
-    const std::shared_ptr<MessageContext> get_last_message();
+    const std::shared_ptr<MessageData::ItemData> get_last_message();
+    void update_message(const std::shared_ptr<MessageData::ItemData>&message_data);
+    std::shared_ptr<MessageData::ItemData> get_message(const QString&message_id) const;
 
     // void update_messages(Messages messages);
     // void append_message (Message  message );
@@ -55,13 +57,18 @@ public Q_SLOTS:
     void slot_button_video       ();
     void slot_button_send        ();
 private slots:
-    void slot_open_link  (const QString &href);
-    void slot_open_folder(const QString &filePath);
-    void slot_openn_image(const QString &filePath);
     void slot_show_context_menu(const QPoint &viewportPos);
+    void slot_open_link  (const QString &href);
+    void slot_open_file  (const std::shared_ptr<MessageData::ItemData> &message_data);
+    void slot_open_folder(const std::shared_ptr<MessageData::ItemData> &message_data);
+    void slot_open_data  (const std::shared_ptr<MessageData::ItemData> &message_data);
+    void slot_copy_data  (const std::shared_ptr<MessageData::ItemData> &message_data);
+    void slot_copy_file  (const std::shared_ptr<MessageData::ItemData> &message_data);
+    void slot_copy_path  (const std::shared_ptr<MessageData::ItemData> &message_data);
+    void slot_save_to    (const std::shared_ptr<MessageData::ItemData> &message_data);
 
 signals:
-    void signal_new_message(const std::shared_ptr<MessageContext>&message);
+    void signal_new_message(const std::shared_ptr<MessageData::ItemData>&message);
 
 private:
     std::shared_ptr<Ui::MessageWindow> m_ui;

@@ -154,7 +154,8 @@ bool SearchWindow::search_user(const QString&keyword) {
                         m_ui->page_list_users->setItemDelegate(m_users_delegate.get());
                     }
                 };
-                NetworkClient::instance().download_file(file_id, file_size, callback_download_avatar_notify);
+                QString notify_id = QString("notify SearchWindow::search_user %1").arg(file_id);
+                NetworkClient::instance().download_file(file_id, notify_id, callback_download_avatar_notify);
                 return;
             }
         }

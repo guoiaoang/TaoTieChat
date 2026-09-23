@@ -141,20 +141,20 @@ void MediaWindow::show_media(const std::shared_ptr<MediaInfo>&media_info) {
         return;
     }
 
-    QPixmap media_pixmap = media_info->media_pixmap;
-    if(media_pixmap.isNull()) {
+    auto media_image = media_info->media_image;
+    if(media_image.isNull()) {
         // 缓存，防止缩放时多次从磁盘读取文件。最多仅需保存最近的一张照片。
-        static QMap<QString, QPixmap> s_cache_pixmap;
+        static QMap<QString, QImage> s_cache_image;
 
         // 如果有缓存就不再读取文件
-        if (!media_info->media_path.isEmpty() && s_cache_pixmap.contains(media_info->media_path)) {
-            media_pixmap = s_cache_pixmap.value(media_info->media_path);
+        if (!media_info->media_path.isEmpty() && s_cache_image.contains(media_info->media_path)) {
+            media_image = s_cache_image.value(media_info->media_path);
         }
         else {
-            s_cache_pixmap.clear();  // 清除缓存
+            s_cache_image.clear();  // 清除缓存
             QFileInfo file_info(media_info->media_path);
-            media_pixmap.load(media_info->media_path);
-            s_cache_pixmap[media_info->media_path] = media_pixmap;
+            media_image.load(media_info->media_path);
+            s_cache_image[media_info->media_path] = media_image;
         }
     }
 
@@ -163,13 +163,13 @@ void MediaWindow::show_media(const std::shared_ptr<MediaInfo>&media_info) {
         // 更新缩放图片：使其适应 Label 大小，并保持纵横比
         // Qt::KeepAspectRatio 保证图片不变形
         // Qt::SmoothTransformation 保证缩放后的图片清晰（消除锯齿）
-        QPixmap pixmap_scaled = media_pixmap.scaled(m_ui->label->size(), Qt::KeepAspectRatio, Qt::SmoothTransformation);
-        m_ui->label->setPixmap(pixmap_scaled);
+        QImage image_scaled = media_image.scaled(m_ui->label->size(), Qt::KeepAspectRatio, Qt::SmoothTransformation);
+        m_ui->label->setPixmap(QPixmap::fromImage(image_scaled));
 
         // 同步更新缩放比例，防止默认在原图比例上进行缩放
         // 计算宽度和高度各自的缩放比例
-        double scale_w = static_cast<double>(m_ui->label->width()) / media_pixmap.width();
-        double scale_h = static_cast<double>(m_ui->label->height()) / media_pixmap.height();
+        double scale_w = static_cast<double>(m_ui->label->width ()) / media_image.width();
+        double scale_h = static_cast<double>(m_ui->label->height()) / media_image.height();
         // KeepAspectRatio 模式下，实际缩放倍数是两者中的【最小值】
         m_scale_factory = std::min(scale_w, scale_h);
     }
@@ -178,12 +178,12 @@ void MediaWindow::show_media(const std::shared_ptr<MediaInfo>&media_info) {
         const double ff = 0.001;
         if(m_scale_factory > 1.0 - ff && m_scale_factory < 1.0 + ff) {
             // 如果缩放倍数为 1 附近的值，那么直接显示原图，避免不必要的缩放计算和可能的模糊
-            m_ui->label->setPixmap(media_pixmap);
+            m_ui->label->setPixmap(QPixmap::fromImage(media_image));
         }
         else {
             // 缩放倍数不为 1 时需要进行处理
-            QPixmap pixmap_scaled = media_pixmap.scaled(media_pixmap.size() * m_scale_factory, Qt::KeepAspectRatio, Qt::SmoothTransformation);
-            m_ui->label->setPixmap(pixmap_scaled);
+            QImage image_scaled = media_image.scaled(media_image.size() * m_scale_factory, Qt::KeepAspectRatio, Qt::SmoothTransformation);
+            m_ui->label->setPixmap(QPixmap::fromImage(image_scaled));
         }
     }
 
@@ -332,14 +332,14 @@ void MediaWindow::slot_media_save_as() {
             if (is_file_exists && save_suffix == media_suffix) {
                 is_save_ok = QFile::copy(media_path, save_path);
             }
-            // 文件后缀不一致时需要加载转码保存
+            // 文件后缀不一致时需要加载、转码保存
             else if (is_file_exists && save_suffix == media_suffix) {
                 QImage image(media_path);
                 is_save_ok = image.save(save_path);
             }
             // 传入的是图像时(文件不存在时)
-            else if (media_info && !media_info->media_pixmap.isNull()) {
-                is_save_ok = media_info->media_pixmap.save(save_path);
+            else if (media_info && !media_info->media_image.isNull()) {
+                is_save_ok = media_info->media_image.save(save_path);
             }
         } while (false);
         // 界面提示

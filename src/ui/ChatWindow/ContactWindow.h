@@ -33,11 +33,11 @@ public:
     ~ContactWindow();
 
 public:
-    const std::shared_ptr<ContactInfo>&get_cache_contact_info () const;
+    const std::shared_ptr<ContactData::ItemData>&get_cache_contact_data () const;
     const std::shared_ptr<QPixmap    >&get_cache_avatar_pixmap() const;
-    void set_cache_contact_info (const std::shared_ptr<ContactInfo>&contact_info );
+    void set_cache_contact_data (const std::shared_ptr<ContactData::ItemData>&contact_data);
     void set_cache_avatar_pixmap(const std::shared_ptr<QPixmap    >&avatar_pixmap);
-    void show_contact(const std::shared_ptr<ContactInfo>&contact_info, const std::shared_ptr<QPixmap>&avatar_pixmap = nullptr);
+    void show_contact(const std::shared_ptr<ContactData::ItemData>&contact_data, const std::shared_ptr<QPixmap>&avatar_pixmap = nullptr);
     // void set_request_mode(bool request_mode = false);  // 好友申请页面
     void set_show_mode(const ShowFlags show_flags);
     ShowFlags get_show_mode() const { return m_show_flags; }
@@ -59,12 +59,12 @@ private:
     void slot_action_edit    ();
     void slot_action_remove  ();
     // 新添加好友时刷新好友关系状态
-    void slot_contact_status_changed(const std::shared_ptr<ContactInfos>& to_contact_info);
+    void slot_contact_status_changed(const QVector<std::shared_ptr<ContactData::ItemData>>& to_contact_datas);
 
     // get_local_avatar_id_pixmap 根据文件 ID 在本地查找文件并加载为头像图片
     std::shared_ptr<QPixmap> get_local_avatar_id_pixmap(const QString&avatar_id);
     // view_avatar 在媒体窗口查看当前头像
-    void view_avatar(const std::shared_ptr<ContactInfo>&contact_info);
+    void view_avatar(const std::shared_ptr<ContactData::ItemData>&contact_data);
     // show_avatar 当前窗口更新头像显示，无网络及校验功能
     void show_avatar(const std::shared_ptr<QPixmap>&avatar_pixmap);
     // 传入头像 ID，自动从本地或网络加载头像
@@ -73,23 +73,23 @@ private:
     QString dialog_select_avatar_file();
 
     // network
-    void update_profile_text(const ContactInfo&contact_info, const update_profile_callback&callback_update_profile = nullptr);
+    void update_profile_text(const std::shared_ptr<ContactData::ItemData>&contact_data, const update_profile_callback&callback_update_profile = nullptr);
     void update_profile_avatar(const QString&avatar_path);
 
 Q_SIGNALS:
-    void sig_contact_add    (const std::shared_ptr<ContactInfo>&contact_info);
-    void sig_contact_remove (const std::shared_ptr<ContactInfo>&contact_info);
-    void sig_contact_message(const std::shared_ptr<ContactInfo>&contact_info);
-    void sig_contact_voice  (const std::shared_ptr<ContactInfo>&contact_info);
-    void sig_contact_video  (const std::shared_ptr<ContactInfo>&contact_info);
+    void sig_contact_add    (const std::shared_ptr<ContactData::ItemData>&contact_data);
+    void sig_contact_remove (const std::shared_ptr<ContactData::ItemData>&contact_data);
+    void sig_contact_message(const std::shared_ptr<ContactData::ItemData>&contact_data);
+    void sig_contact_voice  (const std::shared_ptr<ContactData::ItemData>&contact_data);
+    void sig_contact_video  (const std::shared_ptr<ContactData::ItemData>&contact_data);
 
 private:
-    std::shared_ptr<Ui::ContactWindow> m_ui                 ;
-    std::shared_ptr<QMenu            > m_menu_manager       ;
-    std::shared_ptr<QAction          > m_action_edit        ;
-    std::shared_ptr<QAction          > m_action_remove      ;
-    std::shared_ptr<ContactInfo      > m_cache_contact_info ;
-    std::shared_ptr<QPixmap          > m_cache_avatar       ;
+    std::shared_ptr<Ui::ContactWindow    > m_ui                ;
+    std::shared_ptr<QMenu                > m_menu_manager      ;
+    std::shared_ptr<QAction              > m_action_edit       ;
+    std::shared_ptr<QAction              > m_action_remove     ;
+    std::shared_ptr<ContactData::ItemData> m_cache_contact_data;
+    std::shared_ptr<QPixmap              > m_cache_avatar      ;
     bool m_edit_mode = false;
     ShowFlags m_show_flags = ShowFlag::unset;
     Utils::WidgetTools::LineEdit m_edit_tool;

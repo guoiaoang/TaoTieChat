@@ -72,13 +72,39 @@ public:
 namespace ContactData {
 // 聊天列表所需的数据
 struct ItemData {
-    QString contact_id;
-    QString nickname;
-    QString notes;
-    QString signature;
+    // ContactInfoBase
+    QString     account_id   = {};  // 账号 ID  // 查找联系人时需要
+    QString     user_id      = {};  // 用户 ID  // 联系人列表排序时需要
+    QString     avatar_id    = {};  // 头像
+    QString     nickname     = {};  // 昵称
+    int         gender       = {};  // 性别
+    QString     birthday     = {};  // 生日
+    QString     signature    = {};  // 签名
+    QString     region       = {};  // 地区
+    QString     description  = {};  // 个人简介
+    QStringList phones       = {};  // 手机号
+    QStringList emails       = {};  // 邮箱
+    QStringList social_links = {};  // 社交链接，逗号分隔
+    QStringList moments_id   = {};  // 朋友圈 ID 列表
+    QStringList groups_id    = {};  // 群组 ID 列表
+    // ContactInfoFriend
+    int         status       = {};  // 是否被拉黑
+    bool        starred      = {};  // 是否标星
+    bool        silent       = {};  // 是否免打扰
+    QString     notes        = {};  // 备注
+    QString     added_source = {};  // 添加来源
+    QString     added_time   = {};  // 添加时间
+    QStringList tags         = {};  // 标签，逗号分隔
+    // ContactInfoSelf
+    bool    modify_self_info  = {};  // 是否是修改个人信息
+    QString password          = {};  // 密码
+    QString token             = {};  // 认证令牌
+    QString security_question = {};  // 安全问题
+    QString security_answer   = {};  // 安全答案
     // cache
-    QString display_name;
-    QString avatar_id;
+    bool is_me     = false;
+    bool is_friend = false;
+    QString display_name;  // 联系人列表排序、显示名称时需要
     QString avatar_path;
     QImage  avatar_image;  // Image 与 UI 无关，可以在子线程中操作
 };
@@ -87,7 +113,6 @@ struct ItemData {
 namespace ChatroomData {
 // 聊天列表所需的数据
 struct ItemData {
-    // std::shared_ptr<ContactInfo> contact;
     QString   chatroom_id; //
     QString   last_message_text    ;  // last_message_text
     QDateTime last_message_datetime;  // last_message_datetime

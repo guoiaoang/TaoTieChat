@@ -2,6 +2,8 @@
 
 #include "headers.h"
 
+namespace ContactData { struct ItemData; };
+
 // 文件及路径操作
 namespace Utils {
 QString app_path();
@@ -45,6 +47,7 @@ QPixmap to_pixmap(const QString&text, const QSize size = QSize(128, 128));
 
 // 获取显示名称的接口
 QString get_display_name(const std::shared_ptr<ContactInfo>&contact_info);
+QString get_display_name(const std::shared_ptr<ContactData::ItemData>&contact_data);
 
 // ====================================================================== //
 // 内存中展开布局器 In-Memory Layout Expander  // 窗口不需要显示即可应用实际布局
@@ -74,11 +77,11 @@ QString get_new_uuid_string();
 void set(Result&result, const SuccessCode&success_code);
 void set(Result&result, const ErrorCode  &error_code  );
 
-// ====================================================================== //
-// 查找指定 id 的好友
-std::shared_ptr<ContactInfo> get_contact_info(const std::shared_ptr<ContactInfos>&contact_infos, const QString& contact_account_id);
-// 从好友列表中获取第 index 个好友
-std::shared_ptr<ContactInfo> get_contact_info(const std::shared_ptr<ContactInfos>&contact_infos, int index);
+// // ====================================================================== //
+// // 查找指定 id 的好友
+// std::shared_ptr<ContactData::ItemData> get_contact_data(const QVector<std::shared_ptr<ContactData::ItemData>>&contact_datas, const QString& contact_account_id);
+// // 从好友列表中获取第 index 个好友
+// std::shared_ptr<ContactData::ItemData> get_contact_data(const QVector<std::shared_ptr<ContactData::ItemData>>&contact_datas, int index);
 
 // ====================================================================== //
 
@@ -290,6 +293,11 @@ QString to_string(FileStatusCode file_status_code);
 int to_int(const FileStatusCode& file_status_code);
 TaoTieChat::Timestamp to_timestamp(const QDateTime&datatime);
 QString human_size(qint64 bytes); // 字节数 → 人类可读大小（KB/MB/GB）
+}
+
+namespace Utils::Transform {
+std::shared_ptr<ContactData::ItemData> to_contact_data(const std::shared_ptr<ContactInfo          >&contact_info);
+std::shared_ptr<ContactInfo          > to_contact_info(const std::shared_ptr<ContactData::ItemData>&contact_data);
 
 }
 

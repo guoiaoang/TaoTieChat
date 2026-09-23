@@ -9,7 +9,6 @@ class ContactModel;
 class ItemDelegate;
 class SearchWindow;
 class ContactWindow;
-class ContactInfo;
 class ChatroomModel;
 class MessageWindow;
 class ChatroomProxy;
@@ -31,9 +30,9 @@ private:
     void init();
 
     // network
-    bool updata_current_account_info();
+    bool updata_current_account_data();
     bool network_status_sync();
-    bool download_contact_avatar(const std::shared_ptr<ContactInfo>&contact_info);
+    bool download_contact_avatar(const std::shared_ptr<ContactData::ItemData>&contact_data);
 
     // 显示设置菜单
     void slot_show_settings_menu();
@@ -47,15 +46,15 @@ private:
     // void slot_chat_room_item_activated(const QModelIndex &index);
 
     // 需要创建副本，而不是使用指针共享同一份内存
-    void set_cache_contact_info(const std::shared_ptr<ContactInfo>&contact_info );
+    void set_cache_contact_data(const std::shared_ptr<ContactData::ItemData>&contact_data);
     void update_contact_avatar (const QString&avatar_id, bool local_only = false);  // local_only 防止循环调用
-    std::shared_ptr<ContactInfo> get_cache_contact_info  () const;
-    std::shared_ptr<QPixmap    > get_cache_contact_avatar() const;
+    std::shared_ptr<ContactData::ItemData> get_cache_contact_data  () const;
+    std::shared_ptr<QImage               > get_cache_contact_avatar() const;
 
-    void show_avatar(const std::shared_ptr<QPixmap>&avatar_pixmap);
+    void show_avatar(const std::shared_ptr<QImage>&avatar_image);
 
     // 切换并显示聊天室
-    // void show_chatroom(const std::shared_ptr<ContactInfo>&contact_info);
+    // void show_chatroom(const std::shared_ptr<ContactData::ItemData>&contact_data);
 
     // 获取聊天记录窗口
     MessageWindow* get_message_window(const QString&account_id);
@@ -68,13 +67,13 @@ private:
 public Q_SLOTS:
     // // 聊天室管理
     // 添加到聊天室列表
-    void add_chat_room(const std::shared_ptr<ContactInfo>&contact_info);
+    void add_chat_room(const std::shared_ptr<ContactData::ItemData>&contact_data);
     // 显示指定聊天室的对话
-    void show_chat_room_messages(const std::shared_ptr<ContactInfo>&contact_info);
+    void show_chat_room_messages(const std::shared_ptr<ContactData::ItemData>&contact_data);
 
     // // 联系人管理
     // 添加到联系人列表
-    void add_contact(const std::shared_ptr<ContactInfo>&contact_info, const ENUMS::ItemGroupType&group_type = ENUMS::ItemGroupType::NONE);
+    void add_contact(const std::shared_ptr<ContactData::ItemData>&contact_data, const ENUMS::ItemGroupType&group_type = ENUMS::ItemGroupType::NONE);
     // model/view 模式下的选择  // 按键移动导致所选行变化时触发激活动作
     void handle_contact_selection_changed(const QModelIndex &current, const QModelIndex &previous);
     // 单击联系人/群组
@@ -89,8 +88,8 @@ public Q_SLOTS:
     void add_message(const std::shared_ptr<SyncMessage>&sync_message);
 
     // 更新联系人信息，可能是头像、昵称、状态等
-    void current_accounut_info_changed();
-    void update_contact_info(const std::shared_ptr<ContactInfo>&contact_info);
+    void current_account_data_changed();
+    void update_contact_data(const std::shared_ptr<ContactData::ItemData>&contact_data);
 
     // 导航按钮事件
     void slot_button_navigate_avatar ();
@@ -98,9 +97,9 @@ public Q_SLOTS:
     void slot_button_navigate_contact();
 
     // 发消息
-    void slot_message_to(const std::shared_ptr<ContactInfo>&contact_info);
-    void slot_voice_to(const std::shared_ptr<ContactInfo>&contact_info);
-    void slot_video_to(const std::shared_ptr<ContactInfo>&contact_info);
+    void slot_message_to(const std::shared_ptr<ContactData::ItemData>&contact_data);
+    void slot_voice_to  (const std::shared_ptr<ContactData::ItemData>&contact_data);
+    void slot_video_to  (const std::shared_ptr<ContactData::ItemData>&contact_data);
 
 signals:
     void signout();
@@ -133,6 +132,6 @@ private:
     std::shared_ptr<SearchWindow > m_search_window   ;
     std::shared_ptr<ContactWindow> m_contact_window  ;  // 当前显示的联系人详情窗口
     //
-    std::shared_ptr<ContactInfo> m_cache_self_info  ;
-    std::shared_ptr<QPixmap    > m_cache_self_avatar;
+    std::shared_ptr<ContactData::ItemData> m_cache_self_data  ;
+    std::shared_ptr<QImage               > m_cache_self_avatar;
 };

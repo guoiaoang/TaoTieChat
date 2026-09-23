@@ -9,9 +9,9 @@ class MediaWindow;
 }
 
 struct MediaInfo {
-    QString media_path  ;
-    QPixmap media_pixmap;
-    QString media_name  ;
+    QString media_path ;
+    QImage  media_image;
+    QString media_name ;
 };
 
 class MediaWindow : public QMainWindow {

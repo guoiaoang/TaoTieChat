@@ -251,7 +251,7 @@ public:
 // #ifdef _DEBUG
 //     ContactModel() {
 //         for(int i = 0; i <= 300; ++i) {
-//             auto contact = std::make_shared<ContactInfo>();
+//             auto contact = std::make_shared<ContactData::ItemData>();
 //             auto num = QString("%1").arg(i, 5, 10, '0');
 //             auto time = QDateTime::currentDateTimeUtc().toString(Qt::ISODate);
 //             contact->mutBaseInfo().setAccountId(QString("Account ID : %1 (%2)").arg(num).arg(time));
@@ -304,18 +304,20 @@ public:
     }
 
     // 返回添加的成员节点  // 1.分组不重复；2.contact 必须有 account_id 且同样不允许重复
-    auto add_member(ENUMS::ItemGroupType group_type, const std::shared_ptr<ContactInfo> contact) -> TreeItemData* {
+    auto add_member(ENUMS::ItemGroupType group_type, const std::shared_ptr<ContactData::ItemData>&contact_data) -> TreeItemData* {
         // ============================ 过滤重复 ============================ //
 
+        if (!contact_data) { return nullptr; }
+
         // 获取账号 ID 作为重复判断条件
-        auto account_id = (contact && contact->hasBaseInfo() && !contact->baseInfo().accountId().isEmpty()) ? contact->baseInfo().accountId() : "";
+        auto account_id = contact_data->account_id;
         if (account_id.isEmpty()) {
             qWarning() << "Contact account id is EMPTY!";
             return nullptr;
         }
 
         auto func_cmp_columns = [account_id](const std::map<int, QVariant>&data_column) {
-            using T = std::shared_ptr<ContactInfo>;
+            using T = std::shared_ptr<ContactData::ItemData>;
             // 不是目标数据
             if (!data_column.contains(ENUMS::role_item_data())) { return false; }
             // 获取目标数据容器
@@ -324,12 +326,8 @@ public:
             if (!var_column.canConvert<T>()) { return false; }
             // 对比目标数据容器内数据
             T val = var_column.value<T>();
-            // if (var_column.value<T>() == group_type) { return true; }
-            if (!val->hasBaseInfo()) { return false; }
-            auto&base_info = val->baseInfo();
-            auto&account_id_text = base_info.accountId();
-            // if (account_id.isEmpty()) { return false; }
-            if (account_id == account_id_text) { return true; }
+            if (!val) { return false; }
+            if (account_id == val->account_id) { return true; }
             return false;
         };
         auto func_cmp_childs = [func_cmp_columns](TreeItemData*item_child) {
@@ -337,7 +335,7 @@ public:
             if (!item_columns.empty()) { return true; }
             return false;
         };
-        auto has_dupe_account = [this, func_cmp_childs](ENUMS::ItemGroupType group_type, const std::shared_ptr<ContactInfo> contact) {
+        auto has_dupe_account = [this, func_cmp_childs](ENUMS::ItemGroupType group_type) {
             auto row = row_group(group_type);
             if (row == -1) { return false; }
             auto item_group = data_root()->get_item_childs().at(row);
@@ -346,18 +344,9 @@ public:
             if (!item_childs.empty()) { return true; }
             return false;
         };
-        if (has_dupe_account(group_type, contact)) {
+        if (has_dupe_account(group_type)) {
             return nullptr;
         }
-
-        // // 支持空信息的添加，如果不是空信息时才校验重复
-        // if (account_id.isEmpty()) {
-        //     qWarning() << "Contact account id is EMPTY!";
-        //     account_id = contact ? tr("Account ID is EMPTY!") : tr("[Contact is EMPTY!]");
-        // }
-        // else {
-        //     if (has_dupe_account(group_type, contact)) { return nullptr; }
-        // }
 
         // ============================ 添加成员 ============================ //
 
@@ -373,7 +362,7 @@ public:
         auto text_diaplay = account_id;
         std::map<int, QVariant> var_item;
         var_item[ENUMS::role_item_type()] = QVariant::fromValue<ENUMS::ItemDataType>(ENUMS::ItemDataType::CONTACT);
-        var_item[ENUMS::role_item_data()] = QVariant::fromValue<std::shared_ptr<ContactInfo>>(contact);
+        var_item[ENUMS::role_item_data()] = QVariant::fromValue<std::shared_ptr<ContactData::ItemData>>(contact_data);
         // 设置一些默认显示的数据，防止未设置 delegete 显示为空
         var_item[Qt::DisplayRole   ] = text_diaplay;
         var_item[Qt::DecorationRole] = icon_init(); // 设置默认图标样式，实际不使用
@@ -383,52 +372,54 @@ public:
         var_item[Qt::WhatsThisRole ] = text_diaplay;
 
         // 查找视图中的插入位置  // 判断条件是先判断昵称，昵称相同再判断用户 ID
-        auto func_find_pos = [](const std::vector<TreeItemData*>&childs, const std::shared_ptr<ContactInfo>&contact) -> int {
-            // 无效值不插入
-            if (!contact->hasBaseInfo()) { return -1; }
-            auto nn  = contact->baseInfo().nickname();
-            auto uid = contact->baseInfo().userId();
-            if (nn.isEmpty() && uid.isEmpty()) { return -1; }
+        auto func_find_pos = [](const std::vector<TreeItemData*>&childs, const std::shared_ptr<ContactData::ItemData>&contact_data) -> int {
+            int pos = -1;
+            do {
+                // 无效值不插入
+                if (!contact_data) { break; }
 
-            // 空值前置  // 插入位置在 ite 前
-            auto ite = childs.begin();
-            for (; ite != childs.end(); ++ite) {
-                // 跳过已有的无效值
-                TreeItemData*tree_item_data = *ite;
-                if (!tree_item_data) { continue; }
+                // 没有可比较的数据时
+                if (contact_data->display_name.isEmpty() && contact_data->user_id.isEmpty()) { break; }
 
-                bool finded = false;
-                for (auto&data_column : tree_item_data->get_data_columns()) {
-                    using T = std::shared_ptr<ContactInfo>;
-                    // 不是目标数据
-                    if (!data_column.contains(ENUMS::role_item_data())) { continue; }
-                    // 获取目标数据容器
-                    const QVariant&var_column = data_column.at(ENUMS::role_item_data());
-                    if (!var_column.isValid()) { continue; }
-                    if (!var_column.canConvert<T>()) { continue; }
-                    // 对比目标数据容器内数据
-                    T val = var_column.value<T>();
-                    // if (var_column.value<T>() == group_type) { return true; }
-                    if (!val->hasBaseInfo()) { continue; }
-                    auto&base_info = val->baseInfo();
-                    auto&nickname  = base_info.nickname();
-                    auto&user_id   = base_info.userId();
-                    // 使用 Qt 的 localeAwareCompare 实现支持中文拼音/本地化排序的对比升序排序
-                    int rnn = QString::localeAwareCompare(nn , nickname);
-                    int rid = QString::localeAwareCompare(uid, user_id );
-                    // 昵称一样时才比较账号 ID
-                    if (rnn < 0 || (rnn == 0 && rid < 0)) { finded = true; break; }
+                // 空值前置  // 插入位置在 ite 前
+                for (auto ite = childs.begin(); ite != childs.end(); ++ite) {
+                    // 跳过已有的无效值
+                    TreeItemData*tree_item_data = *ite;
+                    if (!tree_item_data) { continue; }
+
+                    // bool finded = false;
+                    for (auto&data_column : tree_item_data->get_data_columns()) {
+                        using T = std::shared_ptr<ContactData::ItemData>;
+                        // 不是目标数据
+                        if (!data_column.contains(ENUMS::role_item_data())) { continue; }
+                        // 获取目标数据容器
+                        const QVariant&var_column = data_column.at(ENUMS::role_item_data());
+                        if (!var_column.isValid()) { continue; }
+                        if (!var_column.canConvert<T>()) { continue; }
+                        // 对比目标数据容器内数据
+                        T val = var_column.value<T>();
+                        // if (var_column.value<T>() == group_type) { return true; }
+                        if (!val) { continue; }
+                        // 使用 Qt 的 localeAwareCompare 实现支持中文拼音/本地化排序的对比升序排序
+                        int rdn = QString::localeAwareCompare(contact_data->display_name, val->display_name);
+                        int rid = QString::localeAwareCompare(contact_data->user_id     , val->user_id     );
+                        // 昵称一样时才比较账号 ID
+                        if (rdn < 0 || (rdn == 0 && rid < 0)) {
+                            pos = static_cast<int>(std::distance(childs.begin(), ite));
+                            break;
+                        }
+                    }
+                    if (pos != -1) { break; }
                 }
-                if (finded) { break; }
-            }
-            return static_cast<int>(std::distance(childs.begin(), ite));
+            } while (false);
+            return pos;
         };
 
         int pos_insert = static_cast<int>(item_group->get_item_childs().size()); // 默认不排序
         // 判断分组，查找插入位置
         if (group_type == ENUMS::ItemGroupType::FRIENDS) {
-            pos_insert = func_find_pos(item_group->get_item_childs(), contact);
-            qDebug().noquote().nospace() << "insert pos : " << pos_insert << ", contact nickname : " << contact->baseInfo().nickname();
+            pos_insert = func_find_pos(item_group->get_item_childs(), contact_data);
+            qDebug().noquote().nospace() << "insert pos : " << pos_insert << ", contact nickname : " << contact_data->nickname;
         }
         if (pos_insert < 0) { return nullptr; }
 
@@ -441,7 +432,7 @@ public:
         endInsertRows();
         return item_member;
 
-        // auto item_member = item_group->add_child(new TreeItemData(0, ENUMS::role_item_data(), QVariant::fromValue<std::shared_ptr<ContactInfo>>(contact)));
+        // auto item_member = item_group->add_child(new TreeItemData(0, ENUMS::role_item_data(), QVariant::fromValue<std::shared_ptr<ContactData::ItemData>>(contact)));
         // return item_member;
     }
 
@@ -497,7 +488,7 @@ public:
             //     item_group = add_group(group_type);
             // }
             return item_group;
-            // return item_group->add_child(new TreeItemData(0, ENUMS::role_item_data(), QVariant::fromValue<std::shared_ptr<ContactInfo>>(contact)));
+            // return item_group->add_child(new TreeItemData(0, ENUMS::role_item_data(), QVariant::fromValue<std::shared_ptr<ContactData::ItemData>>(contact)));
         };
         Q_UNUSED(get_item_group_cxx11);
 
@@ -573,7 +564,7 @@ public:
 // #ifdef _DEBUG
 //     SearchModel() {
 //         for(int i = 0; i <= 300; ++i) {
-//             auto contact = std::make_shared<ContactInfo>();
+//             auto contact = std::make_shared<ContactData::ItemData>();
 //             auto num = QString("%1").arg(i, 5, 10, '0');
 //             auto time = QDateTime::currentDateTimeUtc().toString(Qt::ISODate);
 //             contact->mutBaseInfo().setAccountId(QString("Account ID : %1 (%2)").arg(num).arg(time));
@@ -588,18 +579,19 @@ public:
 public:
 
     // 返回添加的成员节点  // 1.分组不重复；2.contact 必须有 account_id 且同样不允许重复
-    auto add_member(const std::shared_ptr<ContactInfo> contact) -> TreeItemData* {
+    auto add_member(const std::shared_ptr<ContactData::ItemData> contact_data) -> TreeItemData* {
         // ============================ 过滤重复 ============================ //
+        if (!contact_data) { return nullptr; }
 
         // 获取账号 ID 作为重复判断条件
-        auto account_id = (contact && contact->hasBaseInfo() && !contact->baseInfo().accountId().isEmpty()) ? contact->baseInfo().accountId() : "";
+        const auto& account_id = contact_data->account_id;
         if (account_id.isEmpty()) {
             qWarning() << "Contact account id is EMPTY!";
             return nullptr;
         }
 
         auto func_check_dupe = [account_id](const std::map<int, QVariant>&data_column) {
-            using T = std::shared_ptr<ContactInfo>;
+            using T = std::shared_ptr<ContactData::ItemData>;
             // 不是目标数据
             if (!data_column.contains(ENUMS::role_item_data())) { return false; }
             // 获取目标数据容器
@@ -607,20 +599,13 @@ public:
             if (!var_column.canConvert<T>()) { return false; }
             // 对比目标数据容器内数据
             T val = var_column.value<T>();
-            // if (var_column.value<T>() == group_type) { return true; }
-            if (!val->hasBaseInfo()) { return false; }
-            auto&base_info = val->baseInfo();
-            auto&account_id_text = base_info.accountId();
-            // if (account_id.isEmpty()) { return false; }
-            if (account_id == account_id_text) { return true; }
+            if (account_id == val->account_id) { return true; }
             return false;
-            // return col.contains(ENUMS::role_item_data()) && col.at(ENUMS::role_item_data()).value<ENUMS::ItemGroupType>() == group_type;
         };
-        auto func_cmp_dupe = [contact, func_check_dupe](const TreeItemData* item_ite) {
+        auto func_cmp_dupe = [func_check_dupe](const TreeItemData* item_ite) {
             if (!item_ite) { return false; }
             auto vec_filter = item_ite->get_data_columns() | std::views::filter(func_check_dupe);
             return !vec_filter.empty();
-            return false;
         };
         auto func_has_dupe = [this, func_cmp_dupe]() {
             auto& childs = data_root()->get_item_childs();
@@ -640,7 +625,7 @@ public:
         auto text_diaplay = account_id;
         std::map<int, QVariant> var_item;
         var_item[ENUMS::role_item_type()] = QVariant::fromValue<ENUMS::ItemDataType>(ENUMS::ItemDataType::CONTACT);
-        var_item[ENUMS::role_item_data()] = QVariant::fromValue<std::shared_ptr<ContactInfo>>(contact);
+        var_item[ENUMS::role_item_data()] = QVariant::fromValue<std::shared_ptr<ContactData::ItemData>>(contact_data);
         // 设置一些默认显示的数据，防止未设置 delegete 显示为空
         var_item[Qt::DisplayRole   ] = text_diaplay;
         var_item[Qt::DecorationRole] = icon_init(); // 设置默认图标样式，实际不使用
@@ -820,7 +805,7 @@ public:
             // }
 
             // 填充数据
-            auto text_diaplay = QString(); // get_display_name(in_contact);
+            auto text_diaplay = message_data->sender->display_name;
             std::map<int, QVariant> var_item;
             var_item[ENUMS::role_item_type()] = QVariant::fromValue<ENUMS::ItemDataType>(ENUMS::ItemDataType::MESSAGE);
             var_item[ENUMS::role_item_data()] = QVariant::fromValue<std::shared_ptr<MessageData::ItemData>>(message_data);

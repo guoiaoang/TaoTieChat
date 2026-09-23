@@ -19,11 +19,11 @@ class MessageWindow : public QWidget {
 
 public:
     explicit MessageWindow(QWidget *parent = nullptr);
-    // explicit MessageWindow(const std::shared_ptr<ContactInfo>&contact_info, Messages messages, QWidget *parent = nullptr);
+    // explicit MessageWindow(const std::shared_ptr<ContactData::ItemData>&contact_data, Messages messages, QWidget *parent = nullptr);
     ~MessageWindow();
 
-    void set_contact(const std::shared_ptr<ContactInfo>& contact_info);
-    std::shared_ptr<ContactInfo> get_contact() const;
+    void set_contact(const std::shared_ptr<ContactData::ItemData>& contact_data);
+    std::shared_ptr<ContactData::ItemData> get_contact() const;
 
     // get_local_avatar_id_pixmap 根据文件 ID 在本地查找文件并加载为头像图片
     std::shared_ptr<QPixmap> get_local_avatar_id_pixmap(const QString&avatar_id);
@@ -71,10 +71,10 @@ signals:
     void signal_new_message(const std::shared_ptr<MessageData::ItemData>&message);
 
 private:
-    std::shared_ptr<Ui::MessageWindow> m_ui;
-    std::shared_ptr<ContactInfo      > m_contact_info;
-    std::shared_ptr<ContactWindow    > m_contact_window;  // 当前显示的联系人详情窗口
-    std::shared_ptr<MessageModel     > m_message_model;
-    std::shared_ptr<MessageDelegate  > m_message_delegate;
+    std::shared_ptr<Ui::MessageWindow    > m_ui;
+    std::shared_ptr<ContactData::ItemData> m_contact_data;
+    std::shared_ptr<ContactWindow        > m_contact_window;  // 当前显示的联系人详情窗口
+    std::shared_ptr<MessageModel         > m_message_model;
+    std::shared_ptr<MessageDelegate      > m_message_delegate;
     bool enable_return_send = true;  // 按回车键发送消息
 };

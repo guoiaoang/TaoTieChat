@@ -270,30 +270,22 @@ bool AuthWindow::handle_signup_successd(const signup_params& params_signup) {
 
 bool AuthWindow::handle_signin_successd(const signin_params& params_signin, const signin_reply& reply_signin, const std::shared_ptr<AuthOpt>& auth_opt) {
     if(auth_opt) {
-        // auth_opt->user_id = params_signin->requestUserAuth().userId();
+        auth_opt->account_id = reply_signin ? reply_signin->accountId() : "";
+        auth_opt->user_id    = (params_signin && params_signin->hasRequestUserAuth()) ? params_signin->requestUserAuth().userId() : "";
         auth_opt->token      = auth_opt->rember_password ? reply_signin->token() : QString();
         auth_opt->password   = auth_opt->rember_password ? params_signin->requestUserAuth().password() : QString();
         // 保存登录记录
         AuthOptRW::save(auth_opt);
-        // 这里的赋值是为了传递，便于主界面恢复为记住密码
-        auth_opt->token      = reply_signin->token();
-        auth_opt->password   = params_signin->requestUserAuth().password();
     }
 
-    const auto auth = (params_signin && params_signin->hasRequestUserAuth()) ? params_signin->requestUserAuth() : AuthRequest();
-
     // 将用户信息保存到全局状态中
-    std::shared_ptr<ContactInfo> contact_info = std::make_shared<ContactInfo>();
-    ContactInfoBase base_info;
-    base_info.setAccountId(reply_signin->accountId());
-    base_info.setUserId   (auth.userId());
-    contact_info->setBaseInfo(base_info);
-    ContactInfoSelf self_info;
-    self_info.setPassword(auth.password());
-    self_info.setToken   (reply_signin->token());
-    contact_info->setSelfInfo(self_info);
-    Accounts::instance().set_current_account(contact_info);
-    Accounts::instance().set_account_auth_opt(reply_signin->accountId(), auth_opt);
+    std::shared_ptr<ContactData::ItemData> contact_data = std::make_shared<ContactData::ItemData>();
+    contact_data->account_id = auth_opt->account_id;
+    contact_data->user_id    = auth_opt->user_id;
+    contact_data->password   = auth_opt->password;
+    contact_data->token      = auth_opt->token;
+    Accounts::instance().set_current_account(contact_data);
+    Accounts::instance().set_account_auth_opt(auth_opt);
 
     // 初始化配置目录
     Database::instance().set_config_dir(Utils::user_home_path());

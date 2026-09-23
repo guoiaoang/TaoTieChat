@@ -62,7 +62,7 @@ public:
             if (!index.isValid()) { return; }
             auto var_data = index.data(ENUMS::role_item_data());
             if (!var_data.isValid()) { return; }
-            if (!var_data.canConvert<std::shared_ptr<ContactInfo>>()) { return; }
+            if (!var_data.canConvert<std::shared_ptr<ContactData::ItemData>>()) { return; }
         }
 
         QStyleOptionViewItem opt = option;
@@ -95,44 +95,81 @@ public:
             //     << ", nicknam width : " << style_data->rect_message.width();
 
             // 获取数据内容
-            auto var_data   = index.data(ENUMS::role_item_data());
-            auto contact_info = var_data.value<std::shared_ptr<ContactInfo>>();
+            const auto& var_data     = index.data(ENUMS::role_item_data());
+            const auto& contact_data = var_data.value<std::shared_ptr<ContactData::ItemData>>();
 
-            // 获取头像  // 圆角头像
-            static std::map<QString, QPixmap> map_cacha_avatar;
-            auto avatar_id  = contact_info->baseInfo().avatarId();
-            if (!map_cacha_avatar.contains(avatar_id)) {
-                auto avatar_file_path = Database::instance().get_local_file_id_path(avatar_id + ";size:128*128");
-                auto pixmap_avatar_source = QPixmap(avatar_file_path);
-                if(pixmap_avatar_source.isNull()) {
-                    // 修改图标大小
-                    int height_item = opt.decorationSize.height();
-                    int height_icon = (height_item * group_height_scale());
-                    opt.decorationSize = QSize(height_icon, height_icon);
-
-                    // 根据颜色和大小生成图标
-                    QColor color_icon = opt.palette.color(QPalette::Text);  // 指定固定的颜色
-                    static Utils::FontIcons icon_font = Utils::FontIcons();
-                    if (icon_font.size.avatar != opt.decorationSize || icon_font.color.normal != color_icon) {
-                        icon_font.size.avatar = opt.decorationSize;
-                        icon_font.color.normal = color_icon;
-                        icon_font.update();
+            auto get_avatar_rounded = [](const std::shared_ptr<ContactData::ItemData>&contact_data, int radius) -> const QImage {
+                // 获取头像  // 圆角头像  // 头像更新后需要这里清除缓存
+                struct CacheContactData {
+                    std::shared_ptr<ContactData::ItemData> data;
+                    int radius = -1;
+                    QImage image;
+                };
+                static std::map<QString, CacheContactData> s_caches;
+                if (!contact_data) { return QImage(); }
+                const auto& account_id = contact_data->account_id;
+                // clean
+                do {
+                    if (!s_caches.contains(account_id)) { break; }
+                    auto&cache = s_caches[account_id];
+                    if (!cache.data) { break; }
+                    const auto&data = cache.data;
+                    // 圆角、id、路径不同均需更新
+                    if (cache.radius      != radius                     ||
+                        data->avatar_id   != contact_data->avatar_id   ||
+                        data->avatar_path != contact_data->avatar_path ||
+                        data->avatar_image.isNull() ||
+                        cache.image.isNull()
+                    ) {
+                        s_caches.erase(account_id);
                     }
-
-                    QIcon&ico_show = icon_font.icon.contacts;
-                    pixmap_avatar_source = QPixmap(ico_show.pixmap(opt.decorationSize, QIcon::Normal));
+                } while (false);
+                // set
+                if (!s_caches.contains(account_id)) {
+                    auto&cache   = s_caches[account_id];
+                    cache.data   = std::make_shared<ContactData::ItemData>(*contact_data);  // 拷贝复制
+                    cache.radius = radius;
+                    cache.image  = Utils::to_round_image(cache.data->avatar_image, radius);
                 }
-                auto pixmap_avatar = Utils::to_round_pixmap(pixmap_avatar_source, style_data->rect_avatar.width() / 2);
-                map_cacha_avatar[avatar_id] = pixmap_avatar;
-            }
-            // 头像
-            auto pixmap_avatar = map_cacha_avatar[avatar_id];
+                return s_caches[account_id].image;
+
+//                 // 获取头像  // 圆角头像
+//                 static std::map<QString, QPixmap> map_cacha_avatar;
+//                 auto avatar_id  = contact_data->avatar_id;
+//                 if (!map_cacha_avatar.contains(avatar_id)) {
+//                     auto avatar_file_path = Database::instance().get_local_file_id_path(avatar_id + ";size:128*128");
+//                     auto pixmap_avatar_source = QPixmap(avatar_file_path);
+//                     if(pixmap_avatar_source.isNull()) {
+//                         // 修改图标大小
+//                         int height_item = opt.decorationSize.height();
+//                         int height_icon = (height_item * group_height_scale());
+//                         opt.decorationSize = QSize(height_icon, height_icon);
+// 
+//                         // 根据颜色和大小生成图标
+//                         QColor color_icon = opt.palette.color(QPalette::Text);  // 指定固定的颜色
+//                         static Utils::FontIcons icon_font = Utils::FontIcons();
+//                         if (icon_font.size.avatar != opt.decorationSize || icon_font.color.normal != color_icon) {
+//                             icon_font.size.avatar = opt.decorationSize;
+//                             icon_font.color.normal = color_icon;
+//                             icon_font.update();
+//                         }
+// 
+//                         QIcon&ico_show = icon_font.icon.contacts;
+//                         pixmap_avatar_source = QPixmap(ico_show.pixmap(opt.decorationSize, QIcon::Normal));
+//                     }
+//                     auto pixmap_avatar = Utils::to_round_pixmap(pixmap_avatar_source, style_data->rect_avatar.width() / 2);
+//                     map_cacha_avatar[avatar_id] = pixmap_avatar;
+//                 }
+//                 // 头像
+//                 auto pixmap_avatar = map_cacha_avatar[avatar_id];
+            };
+            auto image_avatar = get_avatar_rounded(contact_data, style_data->rect_avatar.width() / 2);
             // 昵称
-            auto nickname = contact_info->baseInfo().nickname();
-            QFontMetrics metrics_nickname(style_data->font_nickname);
-            QString elided_nickname = metrics_nickname.elidedText(nickname, Qt::ElideRight, style_data->rect_nickname.width());
+            auto display_name = contact_data->display_name;
+            QFontMetrics metrics_display_name(style_data->font_nickname);
+            QString elided_display_name = metrics_display_name.elidedText(display_name, Qt::ElideRight, style_data->rect_nickname.width());
             // 签名
-            auto signature = contact_info->baseInfo().signature();
+            auto signature = contact_data->signature;
             QFontMetrics metrics_signature(style_data->font_signature);
             QString elided_signature = metrics_signature.elidedText(signature, Qt::ElideRight, style_data->rect_message.width());
 
@@ -146,11 +183,11 @@ public:
             painter->translate(option.rect.topLeft()); // 将画布原点移到 (x, y)
 
             // 绘制头像
-            painter->drawPixmap(style_data->rect_avatar, pixmap_avatar);
+            painter->drawImage(style_data->rect_avatar, image_avatar);
             // 绘制昵称
             painter->setFont(style_data->font_nickname);
             painter->setPen(option.state & QStyle::State_Selected ? option.palette.highlightedText().color() : option.palette.text().color());
-            painter->drawText(style_data->rect_nickname, Qt::AlignLeft | Qt::AlignVCenter, elided_nickname);
+            painter->drawText(style_data->rect_nickname, Qt::AlignLeft | Qt::AlignVCenter, elided_display_name);
             // 绘制签名内容
             painter->setFont(style_data->font_signature);
             painter->setPen(option.state & QStyle::State_Selected ? option.palette.highlightedText().color() : QColor(100, 100, 100));

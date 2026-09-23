@@ -46,9 +46,9 @@ QString users_data_path() {
 
 QString user_home_path(QString user_id) {
     if(user_id.isEmpty()) {
-        std::shared_ptr<ContactInfo> contact_info = Accounts::instance().get_current_account();
-        if(contact_info && !contact_info->baseInfo().accountId().isEmpty()) {
-            user_id = contact_info->baseInfo().accountId();
+        const auto& contact_data = Accounts::instance().get_current_account();
+        if(contact_data && !contact_data->account_id.isEmpty()) {
+            user_id = contact_data->account_id;
         }
         if(user_id.isEmpty()) {
             user_id = "tmp";
@@ -480,27 +480,25 @@ void set(Result&result, const ErrorCode&error_code) {
     result.setMessage(Utils::Transform::to_string(error_code));
 }
 
-// ====================================================================== //
-
-// 查找指定 id 的好友
-std::shared_ptr<ContactInfo> get_contact_info(const std::shared_ptr<ContactInfos>&contact_infos, const QString& contact_account_id) {
-    if(contact_infos) {
-        for(const auto &contact_info : contact_infos->contactInfos()) {
-            if(contact_info.baseInfo().accountId() == contact_account_id) {
-                return std::make_shared<ContactInfo>(contact_info);
-            }
-        }
-    }
-    return std::make_shared<ContactInfo>();
-}
-
-// 从好友列表中获取第 index 个好友
-std::shared_ptr<ContactInfo> get_contact_info(const std::shared_ptr<ContactInfos>&contact_infos, int index) {
-    if(contact_infos && index >= 0 && index < contact_infos->contactInfos().size()) {
-        return std::make_shared<ContactInfo>(contact_infos->contactInfos().at(index));
-    }
-    return std::make_shared<ContactInfo>();
-}
+// // ====================================================================== //
+// 
+// // 查找指定 id 的好友
+// std::shared_ptr<ContactData::ItemData> get_contact_data(const QVector<std::shared_ptr<ContactData::ItemData>>&contact_datas, const QString& contact_account_id) {
+//     for(const auto &contact_data : contact_datas) {
+//         if(contact_data->account_id == contact_account_id) {
+//             return contact_data;
+//         }
+//     }
+//     return std::make_shared<ContactData::ItemData>();
+// }
+// 
+// // 从好友列表中获取第 index 个好友
+// std::shared_ptr<ContactData::ItemData> get_contact_data(const QVector<std::shared_ptr<ContactData::ItemData>>&contact_datas, int index) {
+//     if(index >= 0 && index < contact_datas.size()) {
+//         return contact_datas->at(index);
+//     }
+//     return std::make_shared<ContactData::ItemData>();
+// }
 
 // ====================================================================== //
 
@@ -563,15 +561,28 @@ QString get_display_name(const std::shared_ptr<ContactInfo>&contact_info) {
     QString display_name;
     do {
         if (!contact_info) { break; }
+        if (!contact_info->hasBaseInfo()) { break; }
+        const auto&base_info = contact_info->baseInfo();
+
         // 默认显示昵称
-        if ( contact_info->hasBaseInfo()) {
-            display_name = contact_info->baseInfo().nickname();
-        }
+        display_name = base_info.nickname();
         // 有备注时显示备注
-        if ( contact_info->hasFriendInfo()) {
-            if (!contact_info->friendInfo().notes().isEmpty()) {
-                display_name = contact_info->friendInfo().notes();
-            }
+        if (contact_info->hasFriendInfo() && !contact_info->friendInfo().notes().isEmpty()) {
+            display_name = contact_info->friendInfo().notes();
+        }
+    } while(false);
+    return display_name;
+}
+// 获取显示名称的接口
+QString get_display_name(const std::shared_ptr<ContactData::ItemData>&contact_data) {
+    QString display_name;
+    do {
+        if (!contact_data) { break; }
+        // 默认显示昵称
+        display_name = contact_data->nickname;
+        // 有备注时显示备注
+        if (contact_data->is_friend && !contact_data->notes.isEmpty()) {
+            display_name = contact_data->notes;
         }
     } while(false);
     return display_name;
@@ -707,6 +718,109 @@ QString human_size(qint64 bytes) {
     int u = -1;
     do { v /= 1024.0; ++u; } while (v >= 1024.0 && u < 3);
     return QStringLiteral("%1 %2").arg(QString::number(v, 'f', 1), QLatin1String(units[u]));
+}
+
+}
+
+#include "Database.h"
+namespace Utils::Transform {
+std::shared_ptr<ContactData::ItemData> to_contact_data(const std::shared_ptr<ContactInfo>&contact_info) {
+    auto contact_data = std::make_shared<ContactData::ItemData>();
+    do {
+        if (!contact_info) { break; }
+        if ( contact_info->hasBaseInfo()) {
+            const auto&base_info       = contact_info->baseInfo();
+            contact_data->account_id   = base_info.accountId  ();
+            contact_data->user_id      = base_info.userId     ();
+            contact_data->avatar_id    = base_info.avatarId   ();
+            contact_data->nickname     = base_info.nickname   ();
+            contact_data->gender       = base_info.gender     ();
+            contact_data->birthday     = base_info.birthday   ();
+            contact_data->signature    = base_info.signature  ();
+            contact_data->region       = base_info.region     ();
+            contact_data->description  = base_info.description();
+            contact_data->phones       = base_info.phones     ();
+            contact_data->emails       = base_info.emails     ();
+            contact_data->social_links = base_info.socialLinks();
+            contact_data->moments_id   = base_info.momentsId  ();
+            contact_data->groups_id    = base_info.groupsId   ();
+        }
+        if ( contact_info->hasFriendInfo()) {
+            const auto&friend_info     = contact_info->friendInfo();
+            contact_data->status       = friend_info.status     ();
+            contact_data->starred      = friend_info.starred    ();
+            contact_data->silent       = friend_info.silent     ();
+            contact_data->notes        = friend_info.notes      ();
+            contact_data->added_source = friend_info.addedSource();
+            contact_data->added_time   = friend_info.addedTime  ();
+            contact_data->tags         = friend_info.tags       ();
+        }
+        if ( contact_info->hasSelfInfo()) {
+            const auto&self_info            = contact_info->selfInfo();
+            contact_data->modify_self_info  = self_info.modifySelfInfo  ();
+            contact_data->password          = self_info.password        ();
+            contact_data->token             = self_info.token           ();
+            contact_data->security_question = self_info.securityQuestion();
+            contact_data->security_answer   = self_info.securityAnswer  ();
+        }
+        // cache
+        contact_data->is_me        = Accounts::instance().is_me    (contact_data->account_id);
+        contact_data->is_friend    = Accounts::instance().is_friend(contact_data->account_id);
+        contact_data->display_name = Utils::get_display_name(contact_info);
+        contact_data->avatar_path  = Database::instance().get_local_file_id_path(contact_data->avatar_id);
+        contact_data->avatar_image = QImage(contact_data->avatar_path);
+    } while(false);
+    return contact_data;
+}
+
+std::shared_ptr<ContactInfo> to_contact_info(const std::shared_ptr<ContactData::ItemData>&contact_data) {
+    auto contact_info = std::make_shared<ContactInfo>();
+    do {
+        if (!contact_data) { break; }
+        // ContactInfoBase
+        {
+            ContactInfoBase base_info;
+            base_info.setAccountId   (contact_data->account_id  );
+            base_info.setUserId      (contact_data->user_id     );
+            base_info.setAvatarId    (contact_data->avatar_id   );
+            base_info.setNickname    (contact_data->nickname    );
+            base_info.setGender      (contact_data->gender      );
+            base_info.setBirthday    (contact_data->birthday    );
+            base_info.setSignature   (contact_data->signature   );
+            base_info.setRegion      (contact_data->region      );
+            base_info.setDescription (contact_data->description );
+            base_info.setPhones      (contact_data->phones      );
+            base_info.setEmails      (contact_data->emails      );
+            base_info.setSocialLinks (contact_data->social_links);
+            base_info.setMomentsId   (contact_data->moments_id  );
+            base_info.setGroupsId    (contact_data->groups_id   );
+            contact_info->setBaseInfo(base_info);
+        }
+        //
+        if (contact_data->is_friend) {
+            ContactInfoFriend friend_info;
+            friend_info.setAccountId   (contact_data->account_id  );
+            friend_info.setUserId      (contact_data->user_id     );
+            friend_info.setStatus      (contact_data->status      );
+            friend_info.setStarred     (contact_data->starred     );
+            friend_info.setSilent      (contact_data->silent      );
+            friend_info.setNotes       (contact_data->notes       );
+            friend_info.setAddedSource (contact_data->added_source);
+            friend_info.setAddedTime   (contact_data->added_time  );
+            friend_info.setTags        (contact_data->tags        );
+            contact_info->setFriendInfo(friend_info);
+        }
+        if (contact_data->modify_self_info) {
+            ContactInfoSelf self_info;
+            self_info.setModifySelfInfo  (contact_data->modify_self_info );
+            self_info.setPassword        (contact_data->password         );
+            self_info.setToken           (contact_data->token            );
+            self_info.setSecurityQuestion(contact_data->security_question);
+            self_info.setSecurityAnswer  (contact_data->security_answer  );
+            contact_info->setSelfInfo(self_info);
+        }
+    } while(false);
+    return contact_info;
 }
 
 }

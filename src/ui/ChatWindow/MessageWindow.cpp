@@ -131,18 +131,14 @@ MessageWindow::MessageWindow(QWidget *parent)
 MessageWindow::~MessageWindow() {
 }
 
-void MessageWindow::set_contact(const std::shared_ptr<ContactInfo>& contact_info) {
-    m_contact_info = contact_info;
-
-    QString display_name = Utils::get_display_name(contact_info);
-    m_ui->label_title->setText(display_name);
-
-    QString avatar_id = contact_info && contact_info->hasBaseInfo() ? contact_info->baseInfo().avatarId() : "";
-    show_avatar_id(avatar_id);
+void MessageWindow::set_contact(const std::shared_ptr<ContactData::ItemData>& contact_data) {
+    m_contact_data = contact_data;
+    m_ui->label_title->setText(contact_data->display_name);
+    show_avatar_id(contact_data->avatar_id);
 }
 
-std::shared_ptr<ContactInfo> MessageWindow::get_contact() const {
-    return m_contact_info;
+std::shared_ptr<ContactData::ItemData> MessageWindow::get_contact() const {
+    return m_contact_data;
 }
 
 // 根据文件 ID 在本地查找文件并加载为头像图片
@@ -385,7 +381,7 @@ void MessageWindow::slot_button_title_avatar() {
     if (!m_contact_window) { m_contact_window = std::make_shared<ContactWindow>(this); }
     // 设置为弹窗窗口，否则有父窗口时会显示在父窗口内，发生与父窗口内容重叠的情况
     m_contact_window->setWindowFlags(m_contact_window->windowFlags() |  Qt::Dialog);
-    m_contact_window->show_contact(m_contact_info);
+    m_contact_window->show_contact(m_contact_data);
     using ShowFlags = ContactWindow::ShowFlags;
     using ShowFlag  = ContactWindow::ShowFlag ;
     auto show_mode = m_contact_window->get_show_mode();
@@ -395,7 +391,7 @@ void MessageWindow::slot_button_title_avatar() {
     m_contact_window->show();
 
     // 先显示窗口再更新内容，避免网络请求较慢时窗口无响应
-    auto&user_id = m_contact_info->baseInfo().userId();
+    const auto&user_id = m_contact_data->user_id;
     // 更新成功，刷新显示
     // update(params_update_profile->contact());
     search_user_params params_search_user = std::make_shared<TaoTieChat::SearchUserRequest>();
@@ -403,7 +399,7 @@ void MessageWindow::slot_button_title_avatar() {
     params_search_user->setUserId(user_id);
     NetworkClient::instance().search_user(params_search_user, [this](const search_user_params&params_search_user, const search_user_reply&reply_search_user) {
         if (!reply_search_user || !reply_search_user->result().hasSuccessCode()) { return; }
-        m_contact_window->show_contact(std::make_shared<ContactInfo>(reply_search_user->contactInfo()));
+        m_contact_window->show_contact(Utils::Transform::to_contact_data(std::make_shared<ContactInfo>(reply_search_user->contactInfo())));
         // m_contact_window->setWindowTitle(tr("Profile"));
     });
 }
@@ -452,9 +448,9 @@ void MessageWindow::slot_button_file() {
         return;  // 不支持的消息类型
     }
 
-    auto sender_info   = Accounts::instance().get_current_account();
-    auto account_id    = sender_info->baseInfo().accountId();
-    auto avatar_id     = sender_info->baseInfo().avatarId();
+    auto sender_data   = Accounts::instance().get_current_account();
+    auto account_id    = sender_data->account_id;
+    auto avatar_id     = sender_data->account_id;
     auto message_id    = Utils::get_new_uuid_string();
     auto message_time  = QDateTime::currentDateTimeUtc();
     auto avatar_pixamp = QPixmap(Database::instance().get_local_file_id_path(avatar_id + ";size:128*128"));
@@ -468,8 +464,8 @@ void MessageWindow::slot_button_file() {
     message_data->message_time          = message_time;
     message_data->sender                = std::make_shared<MessageData::SenderData>();
     message_data->sender->account_id    = account_id;
-    message_data->sender->display_name  = Utils::get_display_name(sender_info);
-    message_data->sender->avatar_id     = sender_info->baseInfo().avatarId();
+    message_data->sender->display_name  = Utils::get_display_name(sender_data);
+    message_data->sender->avatar_id     = sender_data->avatar_id;
     message_data->sender->avatar_pixmap = avatar_pixamp;
     ;    if (media_type == MessageData::MediaType::TEXT ) { message_data->text  = text_data ; }
     else if (media_type == MessageData::MediaType::IMAGE) { message_data->image = image_data; }
@@ -503,7 +499,7 @@ void MessageWindow::slot_button_file() {
         message_context->setSenderAccountId(message_send_file_data->account_id);
         message_context->setClientMessageId(message_send_file_data->message_id);
         message_context->setTimestamp(Utils::Transform::to_timestamp(message_send_file_data->message_time));
-        message_context->setAccountId(get_contact()->baseInfo().accountId());
+        message_context->setAccountId(get_contact()->account_id);
         // message_context->setShortText(text_plain);
         message_context->setFileId(file_id);
         // qDebug().noquote().nospace() << "addr : " << (void *)&message_data << ", context : " << *message_data.get();
@@ -569,9 +565,9 @@ void MessageWindow::slot_button_send() {
 
     if (text_plain.isEmpty()) { return; }
 
-    auto sender_info   = Accounts::instance().get_current_account();
-    auto account_id    = sender_info->baseInfo().accountId();
-    auto avatar_id     = sender_info->baseInfo().avatarId();
+    auto sender_data   = Accounts::instance().get_current_account();
+    auto account_id    = sender_data->account_id;
+    auto avatar_id     = sender_data->avatar_id;
     auto message_id    = Utils::get_new_uuid_string();
     auto message_time  = QDateTime::currentDateTimeUtc();
     auto avatar_pixamp = QPixmap(Database::instance().get_local_file_id_path(avatar_id + ";size:128*128"));
@@ -585,8 +581,8 @@ void MessageWindow::slot_button_send() {
     message_data->message_time          = message_time;
     message_data->sender                = std::make_shared<MessageData::SenderData>();
     message_data->sender->account_id    = account_id;
-    message_data->sender->display_name  = Utils::get_display_name(sender_info);
-    message_data->sender->avatar_id     = sender_info->baseInfo().avatarId();
+    message_data->sender->display_name  = Utils::get_display_name(sender_data);
+    message_data->sender->avatar_id     = sender_data->avatar_id;
     message_data->sender->avatar_pixmap = avatar_pixamp;
     message_data->text                  = std::make_shared<MessageData::TextData>();
     message_data->text->text            = text_plain;
@@ -601,7 +597,7 @@ void MessageWindow::slot_button_send() {
     message_context->setSenderAccountId(account_id);
     message_context->setClientMessageId(message_id);
     message_context->setTimestamp(Utils::Transform::to_timestamp(message_time));
-    message_context->setAccountId(get_contact()->baseInfo().accountId());
+    message_context->setAccountId(get_contact()->account_id);
     message_context->setShortText(text_plain);
     // qDebug().noquote().nospace() << "addr : " << (void *)&message_data << ", context : " << *message_data.get();
     send_message_callback callback_send_message = [this](const send_message_params&params_send_message, const send_message_reply&reply_send_message) {
@@ -657,9 +653,9 @@ void MessageWindow::slot_open_data(const std::shared_ptr<MessageData::ItemData> 
             //
             std::vector<std::shared_ptr<MediaInfo>> play_list;
             std::shared_ptr<MediaInfo> media_info = std::make_shared<MediaInfo>();
-            media_info->media_name = file_info.fileName();
-            media_info->media_path = file_path;
-            media_info->media_pixmap = QPixmap();
+            media_info->media_name  = file_info.fileName();
+            media_info->media_path  = file_path;
+            media_info->media_image = QImage();
             play_list.push_back(media_info);
             //
             MediaWindow*media_window = &MediaWindow::instance();

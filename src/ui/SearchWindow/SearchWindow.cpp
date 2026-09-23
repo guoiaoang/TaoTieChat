@@ -51,12 +51,12 @@ SearchWindow::SearchWindow(QWidget *parent)
             if (!index.isValid()) { break; }
 
             auto index_data = index.data(ENUMS::role_item_data());
-            if (!index_data.canConvert<std::shared_ptr<ContactInfo>>()) { break; }
+            if (!index_data.canConvert<std::shared_ptr<ContactData::ItemData>>()) { break; }
 
-            auto contact_info = index_data.value<std::shared_ptr<ContactInfo>>();
-            if (!contact_info) { break; }
+            auto contact_data = index_data.value<std::shared_ptr<ContactData::ItemData>>();
+            if (!contact_data) { break; }
 
-            this->m_user_window->show_contact(contact_info);
+            this->m_user_window->show_contact(contact_data);
             this->m_user_window->set_show_mode(this->m_user_window->get_show_mode() | ContactWindow::ShowFlags(ContactWindow::ShowFlag::Search));  // 标明分组
             // this->m_user_window->setWindowTitle(tr("Search result"));
             Utils::widget_raise(this->m_user_window.get());
@@ -141,7 +141,7 @@ bool SearchWindow::search_user(const QString&keyword) {
                     // 下载时不需要更新界面
                     if ((notify.ok == true && notify.status == FileStatusCode::FILE_STATUS_UPLOADED) || (notify.ok == false)) {
                         // this->m_users_model->clean();
-                        // this->m_users_model->add_member(std::make_shared<ContactInfo>(reply_search_user->contactInfo()));
+                        // this->m_users_model->add_member(std::make_shared<ContactData::ItemData>(reply_search_user->contactInfo()));
 
                         // TODO:由于资源释放问题，暂时采用销毁及重建 model 和 delegate 的方式
                         this->m_users_model   .reset();
@@ -149,7 +149,7 @@ bool SearchWindow::search_user(const QString&keyword) {
                         this->m_users_model    = std::make_unique<SearchModel >();
                         this->m_users_delegate = std::make_unique<ItemDelegate>();
                         this->m_users_model->clean();
-                        this->m_users_model->add_member(std::make_shared<ContactInfo>(reply_search_user->contactInfo()));
+                        this->m_users_model->add_member(Utils::Transform::to_contact_data(std::make_shared<ContactInfo>(reply_search_user->contactInfo())));
                         m_ui->page_list_users->setModel(m_users_model.get());
                         m_ui->page_list_users->setItemDelegate(m_users_delegate.get());
                     }
@@ -164,7 +164,7 @@ bool SearchWindow::search_user(const QString&keyword) {
         // 搜索结果不为空时才添加成员  // 不知道为什么始终不为空
         if (reply_search_user->hasContactInfo() && reply_search_user->contactInfo().hasBaseInfo() && !reply_search_user->contactInfo().baseInfo().accountId().isEmpty()) {
             // this->m_users_model->clean();
-            // this->m_users_model->add_member(std::make_shared<ContactInfo>(reply_search_user->contactInfo()));
+            // this->m_users_model->add_member(std::make_shared<ContactData::ItemData>(reply_search_user->contactInfo()));
 
             // TODO:由于资源释放问题，暂时采用销毁及重建 model 和 delegate 的方式
             this->m_users_model   .reset();
@@ -172,7 +172,7 @@ bool SearchWindow::search_user(const QString&keyword) {
             this->m_users_model    = std::make_unique<SearchModel >();
             this->m_users_delegate = std::make_unique<ItemDelegate>();
             this->m_users_model->clean();
-            this->m_users_model->add_member(std::make_shared<ContactInfo>(reply_search_user->contactInfo()));
+            this->m_users_model->add_member(Utils::Transform::to_contact_data(std::make_shared<ContactInfo>(reply_search_user->contactInfo())));
             m_ui->page_list_users->setModel(m_users_model.get());
             m_ui->page_list_users->setItemDelegate(m_users_delegate.get());
         }

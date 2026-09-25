@@ -56,8 +56,7 @@ SearchWindow::SearchWindow(QWidget *parent)
             auto contact_data = index_data.value<std::shared_ptr<ContactData::ItemData>>();
             if (!contact_data) { break; }
 
-            this->m_user_window->show_contact(contact_data);
-            this->m_user_window->set_show_mode(this->m_user_window->get_show_mode() | ContactWindow::ShowFlags(ContactWindow::ShowFlag::Search));  // 标明分组
+            this->m_user_window->set_contact_data(contact_data, ContactWindow::SourceFlag::Search);
             // this->m_user_window->setWindowTitle(tr("Search result"));
             Utils::widget_raise(this->m_user_window.get());
             return;

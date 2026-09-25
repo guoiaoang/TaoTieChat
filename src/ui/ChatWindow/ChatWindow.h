@@ -32,18 +32,11 @@ private:
     // network
     bool updata_current_account_data();
     bool network_status_sync();
-    bool download_contact_avatar(const std::shared_ptr<ContactData::ItemData>&contact_data);
 
     // 显示设置菜单
     void slot_show_settings_menu();
     // 显示 创建/添加 好友/群组 菜单
     void slot_show_add_menu();
-
-    // // // 聊天室管理
-    // // 单击聊天室中的一个对话  // 显示聊天窗口
-    // void slot_chat_room_item_selected(const QModelIndex &index);
-    // // 双击聊天室中的一个对话  // 微信会弹窗聊天窗口
-    // void slot_chat_room_item_activated(const QModelIndex &index);
 
     // 需要创建副本，而不是使用指针共享同一份内存
     void set_cache_contact_data(const std::shared_ptr<ContactData::ItemData>&contact_data);
@@ -52,9 +45,6 @@ private:
     std::shared_ptr<QImage               > get_cache_contact_avatar() const;
 
     void show_avatar(const std::shared_ptr<QImage>&avatar_image);
-
-    // 切换并显示聊天室
-    // void show_chatroom(const std::shared_ptr<ContactData::ItemData>&contact_data);
 
     // 获取聊天记录窗口
     MessageWindow* get_message_window(const QString&account_id);
@@ -65,9 +55,9 @@ private:
     bool highlight_chatroom(const QString&chatroom_id);
 
 public Q_SLOTS:
-    // // 聊天室管理
+    // 聊天室管理
     // 添加到聊天室列表
-    void add_chat_room(const std::shared_ptr<ContactData::ItemData>&contact_data);
+    void add_chat_room(const QString&chatroom_id);
     // 显示指定聊天室的对话
     void show_chat_room_messages(const std::shared_ptr<ContactData::ItemData>&contact_data);
 

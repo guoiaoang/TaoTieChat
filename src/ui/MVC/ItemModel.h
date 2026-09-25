@@ -281,17 +281,17 @@ public:
             // return item_group;
         }
 
-        auto text_diaplay = QMetaEnum::fromType<ENUMS::ItemGroupType>().valueToKey(static_cast<int>(group_type));
+        auto text_display = QMetaEnum::fromType<ENUMS::ItemGroupType>().valueToKey(static_cast<int>(group_type));
         std::map<int, QVariant> var_item;
         var_item[ENUMS::role_item_type()] = QVariant::fromValue<ENUMS::ItemDataType>(ENUMS::ItemDataType::GROUP);
         var_item[ENUMS::role_item_data()] = QVariant::fromValue<ENUMS::ItemGroupType>(group_type);
         // 设置一些默认显示的数据，防止未设置 delegete 显示为空
-        var_item[Qt::DisplayRole   ] = text_diaplay;
+        var_item[Qt::DisplayRole   ] = text_display;
         var_item[Qt::DecorationRole] = icon_init(); // 设置默认图标样式
-        var_item[Qt::EditRole      ] = text_diaplay;
-        // var_item[Qt::ToolTipRole  ] = text_diaplay;
-        // var_item[Qt::StatusTipRole] = text_diaplay;  // 效果不好
-        var_item[Qt::WhatsThisRole ] = text_diaplay;
+        var_item[Qt::EditRole      ] = text_display;
+        // var_item[Qt::ToolTipRole  ] = text_display;
+        // var_item[Qt::StatusTipRole] = text_display;  // 效果不好
+        var_item[Qt::WhatsThisRole ] = text_display;
         // 为了展示不同类型，给群组设置背景颜色
         // var_item[Qt::BackgroundRole] = QVariant::fromValue<QColor>(Qt::darkCyan);
         // var_item[Qt::ForegroundRole] = QVariant::fromValue<QColor>(Qt::darkMagenta);
@@ -359,35 +359,43 @@ public:
         }
 
         // 分组节点添加成员  // 未校验重复
-        auto text_diaplay = account_id;
+        auto text_display = account_id;
+        // Qt::DecorationRole1The : data to be rendered as a decoration in the form of an icon. (QColor, QIcon or QPixmap)
+        QPixmap pixmap = contact_data->avatar_image.isNull() ? icon_init().pixmap(128) : QPixmap::fromImage(contact_data->avatar_image);
         std::map<int, QVariant> var_item;
         var_item[ENUMS::role_item_type()] = QVariant::fromValue<ENUMS::ItemDataType>(ENUMS::ItemDataType::CONTACT);
         var_item[ENUMS::role_item_data()] = QVariant::fromValue<std::shared_ptr<ContactData::ItemData>>(contact_data);
         // 设置一些默认显示的数据，防止未设置 delegete 显示为空
-        var_item[Qt::DisplayRole   ] = text_diaplay;
-        var_item[Qt::DecorationRole] = icon_init(); // 设置默认图标样式，实际不使用
-        var_item[Qt::EditRole      ] = text_diaplay;
-        // var_item[Qt::ToolTipRole  ] = text_diaplay;
-        // var_item[Qt::StatusTipRole] = text_diaplay;  // 效果不好
-        var_item[Qt::WhatsThisRole ] = text_diaplay;
+        var_item[Qt::DisplayRole   ] = text_display;
+        var_item[Qt::DecorationRole] = pixmap; // 设置默认图标样式，实际不使用
+        var_item[Qt::EditRole      ] = text_display;
+        // var_item[Qt::ToolTipRole  ] = text_display;
+        // var_item[Qt::StatusTipRole] = text_display;  // 效果不好
+        var_item[Qt::WhatsThisRole ] = text_display;
 
         // 查找视图中的插入位置  // 判断条件是先判断昵称，昵称相同再判断用户 ID
         auto func_find_pos = [](const std::vector<TreeItemData*>&childs, const std::shared_ptr<ContactData::ItemData>&contact_data) -> int {
-            int pos = -1;
+            int pos = -1;  // -1：不插入，0：置顶插入
             do {
                 // 无效值不插入
-                if (!contact_data) { break; }
+                if (!contact_data) {
+                    pos = -1;
+                    break;
+                }
 
                 // 没有可比较的数据时
-                if (contact_data->display_name.isEmpty() && contact_data->user_id.isEmpty()) { break; }
+                if (contact_data->display_name.isEmpty() && contact_data->user_id.isEmpty()) {
+                    pos = 0;  // 插入到顶部
+                    break;
+                }
 
                 // 空值前置  // 插入位置在 ite 前
-                for (auto ite = childs.begin(); ite != childs.end(); ++ite) {
+                auto ite = childs.begin();
+                for (; ite != childs.end(); ++ite) {
                     // 跳过已有的无效值
-                    TreeItemData*tree_item_data = *ite;
+                    const TreeItemData*tree_item_data = *ite;
                     if (!tree_item_data) { continue; }
 
-                    // bool finded = false;
                     for (auto&data_column : tree_item_data->get_data_columns()) {
                         using T = std::shared_ptr<ContactData::ItemData>;
                         // 不是目标数据
@@ -401,15 +409,24 @@ public:
                         // if (var_column.value<T>() == group_type) { return true; }
                         if (!val) { continue; }
                         // 使用 Qt 的 localeAwareCompare 实现支持中文拼音/本地化排序的对比升序排序
-                        int rdn = QString::localeAwareCompare(contact_data->display_name, val->display_name);
-                        int rid = QString::localeAwareCompare(contact_data->user_id     , val->user_id     );
-                        // 昵称一样时才比较账号 ID
-                        if (rdn < 0 || (rdn == 0 && rid < 0)) {
+                        // localeAwareCompare(left, right), left > right -> 1
+                        int rdn  = QString::localeAwareCompare(contact_data->display_name, val->display_name);
+                        int ruid = QString::localeAwareCompare(contact_data->user_id     , val->user_id     );
+                        int raid = QString::localeAwareCompare(contact_data->account_id  , val->account_id  );
+                        // 昵称一样时才比较用户 ID  // 插入到 ite 前面
+                        if (rdn < 0 || (rdn == 0 && ruid < 0) || (rdn == 0 && ruid == 0 && raid < 0)) {
                             pos = static_cast<int>(std::distance(childs.begin(), ite));
                             break;
                         }
                     }
-                    if (pos != -1) { break; }
+                    if (pos != -1) {
+                        break;  // 找到插入位置时跳出循环
+                    }
+                }
+                // 循环结束时未找到可插入节点前的位置时，则排序时应该插入到列表尾部
+                if (pos == -1) {
+                    // pos = childs.size() - 1;
+                    pos = static_cast<int>(std::distance(childs.begin(), ite));
                 }
             } while (false);
             return pos;
@@ -417,9 +434,10 @@ public:
 
         int pos_insert = static_cast<int>(item_group->get_item_childs().size()); // 默认不排序
         // 判断分组，查找插入位置
+        // 好友群组需要排序，好友申请列表不需要排序
         if (group_type == ENUMS::ItemGroupType::FRIENDS) {
             pos_insert = func_find_pos(item_group->get_item_childs(), contact_data);
-            qDebug().noquote().nospace() << "insert pos : " << pos_insert << ", contact nickname : " << contact_data->nickname;
+            qDebug().noquote().nospace() << "insert pos : " << pos_insert << ", contact display_name : " << contact_data->display_name;
         }
         if (pos_insert < 0) { return nullptr; }
 
@@ -427,19 +445,56 @@ public:
         const QModelIndex parent_index = index_group(group_type);
         beginInsertRows(parent_index, row_item, row_item);
         // 需要支持按位置插入
-        // auto item_member = item_group->add_child(new TreeItemData(get_data_column(), var_item));
         auto item_member = item_group->insert_child(pos_insert, new TreeItemData(get_data_column(), var_item));
         endInsertRows();
         return item_member;
-
-        // auto item_member = item_group->add_child(new TreeItemData(0, ENUMS::role_item_data(), QVariant::fromValue<std::shared_ptr<ContactData::ItemData>>(contact)));
-        // return item_member;
     }
 
     QModelIndex index_group(ENUMS::ItemGroupType group_type) {
         auto row = row_group(group_type);
         return row == -1 ? QModelIndex() : createIndex(row, 0, data_root()->get_item_childs().at(row));
         return QModelIndex();
+    }
+
+    QModelIndex index_contact(ENUMS::ItemGroupType group_type, const std::shared_ptr<ContactData::ItemData>&contact_data) {
+        QModelIndex contact_index;
+        do {
+            if (!contact_data) { break; }
+            if (!contact_data->account_id.isEmpty()) { break; }
+            int group_row = row_group(group_type);
+            if (group_row < 0) { break; }
+            const auto&group_index = index_group(group_type);  // 群组节点
+            if (!group_index.isValid()) { break; }
+            auto group_item = data_root()->get_item_childs().at(group_row);  // 群组数据
+            if (!group_item) { break; }
+            const auto& childs = group_item->get_item_childs();  // 群组子节点列表
+            int contact_row = -1;  // 联系人在群组中的行号
+            for (size_t row = 0; row < childs.size(); ++row) {
+                const TreeItemData* item_child = childs.at(row);
+                if (!item_child) { continue; }
+                for (const auto& data_column : item_child->get_data_columns()) {
+                    using T = std::shared_ptr<ContactData::ItemData>;
+                    // 不是目标数据
+                    if (!data_column.contains(ENUMS::role_item_data())) { continue; }
+                    // 获取目标数据容器
+                    const QVariant&var_column = data_column.at(ENUMS::role_item_data());
+                    if (!var_column.isValid()) { continue; }
+                    if (!var_column.canConvert<T>()) { continue; }
+                    // 对比目标数据容器内数据
+                    T val = var_column.value<T>();
+                    if (!val) { continue; }
+                    // 匹配账号 ID
+                    if (contact_data->account_id == val->account_id) {
+                        contact_row = static_cast<int>(row);
+                        break;
+                    }
+                }
+                if (contact_row != -1) { break; }
+            }
+            // 获取子节点在父节点中的 index
+            if (contact_row != -1) { contact_index = this->index(contact_row, 0, group_index); }
+        } while (false);
+        return contact_index;
     }
 
     // 用于支持群组节点无子节点时展开
@@ -550,6 +605,33 @@ public:
         return row_group(group_type) != -1;
     }
 
+    // 更新信息
+    bool update_contact(ENUMS::ItemGroupType group_type, const std::shared_ptr<ContactData::ItemData>&contact_data) {
+        if (!contact_data) { return false; }
+        QModelIndex contact_index = index_contact(group_type, contact_data);
+        if (!contact_index.isValid()) { return false; }
+        // 获取节点内部的 TreeItemData* 指针并更新存储数据
+        TreeItemData* item_data = static_cast<TreeItemData*>(contact_index.internalPointer());
+        if (item_data) {
+            QString text_display = Utils::get_display_name(contact_data);
+            QPixmap pixmap = contact_data->avatar_image.isNull() ? icon_init().pixmap(128) : QPixmap::fromImage(contact_data->avatar_image);
+            std::map<int, QVariant> var_item;
+            var_item[ENUMS::role_item_type()] = QVariant::fromValue<ENUMS::ItemDataType>(ENUMS::ItemDataType::CONTACT);
+            var_item[ENUMS::role_item_data()] = QVariant::fromValue<std::shared_ptr<ContactData::ItemData>>(contact_data);
+            // 设置一些默认显示的数据，防止未设置 delegete 显示为空
+            var_item[Qt::DisplayRole   ] = text_display;
+            var_item[Qt::DecorationRole] = pixmap; // 设置默认图标样式，实际不使用
+            var_item[Qt::EditRole      ] = text_display;
+            // var_item[Qt::ToolTipRole  ] = text_display;
+            // var_item[Qt::StatusTipRole] = text_display;  // 效果不好
+            var_item[Qt::WhatsThisRole ] = text_display;
+            // 设置回节点数据列中
+            item_data->set_column_data(0, var_item);
+        }
+        emit dataChanged(contact_index, contact_index);
+        return true;
+    }
+
     // 生成一个占位图标，否则获取图标大小会异常
     QIcon icon_init() const {
         static auto icons = Utils::FontIcons().update();
@@ -622,17 +704,17 @@ public:
         TreeItemData*item_group = data_root();
 
         // 分组节点添加成员  // 未校验重复
-        auto text_diaplay = account_id;
+        auto text_display = account_id;
         std::map<int, QVariant> var_item;
         var_item[ENUMS::role_item_type()] = QVariant::fromValue<ENUMS::ItemDataType>(ENUMS::ItemDataType::CONTACT);
         var_item[ENUMS::role_item_data()] = QVariant::fromValue<std::shared_ptr<ContactData::ItemData>>(contact_data);
         // 设置一些默认显示的数据，防止未设置 delegete 显示为空
-        var_item[Qt::DisplayRole   ] = text_diaplay;
+        var_item[Qt::DisplayRole   ] = text_display;
         var_item[Qt::DecorationRole] = icon_init(); // 设置默认图标样式，实际不使用
-        var_item[Qt::EditRole      ] = text_diaplay;
-        // var_item[Qt::ToolTipRole  ] = text_diaplay;
-        // var_item[Qt::StatusTipRole] = text_diaplay;  // 效果不好
-        var_item[Qt::WhatsThisRole ] = text_diaplay;
+        var_item[Qt::EditRole      ] = text_display;
+        // var_item[Qt::ToolTipRole  ] = text_display;
+        // var_item[Qt::StatusTipRole] = text_display;  // 效果不好
+        var_item[Qt::WhatsThisRole ] = text_display;
 
         auto row = static_cast<int>(item_group->get_item_childs().size());
         beginInsertRows(QModelIndex(), row, row);
@@ -662,17 +744,17 @@ private:
         if (chatroom) { return chatroom; }
 
         // 填充数据
-        auto text_diaplay = chatroom_data->display_name;
+        auto text_display = chatroom_data->display_name;
         std::map<int, QVariant> var_item;
         var_item[ENUMS::role_item_type()] = QVariant::fromValue<ENUMS::ItemDataType>(ENUMS::ItemDataType::CHATROOM);
         var_item[ENUMS::role_item_data()] = QVariant::fromValue<std::shared_ptr<ChatroomData::ItemData>>(chatroom_data);
         // 设置一些默认显示的数据，防止未设置 delegete 显示为空
-        var_item[Qt::DisplayRole   ] = text_diaplay;
+        var_item[Qt::DisplayRole   ] = text_display;
         var_item[Qt::DecorationRole] = chatroom_data->avatar_image;
-        var_item[Qt::EditRole      ] = text_diaplay;
-        // var_item[Qt::ToolTipRole  ] = text_diaplay;
-        // var_item[Qt::StatusTipRole] = text_diaplay;  // 效果不好
-        var_item[Qt::WhatsThisRole ] = text_diaplay;
+        var_item[Qt::EditRole      ] = text_display;
+        // var_item[Qt::ToolTipRole  ] = text_display;
+        // var_item[Qt::StatusTipRole] = text_display;  // 效果不好
+        var_item[Qt::WhatsThisRole ] = text_display;
 
         // 插入到第一行即可，更新时间时再进行排序
         auto row_item = 0;
@@ -805,17 +887,17 @@ public:
             // }
 
             // 填充数据
-            auto text_diaplay = message_data->sender->display_name;
+            auto text_display = message_data->sender->display_name;
             std::map<int, QVariant> var_item;
             var_item[ENUMS::role_item_type()] = QVariant::fromValue<ENUMS::ItemDataType>(ENUMS::ItemDataType::MESSAGE);
             var_item[ENUMS::role_item_data()] = QVariant::fromValue<std::shared_ptr<MessageData::ItemData>>(message_data);
             // 设置一些默认显示的数据，防止未设置 delegete 显示为空
-            var_item[Qt::DisplayRole   ] = text_diaplay;
+            var_item[Qt::DisplayRole   ] = text_display;
             var_item[Qt::DecorationRole] = icon_init(); // 设置默认图标样式，实际不使用
-            var_item[Qt::EditRole      ] = text_diaplay;
-            // var_item[Qt::ToolTipRole  ] = text_diaplay;
-            // var_item[Qt::StatusTipRole] = text_diaplay;  // 效果不好
-            var_item[Qt::WhatsThisRole ] = text_diaplay;
+            var_item[Qt::EditRole      ] = text_display;
+            // var_item[Qt::ToolTipRole  ] = text_display;
+            // var_item[Qt::StatusTipRole] = text_display;  // 效果不好
+            var_item[Qt::WhatsThisRole ] = text_display;
 
             // 插入
             // auto row_item = std::distance(item_childs.begin(), ite);

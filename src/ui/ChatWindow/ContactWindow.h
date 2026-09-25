@@ -12,39 +12,46 @@ class ContactWindow : public QWidget {
     Q_OBJECT
 
 public:
-    enum class ShowFlag : int {
-        unset    = 0,      // no flags
-        View     = 1 << 0, // 0x00000001,  // 显示模式：查看
-        Edit     = 1 << 1, // 0x00000002,  // 显示模式：编辑
-        ViewOnly = 1 << 2, // 0x00000004,  // 显示模式：只允许查看
-        Contact  = 1 << 3, // 0x00000004,  // 好友关系：联系人
-        Stranger = 1 << 4, // 0x00000008,  // 好友关系：陌生人/非联系人
-        Self     = 1 << 5, // 0x00000010,  // 好友关系：自己
-        Profile  = 1 << 6, // 0x00000020,  // 来源页面：个人资料
-        Search   = 1 << 7, // 0x00000040,  // 来源页面：搜索结果
-        Request  = 1 << 8, // 0x00000080,  // 来源页面：好友请求
+    // 显示来源，唯一
+    enum class SourceFlag : int {
+        UNSET    = 1 << 0,
+        Profile  = 1 << 1,  // 0x00000001  // 个人资料
+        Search   = 1 << 2,  // 0x00000002  // 搜索结果
+        Request  = 1 << 3,  // 0x00000004  // 好友请求
+        Contact  = 1 << 4,  // 0x00000008  // 好友列表
     };
-    Q_DECLARE_FLAGS(ShowFlags, ShowFlag)
-    // Q_DECLARE_FLAGS(ShowFlags, ShowFlag)
-    // Q_DECLARE_OPERATORS_FOR_FLAGS(ShowFlags)
+    Q_ENUM(SourceFlag)
+
+    // 显示模式，唯一
+    enum class ViewFlag : int {
+        View     = 1 << 0,  // 0x00000000  // 查看
+        Edit     = 1 << 1,  // 0x00000001  // 编辑
+        ViewOnly = 1 << 2,  // 0x00000002  // 只允许查看
+    };
+    Q_ENUM(ViewFlag)
+
+    // 好友关系，可重叠
+    enum class ShipFlag : int {
+        Stranger = 1 << 0,  // 0x00000001  // 陌生人
+        Friend   = 1 << 1,  // 0x00000002  // 好友
+        Self     = 1 << 2,  // 0x00000004  // 自己
+    };
+    // 声明标志集合类型 ShipFlags
+    Q_DECLARE_FLAGS(ShipFlags, ShipFlag)
+    // // 为 ShipFlags 激活标准位运算符（必须放在类外或全局作用域）
+    // Q_DECLARE_OPERATORS_FOR_FLAGS(ShipFlags)
+    // (可选) 如果需要将标志暴露给 Qt 元对象系统/QML/属性系统
+    Q_FLAG(ShipFlags)
 
 public:
     explicit ContactWindow(QWidget *parent = nullptr);
     ~ContactWindow();
 
 public:
-    const std::shared_ptr<ContactData::ItemData>&get_cache_contact_data () const;
-    const std::shared_ptr<QPixmap    >&get_cache_avatar_pixmap() const;
-    void set_cache_contact_data (const std::shared_ptr<ContactData::ItemData>&contact_data);
-    void set_cache_avatar_pixmap(const std::shared_ptr<QPixmap    >&avatar_pixmap);
-    void show_contact(const std::shared_ptr<ContactData::ItemData>&contact_data, const std::shared_ptr<QPixmap>&avatar_pixmap = nullptr);
-    // void set_request_mode(bool request_mode = false);  // 好友申请页面
-    void set_show_mode(const ShowFlags show_flags);
-    ShowFlags get_show_mode() const { return m_show_flags; }
+    const std::shared_ptr<ContactData::ItemData>& get_contact_data() const;
+    void set_contact_data(const std::shared_ptr<ContactData::ItemData>&contact_data, const SourceFlag&source_flag);
 
 private:
-    // 显示模式
-    // bool set_edit_mode(bool edit = true);
     // 按钮和菜单的槽函数
     void slot_button_manager ();
     void slot_button_avatar  ();
@@ -61,20 +68,16 @@ private:
     // 新添加好友时刷新好友关系状态
     void slot_contact_status_changed(const QVector<std::shared_ptr<ContactData::ItemData>>& to_contact_datas);
 
-    // get_local_avatar_id_pixmap 根据文件 ID 在本地查找文件并加载为头像图片
-    std::shared_ptr<QPixmap> get_local_avatar_id_pixmap(const QString&avatar_id);
     // view_avatar 在媒体窗口查看当前头像
-    void view_avatar(const std::shared_ptr<ContactData::ItemData>&contact_data);
-    // show_avatar 当前窗口更新头像显示，无网络及校验功能
-    void show_avatar(const std::shared_ptr<QPixmap>&avatar_pixmap);
-    // 传入头像 ID，自动从本地或网络加载头像
-    void show_avatar_id(const QString&avatar_id);
-    // dialog_select_avatar_file 选择头像文件的对话框
+    void view_avatar();
+    // 选择头像文件的对话框
     QString dialog_select_avatar_file();
 
     // network
     void update_profile_text(const std::shared_ptr<ContactData::ItemData>&contact_data, const update_profile_callback&callback_update_profile = nullptr);
     void update_profile_avatar(const QString&avatar_path);
+    // 用户仅修改头像时不应该完全重置资料
+    // void update_profile_avatar_only(const std::shared_ptr<ContactData::ItemData>&avatar_data);
 
 Q_SIGNALS:
     void sig_contact_add    (const std::shared_ptr<ContactData::ItemData>&contact_data);
@@ -83,16 +86,34 @@ Q_SIGNALS:
     void sig_contact_voice  (const std::shared_ptr<ContactData::ItemData>&contact_data);
     void sig_contact_video  (const std::shared_ptr<ContactData::ItemData>&contact_data);
 
+public:
+    const SourceFlag get_source_flag() const { return m_source_flag; }
+    const ViewFlag   get_view_flag  () const { return m_view_flag  ; }
+    const ShipFlags  get_ship_flags () const { return m_ship_flags ; }
+    void set_source_flag(const SourceFlag&source_flag) { updata_show(    source_flag  , get_view_flag(), get_ship_flags()); }
+    void set_view_flag  (const ViewFlag  &view_flag  ) { updata_show(get_source_flag(),     view_flag  , get_ship_flags()); }
+    void set_ship_flags (const ShipFlags &ship_flags ) { updata_show(get_source_flag(), get_view_flag(),     ship_flags  ); }
+
 private:
-    std::shared_ptr<Ui::ContactWindow    > m_ui                ;
-    std::shared_ptr<QMenu                > m_menu_manager      ;
-    std::shared_ptr<QAction              > m_action_edit       ;
-    std::shared_ptr<QAction              > m_action_remove     ;
-    std::shared_ptr<ContactData::ItemData> m_cache_contact_data;
-    std::shared_ptr<QPixmap              > m_cache_avatar      ;
-    bool m_edit_mode = false;
-    ShowFlags m_show_flags = ShowFlag::unset;
-    Utils::WidgetTools::LineEdit m_edit_tool;
+    void updata_show(const SourceFlag&source_flag, const ViewFlag&view_flag, const ShipFlags&ship_flags);
+
+private:
+    SourceFlag m_source_flag = SourceFlag::UNSET;
+    ViewFlag   m_view_flag   = ViewFlag::View;
+    ShipFlags  m_ship_flags  = ShipFlag::Stranger;
+
+private:
+    std::shared_ptr<Ui::ContactWindow    > m_ui           ;
+    std::shared_ptr<QMenu                > m_menu_manager ;
+    std::shared_ptr<QAction              > m_action_edit  ;
+    std::shared_ptr<QAction              > m_action_remove;
+    std::shared_ptr<ContactData::ItemData> m_contact_data ;
+    Utils::WidgetTools::LineEdit           m_edit_tool;
 };
 
-Q_DECLARE_OPERATORS_FOR_FLAGS(ContactWindow::ShowFlags)
+// 为 ShipFlags 激活标准位运算符（必须放在类外或全局作用域）
+Q_DECLARE_OPERATORS_FOR_FLAGS(ContactWindow::ShipFlags)
+inline ContactWindow::ShipFlags operator~(ContactWindow::ShipFlag flag) {
+    return ~ContactWindow::ShipFlags(flag);
+}
+

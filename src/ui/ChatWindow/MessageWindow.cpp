@@ -381,13 +381,7 @@ void MessageWindow::slot_button_title_avatar() {
     if (!m_contact_window) { m_contact_window = std::make_shared<ContactWindow>(this); }
     // 设置为弹窗窗口，否则有父窗口时会显示在父窗口内，发生与父窗口内容重叠的情况
     m_contact_window->setWindowFlags(m_contact_window->windowFlags() |  Qt::Dialog);
-    m_contact_window->show_contact(m_contact_data);
-    using ShowFlags = ContactWindow::ShowFlags;
-    using ShowFlag  = ContactWindow::ShowFlag ;
-    auto show_mode = m_contact_window->get_show_mode();
-    show_mode |= ShowFlags(ShowFlag::Profile );
-    show_mode |= ShowFlags(ShowFlag::ViewOnly);
-    m_contact_window->set_show_mode(show_mode);
+    m_contact_window->set_contact_data(m_contact_data, ContactWindow::SourceFlag::Contact);
     m_contact_window->show();
 
     // 先显示窗口再更新内容，避免网络请求较慢时窗口无响应
@@ -399,7 +393,8 @@ void MessageWindow::slot_button_title_avatar() {
     params_search_user->setUserId(user_id);
     NetworkClient::instance().search_user(params_search_user, [this](const search_user_params&params_search_user, const search_user_reply&reply_search_user) {
         if (!reply_search_user || !reply_search_user->result().hasSuccessCode()) { return; }
-        m_contact_window->show_contact(Utils::Transform::to_contact_data(std::make_shared<ContactInfo>(reply_search_user->contactInfo())));
+        const auto& contact_data = Utils::Transform::to_contact_data(std::make_shared<ContactInfo>(reply_search_user->contactInfo()));
+        m_contact_window->set_contact_data(contact_data, ContactWindow::SourceFlag::Contact);
         // m_contact_window->setWindowTitle(tr("Profile"));
     });
 }

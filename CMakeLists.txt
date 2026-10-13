@@ -821,3 +821,191 @@ if(WIN32)
 endif()
 
 include(CPack)
+
+# ==============================================================================
+# 自动生成 Shell / Bat 批处理脚本
+# ==============================================================================
+
+function(output_shell_update_translations)
+    if(NOT ENABLE_CLIENT)
+        return()
+    endif()
+    # 1. 定义输出目录及脚本文件路径
+    set(SHELL_OUTPUT_DIR "${CMAKE_SOURCE_DIR}/shell")
+    file(MAKE_DIRECTORY "${SHELL_OUTPUT_DIR}") # 确保 shell 目录存在
+
+    if(WIN32)
+        set(SCRIPT_FILE "${SHELL_OUTPUT_DIR}/_update_translations.bat")
+
+        # 2. 拼接需要写入脚本的命令内容
+        # 注意：若命令中包含带空格的路径，请用 Quotes 转义
+        set(SCRIPT_CONTENT
+"@echo off
+chcp 65001 >nul
+REM 本文件由 CMake 自动生成，请勿手动改动
+
+\"${CMAKE_COMMAND}\" ^
+    --build \"${CMAKE_BINARY_DIR}\" ^
+    --target update_translations
+
+REM echo.
+REM echo 脚本执行完成！
+"
+        )
+    else()
+        set(SCRIPT_FILE "${SHELL_OUTPUT_DIR}/_update_translations.sh")
+
+        # 2. 拼接需要写入脚本的命令内容
+        # 注意：若命令中包含带空格的路径，请用 Quotes 转义
+        set(SCRIPT_CONTENT
+"#!/usr/bin/env bash
+# 本文件由 CMake 自动生成，请勿手动改动
+
+\"${CMAKE_COMMAND}\" \\
+    --build \"${CMAKE_BINARY_DIR}\" \\
+    --target update_translations
+
+# echo -e \"\\n脚本执行完成！\"
+"
+        )
+    endif()
+
+    # 3. 写入文件
+    file(WRITE "${SCRIPT_FILE}" "${SCRIPT_CONTENT}")
+
+    # 4. 如果是 Unix 系统，赋予可执行权限
+    if(UNIX)
+        execute_process(
+            COMMAND chmod +x "${SCRIPT_FILE}"
+            WORKING_DIRECTORY "${CMAKE_SOURCE_DIR}"
+        )
+    endif()
+endfunction()
+
+if(ENABLE_CLIENT)
+    output_shell_update_translations()
+endif()
+
+function(output_shell_actions_install)
+    # 1. 定义输出目录及脚本文件路径
+    set(SHELL_OUTPUT_DIR "${CMAKE_SOURCE_DIR}/shell")
+    file(MAKE_DIRECTORY "${SHELL_OUTPUT_DIR}") # 确保 shell 目录存在
+
+    if(WIN32)
+        set(SCRIPT_FILE "${SHELL_OUTPUT_DIR}/_actions_install.bat")
+
+        # 2. 拼接需要写入脚本的命令内容
+        # 注意：若命令中包含带空格的路径，请用 Quotes 转义
+        set(SCRIPT_CONTENT
+"@echo off
+chcp 65001 >nul
+REM 本文件由 CMake 自动生成，请勿手动改动
+
+\"${CMAKE_COMMAND}\"  ^
+    --install \"${CMAKE_BINARY_DIR}\" ^
+    --prefix=\"${CMAKE_INSTALL_PREFIX}\"
+
+REM echo.
+REM echo 脚本执行完成！
+"
+        )
+    else()
+        set(SCRIPT_FILE "${SHELL_OUTPUT_DIR}/_actions_install.sh")
+
+        # 2. 拼接需要写入脚本的命令内容
+        # 注意：若命令中包含带空格的路径，请用 Quotes 转义
+        set(SCRIPT_CONTENT
+"#!/usr/bin/env bash
+# 本文件由 CMake 自动生成，请勿手动改动
+
+\"${CMAKE_COMMAND}\" \\
+    --install \"${CMAKE_BINARY_DIR}\" \\
+    --prefix=\"${CMAKE_INSTALL_PREFIX}\"
+
+# echo -e \"\\n脚本执行完成！\"
+"
+        )
+    endif()
+
+    # 3. 写入文件
+    file(WRITE "${SCRIPT_FILE}" "${SCRIPT_CONTENT}")
+
+    # 4. 如果是 Unix 系统，赋予可执行权限
+    if(UNIX)
+        execute_process(
+            COMMAND chmod +x "${SCRIPT_FILE}"
+            WORKING_DIRECTORY "${CMAKE_SOURCE_DIR}"
+        )
+    endif()
+endfunction()
+
+output_shell_actions_install()
+
+# 自动生成跨平台的 CMake Configure 脚本 (Windows .bat / Linux .sh)
+function(output_shell_actions_configure)
+    set(SHELL_OUTPUT_DIR "${CMAKE_SOURCE_DIR}/shell")
+    file(MAKE_DIRECTORY "${SHELL_OUTPUT_DIR}")
+
+    if(WIN32)
+        # ---------------- Windows 批处理格式 (.bat) ----------------
+        set(CONFIG_SCRIPT_FILE "${SHELL_OUTPUT_DIR}/_actions_configure.bat")
+        set(CONFIG_SCRIPT_CONTENT
+"@echo off
+chcp 65001 >nul
+REM 本文件由 CMake 自动生成，请勿手动改动
+
+\"${CMAKE_COMMAND}\" ^
+    -DCMAKE_INSTALL_PREFIX=\"${CMAKE_INSTALL_PREFIX}\" ^
+    -DCMAKE_TOOLCHAIN_FILE=\"${CMAKE_TOOLCHAIN_FILE}\" ^
+    -DCMAKE_PREFIX_PATH=\"${CMAKE_PREFIX_PATH}\" ^
+    -DBUILD_TESTING=${BUILD_TESTING} ^
+    -DCMAKE_EXPORT_COMPILE_COMMANDS=${CMAKE_EXPORT_COMPILE_COMMANDS} ^
+    -DCMAKE_BUILD_TYPE=\"${CMAKE_BUILD_TYPE}\" ^
+    -DCMAKE_CXX_COMPILER=\"${CMAKE_CXX_COMPILER}\" ^
+    -DCMAKE_MAKE_PROGRAM=\"${CMAKE_MAKE_PROGRAM}\" ^
+    -S \"${CMAKE_SOURCE_DIR}\" ^
+    -B \"${CMAKE_BINARY_DIR}\" ^
+    -G \"${CMAKE_GENERATOR}\"
+
+REM echo.
+REM echo 脚本执行完成！
+"
+        )
+    else()
+        # ---------------- Linux / macOS Shell 脚本格式 (.sh) ----------------
+        set(CONFIG_SCRIPT_FILE "${SHELL_OUTPUT_DIR}/_actions_configure.sh")
+        set(CONFIG_SCRIPT_CONTENT
+"#!/usr/bin/env bash
+# 本文件由 CMake 自动生成，请勿手动改动
+
+\"${CMAKE_COMMAND}\" \\
+    -DCMAKE_INSTALL_PREFIX=\"${CMAKE_INSTALL_PREFIX}\" \\
+    -DCMAKE_TOOLCHAIN_FILE=\"${CMAKE_TOOLCHAIN_FILE}\" \\
+    -DCMAKE_PREFIX_PATH=\"${CMAKE_PREFIX_PATH}\" \\
+    -DBUILD_TESTING=${BUILD_TESTING} \\
+    -DCMAKE_EXPORT_COMPILE_COMMANDS=${CMAKE_EXPORT_COMPILE_COMMANDS} \\
+    -DCMAKE_BUILD_TYPE=\"${CMAKE_BUILD_TYPE}\" \\
+    -DCMAKE_CXX_COMPILER=\"${CMAKE_CXX_COMPILER}\" \\
+    -DCMAKE_MAKE_PROGRAM=\"${CMAKE_MAKE_PROGRAM}\" \\
+    -S \"${CMAKE_SOURCE_DIR}\" \\
+    -B \"${CMAKE_BINARY_DIR}\" \\
+    -G \"${CMAKE_GENERATOR}\"
+
+# echo -e \"\\n脚本执行完成！\"
+"
+        )
+    endif()
+
+    # 写入文件
+    file(WRITE "${CONFIG_SCRIPT_FILE}" "${CONFIG_SCRIPT_CONTENT}")
+
+    # 在 Linux/macOS 下为 .sh 脚本赋予可执行权限 (+x)
+    if(UNIX)
+        execute_process(
+            COMMAND chmod +x "${CONFIG_SCRIPT_FILE}"
+            WORKING_DIRECTORY "${CMAKE_SOURCE_DIR}"
+        )
+    endif()
+endfunction()
+
+output_shell_actions_configure()

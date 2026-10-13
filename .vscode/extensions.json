@@ -16,5 +16,15 @@
         "bowlerr.sqlite-intelliview-vscode",
         // 着重显示行尾空格
         "shardulm94.trailing-spaces",
+        // 高亮前綴空格
+        "oderwat.indent-rainbow",
+        // 高亮 TODO 注释
+        "jgclark.vscode-todo-highlight",
+        // 添加 TODO 列表
+        "fanaticpythoner.better-todo-tree",
+        // 添加书签
+        "alefragnani.bookmarks",
+        // 查看二进制数据
+        "ms-vscode.hexeditor",
     ]
 }

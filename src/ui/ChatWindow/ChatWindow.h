@@ -91,6 +91,11 @@ public Q_SLOTS:
     void slot_voice_to  (const std::shared_ptr<ContactData::ItemData>&contact_data);
     void slot_video_to  (const std::shared_ptr<ContactData::ItemData>&contact_data);
 
+    // 更新联系人信息
+    void slot_update_avatar_info       (const std::shared_ptr<ContactData::ItemData>&to_contact_data);  // 左上角头像与窗口图标
+    void slot_update_contact_list_info (const std::shared_ptr<ContactData::ItemData>&to_contact_data);  // 联系人列表与好友申请
+    void slot_update_chatroom_list_info(const std::shared_ptr<ContactData::ItemData>&to_contact_data);  // 对话列表
+
 signals:
     void signout();
 
@@ -110,6 +115,8 @@ private:
     std::shared_ptr<QAction> m_action_auto_login     ;
     std::shared_ptr<QAction> m_action_signout  ;
     std::shared_ptr<QAction> m_action_exit     ;
+    //
+    std::shared_ptr<QAction> m_action_clean_search_box;
     // 搜索按钮
     std::shared_ptr<QMenu  > m_menu_add        ;
     std::shared_ptr<QAction> m_action_add      ;
@@ -121,7 +128,7 @@ private:
     std::shared_ptr<ItemDelegate > m_contact_delegate;
     std::shared_ptr<SearchWindow > m_search_window   ;
     std::shared_ptr<ContactWindow> m_contact_window  ;  // 当前显示的联系人详情窗口
-    //
+    // cache
     std::shared_ptr<ContactData::ItemData> m_cache_self_data  ;
     std::shared_ptr<QImage               > m_cache_self_avatar;
 };

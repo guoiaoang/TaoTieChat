@@ -23,6 +23,7 @@ namespace ENUMS {
         UNSET,
         NONE ,
         GROUP   ,  // 分组
+        REQUEST ,  // 好友申请
         CONTACT ,  // 联系人信息
         CHATROOM,  // 对话
         MESSAGE ,  // 消息
@@ -69,6 +70,25 @@ public:
 };
 #endif // _DEBUG
 
+// 好友申请
+namespace ContactRequestData {
+// 好友申请消息
+struct RequestMessage {
+    QString   message_id;
+    QString   account_id;
+    QDateTime datetime;
+    QString   message_text;
+};
+
+// 好友申请数据
+struct ItemData {
+    QString receiver_account_id;
+    QString sender_account_id;
+    QVector<RequestMessage> messages;
+};
+
+};  // namespace Request
+
 namespace ContactData {
 // 聊天列表所需的数据
 struct ItemData {
@@ -101,14 +121,19 @@ struct ItemData {
     QString token             = {};  // 认证令牌
     QString security_question = {};  // 安全问题
     QString security_answer   = {};  // 安全答案
-    // cache
+    //
+    std::shared_ptr<ContactRequestData::ItemData> request_messages;
+    // cache  // 以下信息在添加时都需要填充
     bool is_me     = false;
     bool is_friend = false;
     QString display_name;  // 联系人列表排序、显示名称时需要
     QString avatar_path;
     QImage  avatar_image;  // Image 与 UI 无关，可以在子线程中操作
+    QString info_text;     // 联系人信息中昵称下面显示的内容(签名或消息)
+    QString info_time;     // 消息时间(聊天或好友申请的时间)
 };
-};
+
+};  // namespace ContactData
 
 namespace ChatroomData {
 // 聊天列表所需的数据

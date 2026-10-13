@@ -67,6 +67,7 @@ private:
     void slot_action_remove  ();
     // 新添加好友时刷新好友关系状态
     void slot_contact_status_changed(const QVector<std::shared_ptr<ContactData::ItemData>>& to_contact_datas);
+    void slot_contact_info_changed(const std::shared_ptr<ContactData::ItemData>& contact_data);
 
     // view_avatar 在媒体窗口查看当前头像
     void view_avatar();
@@ -109,6 +110,10 @@ private:
     std::shared_ptr<QAction              > m_action_remove;
     std::shared_ptr<ContactData::ItemData> m_contact_data ;
     Utils::WidgetTools::LineEdit           m_edit_tool;
+    //
+    QString m_temp_avatar_id;
+    QString m_temp_avatar_path;
+    QImage  m_temp_avatar_image;
 };
 
 // 为 ShipFlags 激活标准位运算符（必须放在类外或全局作用域）

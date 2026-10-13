@@ -577,11 +577,12 @@ QString get_display_name(const std::shared_ptr<ContactInfo>&contact_info) {
 QString get_display_name(const std::shared_ptr<ContactData::ItemData>&contact_data) {
     QString display_name;
     do {
-        if (!contact_data) { break; }
+        if (!contact_data || contact_data->account_id.isEmpty()) { break; }
         // 默认显示昵称
         display_name = contact_data->nickname;
         // 有备注时显示备注
-        if (contact_data->is_friend && !contact_data->notes.isEmpty()) {
+        // if (contact_data->is_friend && !contact_data->notes.isEmpty()) {
+        if (Accounts::instance().is_friend(contact_data->account_id) && !contact_data->notes.isEmpty()) {
             display_name = contact_data->notes;
         }
     } while(false);

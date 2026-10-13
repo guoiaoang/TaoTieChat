@@ -57,6 +57,7 @@ MessageWindow::MessageWindow(QWidget *parent)
         // 基于服务器对此的要求，超长文本不允许发送
         m_ui->button_send->setEnabled(current_text_length < avaliable_text_length);
     });
+    connect(&Accounts::instance(), &Accounts::signal_contact_info_changed, this, &MessageWindow::slot_update_contact_info);
 
     // set
     m_ui->list_messages->setSpacing(0);
@@ -117,6 +118,7 @@ MessageWindow::MessageWindow(QWidget *parent)
     m_ui->list_messages->installEventFilter(this);
     m_ui->list_messages->viewport()->installEventFilter(this);
     m_ui->textEdit->installEventFilter(this);
+    m_ui->label_title->installEventFilter(this);
 
     // TODO:未添加的功能
     m_ui->button_detail    ->setVisible(false);
@@ -135,6 +137,7 @@ void MessageWindow::set_contact(const std::shared_ptr<ContactData::ItemData>& co
     m_contact_data = contact_data;
     m_ui->label_title->setText(contact_data->display_name);
     show_avatar_id(contact_data->avatar_id);
+    // TODO:更新聊天记录中的账号信息
 }
 
 std::shared_ptr<ContactData::ItemData> MessageWindow::get_contact() const {
@@ -267,8 +270,9 @@ std::shared_ptr<MessageData::ItemData> MessageWindow::get_message(const QString&
 
 bool MessageWindow::eventFilter(QObject *watched, QEvent *event) {
     // 如果是按键消息，那么先获取按键
-    QKeyEvent  * key_event   = event->type() == QEvent::KeyPress         ? static_cast<QKeyEvent  *>(event) : nullptr;
-    QMouseEvent* mouse_event = event->type() == QEvent::MouseButtonPress ? static_cast<QMouseEvent*>(event) : nullptr;
+    QKeyEvent   * key_event    = event->type() == QEvent::KeyPress         ? static_cast<QKeyEvent   *>(event) : nullptr;
+    QMouseEvent * mouse_event  = event->type() == QEvent::MouseButtonPress ? static_cast<QMouseEvent *>(event) : nullptr;
+    QResizeEvent* reszie_event = event->type() == QEvent::Resize           ? static_cast<QResizeEvent*>(event) : nullptr;
     bool is_key_press    = event->type() == QEvent::KeyPress        ;  // 键盘按键
     bool is_mouse_press  = event->type() == QEvent::MouseButtonPress;  // 鼠标左键
     bool is_event_resize = event->type() == QEvent::Resize          ;  // 窗口大小调整
@@ -370,6 +374,17 @@ bool MessageWindow::eventFilter(QObject *watched, QEvent *event) {
         // 2. 刷新绘制
         m_ui->list_messages->viewport()->update();
     }
+
+    // 显示裁剪文本
+    if (watched == m_ui->label_title && reszie_event) {
+        if (m_contact_data) {
+            const QFontMetrics font_metrics(m_ui->label_title->font());
+            const auto&label_width = m_ui->label_title->contentsRect().width();
+            const auto&elided_text = font_metrics.elidedText(m_contact_data->display_name, Qt::ElideRight, label_width);
+            m_ui->label_title->setText(elided_text);
+        }
+    }
+
     // 没有处理的消息交给系统默认处理程序(继续由对应控件处理)
     return QWidget::eventFilter(watched, event);
 }
@@ -815,6 +830,20 @@ void MessageWindow::slot_copy_path(const std::shared_ptr<MessageData::ItemData> 
             QApplication::clipboard()->setText(QDir::toNativeSeparators(file_path));
         }
     } while(false);
+}
+
+// to_contact_data 为不定账号，可能不是当前账号，必须校验账号 ID
+void MessageWindow::slot_update_contact_info(const std::shared_ptr<ContactData::ItemData>& to_contact_data) {
+    do {
+        if (!to_contact_data || to_contact_data->account_id.isEmpty()) { break; }
+        const auto& from_contact_data = get_contact();
+        const auto& from_account_id   = from_contact_data ? from_contact_data->account_id : "";
+        const auto& to_account_id     = to_contact_data->account_id;
+        const auto& to_avatar_id      = to_contact_data->avatar_id;
+        if (from_account_id != to_account_id) { break; }
+        // 设置
+        set_contact(to_contact_data);
+    } while (false);
 }
 
 // // 消息较多时应该差异化更新

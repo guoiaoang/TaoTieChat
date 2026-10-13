@@ -244,6 +244,13 @@ public:
 //     std::vector<std::shared_ptr<ItemDelegate>> m_items;
 };
 
+struct IndexData {
+    QModelIndex index;
+    TreeItemData* data = nullptr;
+    std::shared_ptr<ContactData::ItemData> contact = nullptr;
+    int row = -1;
+};
+
 // 联系人列表
 class ContactModel : public TreeModel {
 public:
@@ -308,45 +315,11 @@ public:
         // ============================ 过滤重复 ============================ //
 
         if (!contact_data) { return nullptr; }
+        if ( contact_data->account_id.isEmpty()) { return nullptr; }
 
-        // 获取账号 ID 作为重复判断条件
-        auto account_id = contact_data->account_id;
-        if (account_id.isEmpty()) {
-            qWarning() << "Contact account id is EMPTY!";
-            return nullptr;
-        }
-
-        auto func_cmp_columns = [account_id](const std::map<int, QVariant>&data_column) {
-            using T = std::shared_ptr<ContactData::ItemData>;
-            // 不是目标数据
-            if (!data_column.contains(ENUMS::role_item_data())) { return false; }
-            // 获取目标数据容器
-            const QVariant&var_column = data_column.at(ENUMS::role_item_data());
-            if (!var_column.isValid()) { return false; }
-            if (!var_column.canConvert<T>()) { return false; }
-            // 对比目标数据容器内数据
-            T val = var_column.value<T>();
-            if (!val) { return false; }
-            if (account_id == val->account_id) { return true; }
-            return false;
-        };
-        auto func_cmp_childs = [func_cmp_columns](TreeItemData*item_child) {
-            auto item_columns = item_child->get_data_columns() | std::views::filter(func_cmp_columns);
-            if (!item_columns.empty()) { return true; }
-            return false;
-        };
-        auto has_dupe_account = [this, func_cmp_childs](ENUMS::ItemGroupType group_type) {
-            auto row = row_group(group_type);
-            if (row == -1) { return false; }
-            auto item_group = data_root()->get_item_childs().at(row);
-            if (!item_group) { return false; }
-            auto item_childs = item_group->get_item_childs() | std::views::filter(func_cmp_childs);  // 空数组不会进入 views
-            if (!item_childs.empty()) { return true; }
-            return false;
-        };
-        if (has_dupe_account(group_type)) {
-            return nullptr;
-        }
+        // 能找到说明已经添加
+        auto index_data = get_contact_index_data(group_type, contact_data->account_id);
+        if (index_data->contact) { return nullptr; }
 
         // ============================ 添加成员 ============================ //
 
@@ -359,7 +332,7 @@ public:
         }
 
         // 分组节点添加成员  // 未校验重复
-        auto text_display = account_id;
+        auto text_display = contact_data->account_id;  // for DEBUG
         // Qt::DecorationRole1The : data to be rendered as a decoration in the form of an icon. (QColor, QIcon or QPixmap)
         QPixmap pixmap = contact_data->avatar_image.isNull() ? icon_init().pixmap(128) : QPixmap::fromImage(contact_data->avatar_image);
         std::map<int, QVariant> var_item;
@@ -456,45 +429,9 @@ public:
         return QModelIndex();
     }
 
-    QModelIndex index_contact(ENUMS::ItemGroupType group_type, const std::shared_ptr<ContactData::ItemData>&contact_data) {
-        QModelIndex contact_index;
-        do {
-            if (!contact_data) { break; }
-            if (!contact_data->account_id.isEmpty()) { break; }
-            int group_row = row_group(group_type);
-            if (group_row < 0) { break; }
-            const auto&group_index = index_group(group_type);  // 群组节点
-            if (!group_index.isValid()) { break; }
-            auto group_item = data_root()->get_item_childs().at(group_row);  // 群组数据
-            if (!group_item) { break; }
-            const auto& childs = group_item->get_item_childs();  // 群组子节点列表
-            int contact_row = -1;  // 联系人在群组中的行号
-            for (size_t row = 0; row < childs.size(); ++row) {
-                const TreeItemData* item_child = childs.at(row);
-                if (!item_child) { continue; }
-                for (const auto& data_column : item_child->get_data_columns()) {
-                    using T = std::shared_ptr<ContactData::ItemData>;
-                    // 不是目标数据
-                    if (!data_column.contains(ENUMS::role_item_data())) { continue; }
-                    // 获取目标数据容器
-                    const QVariant&var_column = data_column.at(ENUMS::role_item_data());
-                    if (!var_column.isValid()) { continue; }
-                    if (!var_column.canConvert<T>()) { continue; }
-                    // 对比目标数据容器内数据
-                    T val = var_column.value<T>();
-                    if (!val) { continue; }
-                    // 匹配账号 ID
-                    if (contact_data->account_id == val->account_id) {
-                        contact_row = static_cast<int>(row);
-                        break;
-                    }
-                }
-                if (contact_row != -1) { break; }
-            }
-            // 获取子节点在父节点中的 index
-            if (contact_row != -1) { contact_index = this->index(contact_row, 0, group_index); }
-        } while (false);
-        return contact_index;
+    QModelIndex index_contact(ENUMS::ItemGroupType group_type, const QString&account_id) {
+        auto index_data = get_contact_index_data(group_type, account_id);
+        return index_data->index;
     }
 
     // 用于支持群组节点无子节点时展开
@@ -608,12 +545,13 @@ public:
     // 更新信息
     bool update_contact(ENUMS::ItemGroupType group_type, const std::shared_ptr<ContactData::ItemData>&contact_data) {
         if (!contact_data) { return false; }
-        QModelIndex contact_index = index_contact(group_type, contact_data);
+        if ( contact_data->account_id.isEmpty()) { return false; }
+        QModelIndex contact_index = index_contact(group_type, contact_data->account_id);
         if (!contact_index.isValid()) { return false; }
         // 获取节点内部的 TreeItemData* 指针并更新存储数据
         TreeItemData* item_data = static_cast<TreeItemData*>(contact_index.internalPointer());
         if (item_data) {
-            QString text_display = Utils::get_display_name(contact_data);
+            QString text_display = contact_data->display_name; // Utils::get_display_name(contact_data);
             QPixmap pixmap = contact_data->avatar_image.isNull() ? icon_init().pixmap(128) : QPixmap::fromImage(contact_data->avatar_image);
             std::map<int, QVariant> var_item;
             var_item[ENUMS::role_item_type()] = QVariant::fromValue<ENUMS::ItemDataType>(ENUMS::ItemDataType::CONTACT);
@@ -632,10 +570,54 @@ public:
         return true;
     }
 
+    // 这里的返回值不能使用引用，引用无法延长临时变量的生命周期，会导致被调用时必然崩溃
+    std::shared_ptr<ContactData::ItemData> get_contact_data(ENUMS::ItemGroupType group_type, const QString&account_id) {
+        auto index_data = get_contact_index_data(group_type, account_id);
+        return index_data->contact;
+    }
     // 生成一个占位图标，否则获取图标大小会异常
     QIcon icon_init() const {
         static auto icons = Utils::FontIcons().update();
         return icons.icon.contacts;
+    }
+private:
+    std::shared_ptr<IndexData> get_contact_index_data(ENUMS::ItemGroupType group_type, const QString&account_id) {
+        auto index_data = std::make_shared<IndexData>();
+        do {
+            if ( account_id.isEmpty()) { break; }
+            int group_row = row_group(group_type);
+            if (group_row < 0) { break; }
+            const auto&group_index = index_group(group_type);  // 群组节点
+            if (!group_index.isValid()) { break; }
+            auto group_item = data_root()->get_item_childs().at(group_row);  // 群组数据
+            if (!group_item) { break; }
+            const auto& childs = group_item->get_item_childs();  // 群组子节点列表
+            for (size_t row = 0; row < childs.size(); ++row) {
+                index_data->data = childs.at(row);
+                if (!index_data->data) { continue; }
+                for (const auto& data_column : index_data->data->get_data_columns()) {
+                    using T = std::shared_ptr<ContactData::ItemData>;
+                    // 不是目标数据
+                    if (!data_column.contains(ENUMS::role_item_data())) { continue; }
+                    // 获取目标数据容器
+                    const QVariant&var_column = data_column.at(ENUMS::role_item_data());
+                    if (!var_column.isValid()) { continue; }
+                    if (!var_column.canConvert<T>()) { continue; }
+                    // 对比目标数据容器内数据
+                    index_data->contact = var_column.value<T>();
+                    if (!index_data->contact) { continue; }
+                    // 匹配账号 ID
+                    if (account_id == index_data->contact->account_id) {
+                        index_data->row = static_cast<int>(row);
+                        break;
+                    }
+                }
+                if (index_data->row != -1) { break; }
+            }
+            // 获取子节点在父节点中的 index
+            if (index_data->row != -1) { index_data->index = this->index(index_data->row, 0, group_index); }
+        } while (false);
+        return index_data;
     }
 };
 
@@ -723,10 +705,82 @@ public:
         return item_member;
     }
 
+    QModelIndex index_contact(const QString&account_id) {
+        auto index_data = get_contact_index_data(account_id);
+        return index_data->index;
+    }
+
+    // 这里的返回值不能使用引用，引用无法延长临时变量的生命周期，会导致被调用时必然崩溃
+    std::shared_ptr<ContactData::ItemData> get_contact_data(const QString&account_id) {
+        auto index_data = get_contact_index_data(account_id);
+        return index_data->contact;
+    }
+
+    bool update_contact(const std::shared_ptr<ContactData::ItemData>&contact_data) {
+        if (!contact_data) { return false; }
+        if ( contact_data->account_id.isEmpty()) { return false; }
+        QModelIndex contact_index = index_contact(contact_data->account_id);
+        if (!contact_index.isValid()) { return false; }
+        // 获取节点内部的 TreeItemData* 指针并更新存储数据
+        TreeItemData* item_data = static_cast<TreeItemData*>(contact_index.internalPointer());
+        if (item_data) {
+            QString text_display = contact_data->display_name; // Utils::get_display_name(contact_data);
+            QPixmap pixmap = contact_data->avatar_image.isNull() ? icon_init().pixmap(128) : QPixmap::fromImage(contact_data->avatar_image);
+            std::map<int, QVariant> var_item;
+            var_item[ENUMS::role_item_type()] = QVariant::fromValue<ENUMS::ItemDataType>(ENUMS::ItemDataType::CONTACT);
+            var_item[ENUMS::role_item_data()] = QVariant::fromValue<std::shared_ptr<ContactData::ItemData>>(contact_data);
+            // 设置一些默认显示的数据，防止未设置 delegete 显示为空
+            var_item[Qt::DisplayRole   ] = text_display;
+            var_item[Qt::DecorationRole] = pixmap; // 设置默认图标样式，实际不使用
+            var_item[Qt::EditRole      ] = text_display;
+            // var_item[Qt::ToolTipRole  ] = text_display;
+            // var_item[Qt::StatusTipRole] = text_display;  // 效果不好
+            var_item[Qt::WhatsThisRole ] = text_display;
+            // 设置回节点数据列中
+            item_data->set_column_data(0, var_item);
+        }
+        emit dataChanged(contact_index, contact_index);
+        return true;
+    }
+
     // 生成一个占位图标，否则获取图标大小会异常
     QIcon icon_init() const {
         static auto icons = Utils::FontIcons().update();
         return icons.icon.contacts;
+    }
+
+private:
+    std::shared_ptr<IndexData> get_contact_index_data(const QString&account_id) {
+        auto index_data = std::make_shared<IndexData>();
+        do {
+            if ( account_id.isEmpty()) { break; }
+            const auto& childs = data_root()->get_item_childs();  // 群组子节点列表
+            for (size_t row = 0; row < childs.size(); ++row) {
+                index_data->data = childs.at(row);
+                if (!index_data->data) { continue; }
+                for (const auto& data_column : index_data->data->get_data_columns()) {
+                    using T = std::shared_ptr<ContactData::ItemData>;
+                    // 不是目标数据
+                    if (!data_column.contains(ENUMS::role_item_data())) { continue; }
+                    // 获取目标数据容器
+                    const QVariant&var_column = data_column.at(ENUMS::role_item_data());
+                    if (!var_column.isValid()) { continue; }
+                    if (!var_column.canConvert<T>()) { continue; }
+                    // 对比目标数据容器内数据
+                    index_data->contact = var_column.value<T>();
+                    if (!index_data->contact) { continue; }
+                    // 匹配账号 ID
+                    if (account_id == index_data->contact->account_id) {
+                        index_data->row = static_cast<int>(row);
+                        break;
+                    }
+                }
+                if (index_data->row != -1) { break; }
+            }
+            // 获取子节点在父节点中的 index
+            if (index_data->row != -1) { index_data->index = this->index(index_data->row, 0, QModelIndex()); }
+        } while (false);
+        return index_data;
     }
 };
 

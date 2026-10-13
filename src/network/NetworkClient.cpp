@@ -243,7 +243,7 @@ bool NetworkClient::search_user (const search_user_params&params, const search_u
     return true;
 }
 
-// 更新个人资料
+// 更新个人资料，服务端支持同时修改头像 ID，不包括鉴权信息
 bool NetworkClient::update_profile(const update_profile_params&params, const update_profile_callback&callback) {
     using namespace Utils::Wrapper;
     using Request  = UpdateProfileRequest;

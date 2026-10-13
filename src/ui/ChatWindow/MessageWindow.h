@@ -66,6 +66,8 @@ private slots:
     void slot_copy_file  (const std::shared_ptr<MessageData::ItemData> &message_data);
     void slot_copy_path  (const std::shared_ptr<MessageData::ItemData> &message_data);
     void slot_save_to    (const std::shared_ptr<MessageData::ItemData> &message_data);
+private slots:
+    void slot_update_contact_info(const std::shared_ptr<ContactData::ItemData>& to_contact_data);
 
 signals:
     void signal_new_message(const std::shared_ptr<MessageData::ItemData>&message);

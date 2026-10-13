@@ -738,26 +738,27 @@ message SyncContact {
 
 // 账号信息更新
 message SyncContactUpdate {
-  ContactInfo contact_info = 1;
+  ContactInfo contact_update = 1;
 }
 
 // 好友申请
 message SyncContactRequest{
   ContactInfo contact_request = 1;
-  string      time            = 2;
-  string      message         = 3;
+  string      message_id      = 2;
+  Timestamp   timestamp       = 3;
+  string      message_text    = 4;
 }
 
 // 好友申请回复
 message SyncContactReply{
-  ContactInfo contact_reply   = 1;
-  string      time            = 2;
-  string      message         = 3;
+  ContactInfo contact_reply = 1;
+  Timestamp   timestamp     = 2;
+  string      message       = 3;
 }
 
 // 好友关系变更
 message SyncContactShip{
-  ContactInfo contact = 1;
+  ContactInfo contact_ship = 1;
   // ...
 }
 
@@ -786,16 +787,16 @@ message SyncGroupUpdate {
 
 // 群组申请
 message SyncGroupRequest{
-  Group  group   = 1;
-  string time    = 2;
-  string message = 3;
+  Group     group     = 1;
+  Timestamp timestamp = 2;
+  string    message   = 3;
 }
 
 // 群组申请回复
 message SyncGroupReply{
-  Group  group   = 1;
-  string time    = 2;
-  string message = 3;
+  Group     group     = 1;
+  Timestamp timestamp = 2;
+  string    message   = 3;
 }
 
 // 群组关系变更
@@ -828,16 +829,16 @@ message SyncMessage {
 // 文本消息内容
 message SyncMessageText {
   oneof    info {
-    string short_text        = 1;  // 文本消息内容
+    string short_text = 1;  // 文本消息内容
   }
 }
 
 // 文件类型
 enum FileType {
   FILE_TYPE_UNSPECIFIED = 0;
-  FILE_TYPE_IMAGE = 1;
-  FILE_TYPE_AUDIO = 2;
-  FILE_TYPE_VIDEO = 3;
+  FILE_TYPE_IMAGE       = 1;
+  FILE_TYPE_AUDIO       = 2;
+  FILE_TYPE_VIDEO       = 3;
 };
 
 // 文件消息内容

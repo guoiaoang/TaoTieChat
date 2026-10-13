@@ -34,16 +34,25 @@ public:
     bool set_contact(const std::shared_ptr<ContactData::ItemData>& contact_data);
     std::shared_ptr<ContactData::ItemData> get_contact(const QString&account_id) const;
 
+    // // 好友申请信息
+    // void set_request_messages(const QString&receiver_account_id, const QString&sender_account_id, const ContactRequestData::ItemData&messages);
+    // ContactRequestData::ItemData get_request_messages(const QString&receiver_account_id, const QString&sender_account_id) const;
+    // void set_request_messages(const QString&sender_account_id, const ContactRequestData::ItemData&messages);
+    // ContactRequestData::ItemData get_request_messages(const QString&sender_account_id) const;
+
 signals:
     void signal_account_changing     (const std::shared_ptr<ContactData::ItemData>& from_contact_data, const std::shared_ptr<ContactData::ItemData>& to_contact_data);
     void signal_account_changed      (const std::shared_ptr<ContactData::ItemData>& to_contact_data);
     void signal_contact_list_changing(const QVector<std::shared_ptr<ContactData::ItemData>>& from_contact_data, const QVector<std::shared_ptr<ContactData::ItemData>>& to_contact_data);
     void signal_contact_list_changed (const QVector<std::shared_ptr<ContactData::ItemData>>& to_contact_data);
+    void signal_contact_info_changing(const std::shared_ptr<ContactData::ItemData>& from_contact_data, const std::shared_ptr<ContactData::ItemData>& to_contact_data);
+    void signal_contact_info_changed (const std::shared_ptr<ContactData::ItemData>& to_contact_data);
 
 private:
     ;       std::shared_ptr<ContactData::ItemData>  m_current_account = std::make_shared<ContactData::ItemData >();
     QVector<std::shared_ptr<ContactData::ItemData>> m_contact_datas;
     std::map<QString, std::shared_ptr<AuthOpt>> m_map_account_id_auth_opt;
+    // std::map<QString, std::map<QString, ContactRequestData::ItemData>> m_map_contact_requests;
     // cache
     std::map<QString, std::shared_ptr<ContactData::ItemData>> m_map_all_contacts;
 };
@@ -75,9 +84,10 @@ public:
         mINI::INIFile ini_file(config_path().toStdString());
         mINI::INIStructure ini_data;
         ini_file.read(ini_data);
-        ini_data[user_section_sz]["user_id"        ] = auth_opt->user_id .toStdString();
-        ini_data[user_section_sz]["token"          ] = auth_opt->token   .toStdString();
-        ini_data[user_section_sz]["password"       ] = auth_opt->password.toStdString();
+        ini_data[user_section_sz]["account_id"     ] = auth_opt->account_id.toStdString();
+        ini_data[user_section_sz]["user_id"        ] = auth_opt->user_id   .toStdString();
+        ini_data[user_section_sz]["token"          ] = auth_opt->rember_password ? auth_opt->token     .toStdString() : "";
+        ini_data[user_section_sz]["password"       ] = auth_opt->rember_password ? auth_opt->password  .toStdString() : "";
         ini_data[user_section_sz]["rember_password"] = auth_opt->rember_password ? "true" : "false";
         ini_data[user_section_sz]["auto_login"     ] = auth_opt->auto_login      ? "true" : "false";
         ini_file.write(ini_data);
@@ -97,9 +107,10 @@ public:
                 auto auth_opt             = std::make_shared<AuthOpt>();
                 auth_opt->account_id      = QString::fromStdString(section.substr(m_user_section_prefix().length()));  // 去掉 "user:" 前缀
                 auto const& collection    = ite_section.second;
-                auth_opt->user_id         = collection.has("user_id"        ) ? QString::fromStdString(collection.get("user_id" )) : QString();
-                auth_opt->token           = collection.has("token"          ) ? QString::fromStdString(collection.get("token"   )) : QString();
-                auth_opt->password        = collection.has("password"       ) ? QString::fromStdString(collection.get("password")) : QString();
+                auth_opt->account_id      = collection.has("account_id"     ) ? QString::fromStdString(collection.get("account_id")) : QString();
+                auth_opt->user_id         = collection.has("user_id"        ) ? QString::fromStdString(collection.get("user_id"   )) : QString();
+                auth_opt->token           = collection.has("token"          ) ? QString::fromStdString(collection.get("token"     )) : QString();
+                auth_opt->password        = collection.has("password"       ) ? QString::fromStdString(collection.get("password"  )) : QString();
                 auth_opt->rember_password = collection.has("rember_password") ? collection.get("rember_password") == "true" : false;
                 auth_opt->auto_login      = collection.has("auto_login"     ) ? collection.get("auto_login"     ) == "true" : false;
                 auth_opts.push_back(auth_opt);

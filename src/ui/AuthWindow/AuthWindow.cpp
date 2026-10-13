@@ -269,11 +269,42 @@ bool AuthWindow::handle_signup_successd(const signup_params& params_signup) {
 }
 
 bool AuthWindow::handle_signin_successd(const signin_params& params_signin, const signin_reply& reply_signin, const std::shared_ptr<AuthOpt>& auth_opt) {
+    // 优先使用登录成功的数据覆盖 auth_opt
     if(auth_opt) {
-        auth_opt->account_id = reply_signin ? reply_signin->accountId() : "";
-        auth_opt->user_id    = (params_signin && params_signin->hasRequestUserAuth()) ? params_signin->requestUserAuth().userId() : "";
-        auth_opt->token      = auth_opt->rember_password ? reply_signin->token() : QString();
-        auth_opt->password   = auth_opt->rember_password ? params_signin->requestUserAuth().password() : QString();
+        // if (auth_opt->account_id.isEmpty() && reply_signin && !reply_signin->accountId().isEmpty()) {
+        //     auth_opt->account_id = reply_signin->accountId();
+        // }
+        // if (auth_opt->user_id.isEmpty() && params_signin && params_signin->hasRequestUserAuth() && !params_signin->requestUserAuth().userId().isEmpty()) {
+        //     auth_opt->user_id = params_signin->requestUserAuth().userId();
+        // }
+        // if (auth_opt->token.isEmpty() && reply_signin && !reply_signin->token().isEmpty()) {
+        //     auth_opt->token = auth_opt->rember_password ? reply_signin->token() : QString();
+        // }
+        // else {
+        //     auth_opt->token = auth_opt->rember_password ? reply_signin->token() : QString();
+        // }
+        // auth_opt->password   = auth_opt->rember_password ? params_signin->requestUserAuth().password() : QString();
+
+        // 先复制原始的登录信息
+        if (params_signin && params_signin->hasRequestUserAuth()) {
+            auth_opt->account_id = params_signin->requestUserAuth().hasAccountId() ? params_signin->requestUserAuth().accountId() : "";
+            auth_opt->user_id    = params_signin->requestUserAuth().hasUserId   () ? params_signin->requestUserAuth().userId   () : "";
+            auth_opt->token      = params_signin->requestUserAuth().hasToken    () ? params_signin->requestUserAuth().token    () : "";
+            auth_opt->password   = params_signin->requestUserAuth().hasPassword () ? params_signin->requestUserAuth().password () : "";
+        }
+        // 从返回参数中强制覆盖
+        if(reply_signin && !reply_signin->accountId().isEmpty()) {
+            auth_opt->account_id = reply_signin->accountId();
+        }
+        if(reply_signin && !reply_signin->token().isEmpty()) {
+            auth_opt->token = reply_signin->token();
+        }
+        // 其他函数可能会用到该数据，不必清空
+        // // 再清除不必要的数据
+        // if (!auth_opt->rember_password) {
+        //     auth_opt->password = QString();
+        //     auth_opt->token    = QString();
+        // }
         // 保存登录记录
         AuthOptRW::save(auth_opt);
     }

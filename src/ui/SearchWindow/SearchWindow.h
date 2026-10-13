@@ -20,8 +20,17 @@ public:
     explicit SearchWindow(QWidget *parent = nullptr);
     ~SearchWindow();
 
+public:
+    void set_keyword(const QString&keyword);
+    QString get_keyword() const;
+    std::shared_ptr<ContactWindow> get_user_window() const;
+
 Q_SIGNALS:
     void SearchEditTextChanged(const QString &);
+
+public slots:
+    // 更新搜索结果中显示的数据
+    void slot_update_search_list_info(const std::shared_ptr<ContactData::ItemData>&to_contact_data);
 
 private:
     bool do_search   (const QString&keyword);
@@ -32,10 +41,10 @@ protected:
     bool eventFilter(QObject *obj, QEvent *event) override;
 
 private:
-    std::unique_ptr<Ui::SearchWindow> m_ui            ;
-    std::unique_ptr<QAction         > m_action_search ;
+    std::shared_ptr<Ui::SearchWindow> m_ui           ;
+    std::shared_ptr<QAction         > m_action_search;
     // model/view/delegate
-    std::unique_ptr<SearchModel  > m_users_model   ;
-    std::unique_ptr<ItemDelegate > m_users_delegate;
-    std::unique_ptr<ContactWindow> m_user_window   ;
+    std::shared_ptr<SearchModel  > m_users_model   ;
+    std::shared_ptr<ItemDelegate > m_users_delegate;
+    std::shared_ptr<ContactWindow> m_user_window   ;
 };

@@ -7,6 +7,9 @@ void ItemDelegate::register_delegates() const {
     if (!m_map_delegates.contains(ENUMS::ItemDataType::GROUP)) {
         m_map_delegates[ENUMS::ItemDataType::GROUP] = std::make_shared<ItemDelegateGroup>();
     }
+    if (!m_map_delegates.contains(ENUMS::ItemDataType::REQUEST)) {
+        m_map_delegates[ENUMS::ItemDataType::CONTACT] = std::make_shared<ItemDelegateContact>();
+    }
     if (!m_map_delegates.contains(ENUMS::ItemDataType::CONTACT)) {
         m_map_delegates[ENUMS::ItemDataType::CONTACT] = std::make_shared<ItemDelegateContact>();
     }

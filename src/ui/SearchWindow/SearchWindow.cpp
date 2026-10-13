@@ -5,17 +5,18 @@
 #include "ItemModel.h"
 #include "ItemDelegate.h"
 #include "ContactWindow.h"
+#include "Accounts.h"
 
 SearchWindow::SearchWindow(QWidget *parent)
-    : QScrollArea(parent) , m_ui(std::make_unique<Ui::SearchWindow>()) {
+    : QScrollArea(parent) , m_ui(std::make_shared<Ui::SearchWindow>()) {
     m_ui->setupUi(this);
 
     // new
-    m_action_search  = std::make_unique<QAction>(this);
+    m_action_search  = std::make_shared<QAction>(this);
     // model/view
-    m_users_model    = std::make_unique<SearchModel  >();
-    m_users_delegate = std::make_unique<ItemDelegate >();
-    m_user_window    = std::make_unique<ContactWindow>();
+    m_users_model    = std::make_shared<SearchModel  >();
+    m_users_delegate = std::make_shared<ItemDelegate >();
+    m_user_window    = std::make_shared<ContactWindow>();
 
     // connect
     connect(m_ui->searchpage_lineedit_key     , &QLineEdit::textChanged, this, [this](){
@@ -32,6 +33,7 @@ SearchWindow::SearchWindow(QWidget *parent)
     });
     // 用于同步显示搜索词
     connect(m_ui->searchpage_lineedit_key, &QLineEdit::textChanged, this, &SearchWindow::SearchEditTextChanged);
+    connect(&Accounts::instance(), &Accounts::signal_contact_info_changed, this, &SearchWindow::slot_update_search_list_info);
 
     // set
     m_action_search->setText(m_ui->searchpage_toolbutton_search->text());
@@ -75,6 +77,34 @@ SearchWindow::SearchWindow(QWidget *parent)
 SearchWindow::~SearchWindow() {
 }
 
+void SearchWindow::set_keyword(const QString&keyword) {
+    if (keyword != get_keyword()) {
+        m_ui->searchpage_lineedit_key->setText(keyword);
+    }
+}
+
+QString SearchWindow::get_keyword() const {
+    return m_ui->searchpage_lineedit_key->text();
+}
+
+std::shared_ptr<ContactWindow> SearchWindow::get_user_window() const {
+    return m_user_window;
+}
+
+void SearchWindow::slot_update_search_list_info(const std::shared_ptr<ContactData::ItemData>&to_contact_data) {
+    do {
+        if (!m_users_model) { break; }
+        if (!to_contact_data) { break; }
+        if ( to_contact_data->account_id.isEmpty()) { break; }
+        to_contact_data->is_me        = Accounts::instance().is_me    (to_contact_data->account_id);
+        to_contact_data->is_friend    = Accounts::instance().is_friend(to_contact_data->account_id);
+        to_contact_data->display_name = Utils::get_display_name(to_contact_data);
+        to_contact_data->info_time    = QString{};  // 搜索结果不需要时间显示
+        to_contact_data->info_text    = to_contact_data->signature;  // 搜索结果显示签名
+        m_users_model->update_contact(to_contact_data);  // 模型会自动找到对应的条目进行更新
+    } while (false);
+}
+
 bool SearchWindow::do_search(const QString&keyword) {
     // get_search_params(); //  应该封装为函数，当结果返回时对比搜索词一致时才显示
     QString str_search_keyword = keyword.trimmed();
@@ -97,6 +127,7 @@ bool SearchWindow::search_user(const QString&keyword) {
     // 本地搜索 + 网络搜索
     // local_search_user();
     search_user_params params_search_user = std::make_shared<TaoTieChat::SearchUserRequest>();
+    params_search_user->setRequestUserAuth(*Accounts::instance().get_auth_request().get());  // 有身份信息才能获取好友相关的资料
     params_search_user->setUserId(str_search_keyword);
     auto network_search_user_callback = [this](const search_user_params&param_search_user, const search_user_reply&reply_search_user) {
         ErrorCode error_code    = ErrorCode::ERROR_UNSET;
@@ -129,7 +160,10 @@ bool SearchWindow::search_user(const QString&keyword) {
 
         qDebug().noquote().nospace() << "search_user reply : " << reply_search_user;
 
-        if (reply_search_user->hasContactInfo() && reply_search_user->contactInfo().hasBaseInfo() && !reply_search_user->contactInfo().baseInfo().avatarId().isEmpty()) {
+        if (    reply_search_user->hasContactInfo()
+            &&  reply_search_user->contactInfo().hasBaseInfo()
+            && !reply_search_user->contactInfo().baseInfo().avatarId().isEmpty()
+        ) {
             auto file_id   = reply_search_user->contactInfo().baseInfo().avatarId();
             auto file_path = Database::instance().get_local_file_id_path(file_id);
             auto file_size = QFileInfo(file_path).size();
@@ -145,8 +179,8 @@ bool SearchWindow::search_user(const QString&keyword) {
                         // TODO:由于资源释放问题，暂时采用销毁及重建 model 和 delegate 的方式
                         this->m_users_model   .reset();
                         this->m_users_delegate.reset();
-                        this->m_users_model    = std::make_unique<SearchModel >();
-                        this->m_users_delegate = std::make_unique<ItemDelegate>();
+                        this->m_users_model    = std::make_shared<SearchModel >();
+                        this->m_users_delegate = std::make_shared<ItemDelegate>();
                         this->m_users_model->clean();
                         this->m_users_model->add_member(Utils::Transform::to_contact_data(std::make_shared<ContactInfo>(reply_search_user->contactInfo())));
                         m_ui->page_list_users->setModel(m_users_model.get());
@@ -161,19 +195,30 @@ bool SearchWindow::search_user(const QString&keyword) {
 
         // 有头像时直接添加显示即可
         // 搜索结果不为空时才添加成员  // 不知道为什么始终不为空
-        if (reply_search_user->hasContactInfo() && reply_search_user->contactInfo().hasBaseInfo() && !reply_search_user->contactInfo().baseInfo().accountId().isEmpty()) {
+        if (    reply_search_user->hasContactInfo()
+            &&  reply_search_user->contactInfo().hasBaseInfo()
+            && !reply_search_user->contactInfo().baseInfo().accountId().isEmpty()
+        ) {
             // this->m_users_model->clean();
             // this->m_users_model->add_member(std::make_shared<ContactData::ItemData>(reply_search_user->contactInfo()));
 
             // TODO:由于资源释放问题，暂时采用销毁及重建 model 和 delegate 的方式
             this->m_users_model   .reset();
             this->m_users_delegate.reset();
-            this->m_users_model    = std::make_unique<SearchModel >();
-            this->m_users_delegate = std::make_unique<ItemDelegate>();
+            this->m_users_model    = std::make_shared<SearchModel >();
+            this->m_users_delegate = std::make_shared<ItemDelegate>();
             this->m_users_model->clean();
-            this->m_users_model->add_member(Utils::Transform::to_contact_data(std::make_shared<ContactInfo>(reply_search_user->contactInfo())));
-            m_ui->page_list_users->setModel(m_users_model.get());
-            m_ui->page_list_users->setItemDelegate(m_users_delegate.get());
+            auto contact_info = Utils::Transform::to_contact_data(std::make_shared<ContactInfo>(reply_search_user->contactInfo()));
+            if (contact_info && !contact_info->account_id.isEmpty()) {
+                contact_info->is_me        = Accounts::instance().is_me    (contact_info->account_id);
+                contact_info->is_friend    = Accounts::instance().is_friend(contact_info->account_id);
+                contact_info->display_name = Utils::get_display_name(contact_info);
+                contact_info->info_time    = QString{};  // 搜索结果不需要时间显示
+                contact_info->info_text    = contact_info->signature;  // 搜索结果显示签名
+                this->m_users_model->add_member(contact_info);
+                m_ui->page_list_users->setModel(m_users_model.get());
+                m_ui->page_list_users->setItemDelegate(m_users_delegate.get());
+            }
         }
     };
     NetworkClient::instance().search_user(params_search_user, network_search_user_callback);

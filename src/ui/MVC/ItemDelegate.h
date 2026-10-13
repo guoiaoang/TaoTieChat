@@ -77,6 +77,14 @@ public:
             opt.widget->style()->drawPrimitive(QStyle::PE_PanelItemViewItem, &opt, painter, opt.widget);
         }
 
+        // 底部需要绘制一条分隔线以便用户确认添加了数据
+        if (0) {
+            auto pen_old = painter->pen();
+            painter->setPen(QPen(QColor(Qt::darkGray)));
+            painter->drawLine(opt.rect.bottomLeft() + QPoint(10, 0), opt.rect.bottomRight() - QPoint(10, 0));
+            painter->setPen(pen_old);
+        }
+
         // 绘制内容
         {
             // 获取样式
@@ -115,7 +123,7 @@ public:
                     if (!cache.data) { break; }
                     const auto&data = cache.data;
                     // 圆角、id、路径不同均需更新
-                    if (cache.radius      != radius                     ||
+                    if (cache.radius      != radius                    ||
                         data->avatar_id   != contact_data->avatar_id   ||
                         data->avatar_path != contact_data->avatar_path ||
                         data->avatar_image.isNull() ||
@@ -132,52 +140,38 @@ public:
                     cache.image  = Utils::to_round_image(cache.data->avatar_image, radius);
                 }
                 return s_caches[account_id].image;
-
-//                 // 获取头像  // 圆角头像
-//                 static std::map<QString, QPixmap> map_cacha_avatar;
-//                 auto avatar_id  = contact_data->avatar_id;
-//                 if (!map_cacha_avatar.contains(avatar_id)) {
-//                     auto avatar_file_path = Database::instance().get_local_file_id_path(avatar_id + ";size:128*128");
-//                     auto pixmap_avatar_source = QPixmap(avatar_file_path);
-//                     if(pixmap_avatar_source.isNull()) {
-//                         // 修改图标大小
-//                         int height_item = opt.decorationSize.height();
-//                         int height_icon = (height_item * group_height_scale());
-//                         opt.decorationSize = QSize(height_icon, height_icon);
-// 
-//                         // 根据颜色和大小生成图标
-//                         QColor color_icon = opt.palette.color(QPalette::Text);  // 指定固定的颜色
-//                         static Utils::FontIcons icon_font = Utils::FontIcons();
-//                         if (icon_font.size.avatar != opt.decorationSize || icon_font.color.normal != color_icon) {
-//                             icon_font.size.avatar = opt.decorationSize;
-//                             icon_font.color.normal = color_icon;
-//                             icon_font.update();
-//                         }
-// 
-//                         QIcon&ico_show = icon_font.icon.contacts;
-//                         pixmap_avatar_source = QPixmap(ico_show.pixmap(opt.decorationSize, QIcon::Normal));
-//                     }
-//                     auto pixmap_avatar = Utils::to_round_pixmap(pixmap_avatar_source, style_data->rect_avatar.width() / 2);
-//                     map_cacha_avatar[avatar_id] = pixmap_avatar;
-//                 }
-//                 // 头像
-//                 auto pixmap_avatar = map_cacha_avatar[avatar_id];
             };
             auto image_avatar = get_avatar_rounded(contact_data, style_data->rect_avatar.width() / 2);
+
+            // 提示消息
+            auto info_text = contact_data->info_text;
+            QFontMetrics metrics_info_text(style_data->font_signature);
+            QString elided_info_text = metrics_info_text.elidedText(info_text, Qt::ElideRight, style_data->rect_message.width());
+            // 时间 // 不要裁剪
+            auto info_time = contact_data->info_time;
+            QFontMetrics metrics_info_time(style_data->font_time);
+            // QString elided_info_time = metrics_info_time.elidedText(info_time, Qt::ElideRight, style_data->rect_message.width());
+
+            // 调整宽度
+            QRect rect_nickname_last = style_data->rect_nickname;
+            QRect rect_time_last     = style_data->rect_time;
+
+            QRect rect_time = metrics_info_time.boundingRect(info_time);
+            int adjusted_width = style_data->rect_time.width() - rect_time.width() - 10;  // 保留一定的间距，防止显示不全
+            rect_time_last = rect_time_last.adjusted(adjusted_width, 0, 0, 0);
+            rect_nickname_last = rect_nickname_last.adjusted(0, 0, -adjusted_width, 0);
+            rect_nickname_last.setRight(rect_time_last.left() - 5);
+
+            // 没有时间信息则调整显示名称的宽度
+            if (info_time.isEmpty()) {
+                rect_nickname_last.setRight(rect_time_last.right());
+                rect_time_last.setLeft(rect_time_last.right());
+            }
+
             // 昵称
             auto display_name = contact_data->display_name;
             QFontMetrics metrics_display_name(style_data->font_nickname);
-            QString elided_display_name = metrics_display_name.elidedText(display_name, Qt::ElideRight, style_data->rect_nickname.width());
-            // 签名
-            auto signature = contact_data->signature;
-            QFontMetrics metrics_signature(style_data->font_signature);
-            QString elided_signature = metrics_signature.elidedText(signature, Qt::ElideRight, style_data->rect_message.width());
-
-// #ifdef _DEBUG
-//         QString deebug_suffix = " aaabbbcccdddeeefffggghhhiiijjjkkklllmmmnnnooopppqqqrrrssstttuuuvvvwwwxxxyyyzzz";
-//         nickname  += deebug_suffix;
-//         signature += deebug_suffix;
-// #endif // _DEBUG
+            QString elided_display_name = metrics_display_name.elidedText(display_name, Qt::ElideRight, rect_nickname_last.width());
 
             painter->save();
             painter->translate(option.rect.topLeft()); // 将画布原点移到 (x, y)
@@ -187,11 +181,24 @@ public:
             // 绘制昵称
             painter->setFont(style_data->font_nickname);
             painter->setPen(option.state & QStyle::State_Selected ? option.palette.highlightedText().color() : option.palette.text().color());
-            painter->drawText(style_data->rect_nickname, Qt::AlignLeft | Qt::AlignVCenter, elided_display_name);
+            painter->drawText(rect_nickname_last, Qt::AlignLeft | Qt::AlignVCenter, elided_display_name);
             // 绘制签名内容
             painter->setFont(style_data->font_signature);
             painter->setPen(option.state & QStyle::State_Selected ? option.palette.highlightedText().color() : QColor(100, 100, 100));
-            painter->drawText(style_data->rect_message, Qt::AlignLeft | Qt::AlignVCenter, elided_signature);
+            painter->drawText(style_data->rect_message, Qt::AlignLeft | Qt::AlignVCenter, elided_info_text);
+            painter->drawText(rect_time_last, Qt::AlignRight | Qt::AlignVCenter, info_time);
+
+#ifdef _DEBUG
+            if (0) {
+                // 画出昵称和时间所在矩形
+                painter->setPen(QPen(QColor(Qt::darkRed)));
+                painter->drawRect(rect_nickname_last);
+                painter->setPen(QPen(QColor(Qt::darkCyan)));
+                painter->drawRect(rect_time_last);
+                painter->setPen(QPen(QColor(Qt::darkMagenta)));
+                painter->drawRect(style_data->rect_message);
+            }
+#endif // _DEBUG
 
             painter->restore();
         }
@@ -362,6 +369,14 @@ public:
             opt.widget->style()->drawPrimitive(QStyle::PE_PanelItemViewItem, &opt, painter, opt.widget);
         }
 
+        // 底部需要绘制一条分隔线以便用户确认添加了数据
+        if (0) {
+            auto pen_old = painter->pen();
+            painter->setPen(QPen(QColor(Qt::darkGray)));
+            painter->drawLine(opt.rect.bottomLeft() + QPoint(10, 0), opt.rect.bottomRight() - QPoint(10, 0));
+            painter->setPen(pen_old);
+        }
+
         // 绘制内容
         {
             // 获取样式
@@ -419,6 +434,7 @@ public:
                 return s_caches[chatroom_id].image;
             };
             const auto& image_avatar = get_avatar_rounded(chatroom_data, style_data->rect_avatar.width() / 2);
+
             // 提示消息
             auto last_message_text = chatroom_data->last_message_text;
             QFontMetrics metrics_signature(style_data->font_signature);
@@ -436,7 +452,7 @@ public:
             QRect rect_time_last     = style_data->rect_time;
 
             QRect rect_time = metrics_time.boundingRect(last_message_time);
-            int adjusted_width = style_data->rect_time.width() - rect_time.width();
+            int adjusted_width = style_data->rect_time.width() - rect_time.width() - 10;  // 保留一定的间距，防止显示不全
             rect_time_last = rect_time_last.adjusted(adjusted_width, 0, 0, 0);
             rect_nickname_last = rect_nickname_last.adjusted(0, 0, -adjusted_width, 0);
             rect_nickname_last.setRight(rect_time_last.left() - 5);
@@ -472,6 +488,7 @@ public:
                 painter->drawRect(style_data->rect_message);
             }
 #endif // _DEBUG
+
             painter->restore();
         }
 

@@ -64,7 +64,7 @@ enum ErrorCode {
   UNKNOWN                         = 0x00000001;  // 未知错误
   DEFAULT                         = 0x00000002;  // 未知错误
   // grpc 相关的错误码  // 0x00001001 - 0x00001FFF
-  ERROR_INIT                      = 0x00001001;  // 返回初始值
+  ERROR_INIT                      = 0x00001001;  // 初始化失败
   ERROR_CONN                      = 0x00001002;  // QT 建立连接失败，无法触发 connect 动作
   ERROR_RECV                      = 0x00001003;  // 接收到的数据不完整或解析失败
   ERROR_SEND                      = 0x00001004;  // 发送数据失败
@@ -814,15 +814,16 @@ message SyncMessages {
 
 // 同步消息相关信息
 message SyncMessage {
-  SyncSubTypeMessage   sub_type            = 1;  // 消息子类型
-  string               server_message_id   = 2;  // 服务端消息 ID
-  string               client_message_id   = 3;  // 客户端消息 ID
-  string               sender_account_id   = 4;  // 发送方账号 ID
-  string               receiver_account_id = 6;  // 接收方账号 ID
-  Timestamp            timestamp           = 7;  // 服务端落库时间
+  SyncSubTypeMessage   sub_type            = 11;  // 消息子类型
+  string               chatroom_id         = 12;  // 聊天室 ID
+  string               server_message_id   = 13;  // 服务端消息 ID
+  string               client_message_id   = 14;  // 客户端消息 ID
+  string               sender_account_id   = 16;  // 发送方账号 ID
+  string               receiver_account_id = 17;  // 接收方账号 ID
+  Timestamp            timestamp           = 18;  // 服务端落库时间
   oneof                info {
-    SyncMessageText    text                = 8;  // 文本消息
-    SyncMessageFile    file                = 9;  // 文件消息
+    SyncMessageText    text                = 21;  // 文本消息
+    SyncMessageFile    file                = 22;  // 文件消息
   }
 }
 

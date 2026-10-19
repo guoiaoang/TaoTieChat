@@ -10,8 +10,17 @@ namespace Ui {
 class AuthWindow;
 }
 
-class AuthWindow : public QDialog{
+class AuthWindow : public QDialog {
     Q_OBJECT
+
+public:
+    enum class TipsLevel : short {
+        CLEAN       = 0,
+        SUCCEEDED   = 1,
+        INFORMATION = 2,
+        FAILED      = 3,  // ERROR 宏与 Windows SKD 中的定义冲突
+    };
+    Q_ENUM(TipsLevel)
 
 public:
     explicit AuthWindow(QWidget *parent = nullptr);
@@ -21,19 +30,19 @@ public:
     void view();
 
 private slots:
-    void handle_page_signin_tips_error(const QString&message);
-    void handle_page_signin_tips_clean();
-    void handle_page_signup_tips_error(const QString&message);
-    void handle_page_signup_tips_clean();
+    void slot_page_signin_tips_show(TipsLevel level, const QString&message = QString{});
+    void slot_page_signin_tips_clean();
+    void slot_page_signup_tips_show(TipsLevel level, const QString&message = QString{});
+    void slot_page_signup_tips_clean();
     //
-    bool handle_signup();
-    bool handle_signin();
-    bool handle_signup_successd(const signup_params&params_signup);
-    bool handle_signin_successd(const signin_params& params_signin, const signin_reply& reply_signin, const std::shared_ptr<AuthOpt>& auth_opt);
+    bool slot_signup();
+    bool slot_signin();
+    bool slot_signup_successd(signup_params params_signup);
+    bool slot_signin_successd(signin_params params_signin, signin_reply reply_signin, std::shared_ptr<AuthOpt> auth_opt);
 
 private:
-    bool signup(const signup_params& params_signup);
-    bool signin(const signin_params& params_signin, const std::shared_ptr<AuthOpt>& auth_opt);
+    bool signup(signup_params params_signup);
+    bool signin(signin_params params_signin, std::shared_ptr<AuthOpt> auth_opt);
 
     void status_signin_unblock(bool unblock = true);
     void status_signup_unblock(bool unblock = true);

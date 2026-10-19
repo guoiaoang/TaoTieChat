@@ -14,11 +14,11 @@ private:
     Accounts& operator=(const Accounts&) = delete;
 public:
     ~Accounts();
-    static Accounts& instance();
+    static Accounts* instance();
 
 public:
     // 设置当前账号信息及设置好友列表
-    void set_current_account (const         std::shared_ptr<ContactData::ItemData> & contact_data );
+    void set_current_account (              std::shared_ptr<ContactData::ItemData>   contact_data );
     void set_contact_list    (const QVector<std::shared_ptr<ContactData::ItemData>>& contact_datas);
     ;       std::shared_ptr<ContactData::ItemData > get_current_account() const;
     QVector<std::shared_ptr<ContactData::ItemData>> get_contact_list   () const;
@@ -27,26 +27,20 @@ public:
     bool is_friend(const QString& account_id) const;
     // 记住密码及自动登陆选项
     std::shared_ptr<AuthRequest> get_auth_request() const;
-    void set_account_auth_opt(const std::shared_ptr<AuthOpt>& auth_opt);
+    void set_account_auth_opt(std::shared_ptr<AuthOpt> auth_opt);
     std::shared_ptr<AuthOpt> get_auth_opt(const QString&account_id) const;
 
     // 获取指定账号的用户信息
-    bool set_contact(const std::shared_ptr<ContactData::ItemData>& contact_data);
+    bool set_contact(std::shared_ptr<ContactData::ItemData> contact_data);
     std::shared_ptr<ContactData::ItemData> get_contact(const QString&account_id) const;
 
-    // // 好友申请信息
-    // void set_request_messages(const QString&receiver_account_id, const QString&sender_account_id, const ContactRequestData::ItemData&messages);
-    // ContactRequestData::ItemData get_request_messages(const QString&receiver_account_id, const QString&sender_account_id) const;
-    // void set_request_messages(const QString&sender_account_id, const ContactRequestData::ItemData&messages);
-    // ContactRequestData::ItemData get_request_messages(const QString&sender_account_id) const;
-
-signals:
-    void signal_account_changing     (const std::shared_ptr<ContactData::ItemData>& from_contact_data, const std::shared_ptr<ContactData::ItemData>& to_contact_data);
-    void signal_account_changed      (const std::shared_ptr<ContactData::ItemData>& to_contact_data);
-    void signal_contact_list_changing(const QVector<std::shared_ptr<ContactData::ItemData>>& from_contact_data, const QVector<std::shared_ptr<ContactData::ItemData>>& to_contact_data);
-    void signal_contact_list_changed (const QVector<std::shared_ptr<ContactData::ItemData>>& to_contact_data);
-    void signal_contact_info_changing(const std::shared_ptr<ContactData::ItemData>& from_contact_data, const std::shared_ptr<ContactData::ItemData>& to_contact_data);
-    void signal_contact_info_changed (const std::shared_ptr<ContactData::ItemData>& to_contact_data);
+// signals:
+//     void signal_account_changing     (std::shared_ptr<ContactData::ItemData> from_contact_data, std::shared_ptr<ContactData::ItemData> to_contact_data);
+//     void signal_account_changed      (std::shared_ptr<ContactData::ItemData> to_contact_data);
+//     void signal_contact_list_changing(const QVector<std::shared_ptr<ContactData::ItemData>>& from_contact_data, const QVector<std::shared_ptr<ContactData::ItemData>>& to_contact_data);
+//     void signal_contact_list_changed (const QVector<std::shared_ptr<ContactData::ItemData>>& to_contact_data);
+//     void signal_contact_info_changing(std::shared_ptr<ContactData::ItemData> from_contact_data, std::shared_ptr<ContactData::ItemData> to_contact_data);
+//     void signal_contact_info_changed (std::shared_ptr<ContactData::ItemData> to_contact_data);  // 需要复制，否则会导致意外的修改而显示不一致
 
 private:
     ;       std::shared_ptr<ContactData::ItemData>  m_current_account = std::make_shared<ContactData::ItemData >();
@@ -74,7 +68,7 @@ class AuthOptRW {
     }
     static QString m_user_section_prefix() { return "user:"; }
 public:
-    static bool save(const std::shared_ptr<AuthOpt> & auth_opt) {
+    static bool save(std::shared_ptr<AuthOpt> auth_opt) {
         auto user_section     = m_user_section_prefix() + auth_opt->account_id;
         auto user_section_str = user_section.toStdString();
         auto user_section_sz  = user_section_str.c_str();

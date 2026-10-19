@@ -205,8 +205,7 @@ struct ItemCache {
 
 // 消息内容
 struct ItemData {
-    // std::shared_ptr<MessageContext> context;
-    // std::shared_ptr<ItemGeometry  > geometry;
+    QString    chatroom_id;
     //
     SenderType sender_type = SenderType::USER;
     MediaType  media_type  = MediaType::TEXT;
@@ -299,64 +298,64 @@ static int get_data_column() { return 0; }
 // rpc SignUp(SignUpRequest) returns (SignUpReply) {}
 using signup_params   = std::shared_ptr<SignUpRequest>;
 using signup_reply    = std::optional  <SignUpReply  >;
-using signup_callback = std::function  <void(const signup_params&, const signup_reply&)>;
+using signup_callback = std::function  <void(signup_params, signup_reply)>;
 // user login
 // rpc SignIn(SignInRequest) returns (SignInReply) {}
 using signin_params   = std::shared_ptr<SignInRequest>;
 using signin_reply    = std::optional  <SignInReply  >;
-using signin_callback = std::function  <void(const signin_params&, const signin_reply&)>;
+using signin_callback = std::function  <void(signin_params, signin_reply)>;
 // search users
 // rpc SearchUser(SearchUserRequest) returns (SearchUserReply) {}
 using search_user_params   = std::shared_ptr<SearchUserRequest>;
 using search_user_reply    = std::optional  <SearchUserReply  >;
-using search_user_callback = std::function  <void(const search_user_params&, const search_user_reply&)>;
+using search_user_callback = std::function  <void(search_user_params, search_user_reply)>;
 // update profile
 // rpc UpdateProfile(UpdateProfileRequest) returns (UpdateProfileReply) {}
 using update_profile_params   = std::shared_ptr<UpdateProfileRequest>;
 using update_profile_reply    = std::optional  <UpdateProfileReply  >;
-using update_profile_callback = std::function  <void(const update_profile_params&, const update_profile_reply&)>;
+using update_profile_callback = std::function  <void(update_profile_params, update_profile_reply)>;
 // get file upload id
 // rpc GetFileID(GetFileIDRequest) returns (GetFileIDReply) {}
 using get_file_id_params   = std::shared_ptr<GetFileIDRequest>;
 using get_file_id_reply    = std::optional  <GetFileIDReply  >;
-using get_file_id_callback = std::function  <void(const get_file_id_params&, const get_file_id_reply&)>;
+using get_file_id_callback = std::function  <void(get_file_id_params, get_file_id_reply)>;
 // file upload
 // rpc FileUpload(stream FileUploadRequest) returns (stream FileUploadReply);
 using file_upload_params   = std::shared_ptr<FileUploadRequest>;
 using file_upload_reply    = std::optional  <FileUploadReply  >;
-using file_upload_callback = std::function  <void(const file_upload_params&, const file_upload_reply&)>;
+using file_upload_callback = std::function  <void(file_upload_params, file_upload_reply)>;
 // file download
 // rpc FileDownload(FileDownloadRequest) returns (stream FileDownloadReply);
 using file_download_params   = std::shared_ptr<FileDownloadRequest>;
 using file_download_reply    = std::optional  <FileDownloadReply  >;
-using file_download_callback = std::function  <void(const file_download_params&, const file_download_reply&)>;
+using file_download_callback = std::function  <void(file_download_params, file_download_reply)>;
 // ContactRequest 好友申请
 // rpc ContactRequest(ContactRequestRequest) returns (ContactRequestReply) {}
 using contact_request_params   = std::shared_ptr<ContactRequestRequest>;
 using contact_request_reply    = std::optional  <ContactRequestReply  >;
-using contact_request_callback = std::function  <void(const contact_request_params&, const contact_request_reply&)>;
+using contact_request_callback = std::function  <void(contact_request_params, contact_request_reply)>;
 // 添加联系人的回复
 // rpc ContactReply(ContactReplyRequest) returns (ContactReplyReply) {}
 using contact_reply_params   = std::shared_ptr<ContactReplyRequest>;
 using contact_reply_reply    = std::optional  <ContactReplyReply  >;
-using contact_reply_callback = std::function  <void(const contact_reply_params&, const contact_reply_reply&)>;
+using contact_reply_callback = std::function  <void(contact_reply_params, contact_reply_reply)>;
 // 获取添加联系人申请的列表
 // rpc GetContactRequests(AuthRequest) returns (GetContactRequestsReply) {}
 using get_contact_request_params   = std::shared_ptr<AuthRequest            >;
 using get_contact_request_reply    = std::optional  <GetContactRequestsReply>;
-using get_contact_request_callback = std::function  <void(const get_contact_request_params&, const get_contact_request_reply&)>;
+using get_contact_request_callback = std::function  <void(get_contact_request_params, get_contact_request_reply)>;
 // 获取最好的消息 ID
 // rpc GetLastID(AuthRequest) returns (GetLastIDReply) {}
 using get_last_id_params   = std::shared_ptr<AuthRequest   >;
 using get_last_id_reply    = std::optional  <GetLastIDReply>;
-using get_last_id_callback = std::function  <void(const get_last_id_params&, const get_last_id_reply&)>;
+using get_last_id_callback = std::function  <void(get_last_id_params, get_last_id_reply)>;
 // 消息同步
 // rpc Sync(stream SyncRequest) returns (stream SyncReply) {}
 using sync_params   = std::shared_ptr<SyncRequest>;
 using sync_reply    = std::optional  <SyncReply  >;
-using sync_callback = std::function  <void(const sync_params&, const sync_reply&)>;
+using sync_callback = std::function  <void(sync_params, sync_reply)>;
 // 发送消息
 // rpc SendMessage(MessageContext) returns (MessageReply) {}
 using send_message_params   = std::shared_ptr<MessageContext>;
 using send_message_reply    = std::optional  <MessageReply  >;
-using send_message_callback = std::function  <void(const send_message_params&, const send_message_reply&)>;
+using send_message_callback = std::function  <void(send_message_params, send_message_reply)>;

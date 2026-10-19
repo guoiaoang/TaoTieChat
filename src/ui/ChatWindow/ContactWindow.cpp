@@ -7,6 +7,7 @@
 #include "MediaWindow.h"
 #include "Accounts.h"
 #include "Database.h"
+#include "SignalInner.h"
 
 ContactWindow::ContactWindow(QWidget *parent) : QWidget(parent), m_ui(std::make_shared<Ui::ContactWindow>()) {
     m_ui->setupUi(this);
@@ -31,8 +32,10 @@ ContactWindow::ContactWindow(QWidget *parent) : QWidget(parent), m_ui(std::make_
     connect(m_action_edit  .get(), &QAction    ::triggered, this, &ContactWindow::slot_action_edit    );
     connect(m_action_remove.get(), &QAction    ::triggered, this, &ContactWindow::slot_action_remove  );
     // 新添加好友时刷新好友关系状态
-    connect(&Accounts::instance(), &Accounts::signal_contact_list_changed, this, &ContactWindow::slot_contact_status_changed);
-    connect(&Accounts::instance(), &Accounts::signal_contact_info_changed, this, &ContactWindow::slot_contact_info_changed  );
+    // connect(Accounts::instance(), &Accounts::signal_contact_list_changed, this, &ContactWindow::slot_contact_status_changed);
+    // connect(Accounts::instance(), &Accounts::signal_contact_info_changed, this, &ContactWindow::slot_contact_info_changed  );
+    connect(SignalInner::instance(), &SignalInner::signal_contact_list_changed, this, &ContactWindow::slot_contact_status_changed);
+    connect(SignalInner::instance(), &SignalInner::signal_contact_info_changed, this, &ContactWindow::slot_contact_info_changed  );
 
     // set
     // 设置动态头像大小，与右侧内容高度一致
@@ -65,11 +68,11 @@ ContactWindow::ContactWindow(QWidget *parent) : QWidget(parent), m_ui(std::make_
 ContactWindow::~ContactWindow() {
 }
 
-const std::shared_ptr<ContactData::ItemData>&ContactWindow::get_contact_data() const {
+std::shared_ptr<ContactData::ItemData> ContactWindow::get_contact_data() const {
     return m_contact_data;
 }
 
-void ContactWindow::set_contact_data(const std::shared_ptr<ContactData::ItemData>&contact_data, const SourceFlag&source_flag) {
+void ContactWindow::set_contact_data(std::shared_ptr<ContactData::ItemData> contact_data, const SourceFlag&source_flag) {
     auto set_edit_text = [](QLineEdit*edit, const QString&text) {
         if (!edit) { return; }
         edit->setText(text);
@@ -86,7 +89,7 @@ void ContactWindow::set_contact_data(const std::shared_ptr<ContactData::ItemData
 
     contact_data->modify_self_info = false;  // 仅应该在修改自身资料时才设置
     // 通过好友申请后，好友请求列表中的状态也要进行同步修改
-    contact_data->is_friend = Accounts::instance().is_friend(contact_data->account_id);
+    contact_data->is_friend = Accounts::instance()->is_friend(contact_data->account_id);
 
     // 缓存信息，用于取消编辑时恢复显示
     // if (m_contact_data == contact_data) { return; }
@@ -115,7 +118,7 @@ void ContactWindow::set_contact_data(const std::shared_ptr<ContactData::ItemData
         m_ui->button_avatar->setIcon(QIcon());
     }
     else {
-        const auto&avatar_pixamp = QPixmap::fromImage(contact_data->avatar_image)
+        auto avatar_pixamp = QPixmap::fromImage(contact_data->avatar_image)
             .scaled(m_ui->button_avatar->size(), Qt::IgnoreAspectRatio, Qt::SmoothTransformation);
         m_ui->button_avatar->setIcon(QIcon(avatar_pixamp));
     }
@@ -137,7 +140,7 @@ void ContactWindow::set_contact_data(const std::shared_ptr<ContactData::ItemData
                 // QMessageBox::information(this, tr("Error"), error_message, QMessageBox::StandardButton::Ok);
                 return;
             }
-            const auto& contact_data = get_contact_data();
+            auto contact_data = get_contact_data();
             // 下载成功
             if (notify.ok &&
                 notify.code    == int64_t(SuccessCode::SUCCESS) &&
@@ -147,10 +150,10 @@ void ContactWindow::set_contact_data(const std::shared_ptr<ContactData::ItemData
                 contact_data->avatar_id == notify.id
             ) {
                 // 头像下载成功时仅需修改头像相关的信息
-                contact_data->avatar_path  = Database::instance().get_local_file_id_path(contact_data->avatar_id);
+                contact_data->avatar_path  = Database::instance()->get_local_file_id_path(contact_data->avatar_id);
                 contact_data->avatar_image = QImage(contact_data->avatar_path);
                 if (!contact_data->avatar_image.isNull()) {
-                    const auto&avatar_pixamp = QPixmap::fromImage(contact_data->avatar_image)
+                    auto avatar_pixamp = QPixmap::fromImage(contact_data->avatar_image)
                         .scaled(m_ui->button_avatar->size(), Qt::IgnoreAspectRatio, Qt::SmoothTransformation);
                     m_ui->button_avatar->setIcon(QIcon(avatar_pixamp));
                 }
@@ -158,7 +161,7 @@ void ContactWindow::set_contact_data(const std::shared_ptr<ContactData::ItemData
         };
         QString notify_id = QString("notify ContactWindow::set_contact_data, account_id:%1, avatar_id:%2")
             .arg(contact_data->account_id).arg(contact_data->avatar_id);
-        NetworkClient::instance().download_file(contact_data->avatar_id, notify_id, callback_download_file_notify);
+        NetworkClient::instance()->download_file(contact_data->avatar_id, notify_id, callback_download_file_notify);
     }
 
     ViewFlag  view_flag   = ViewFlag::View;
@@ -217,8 +220,7 @@ void ContactWindow::updata_show(const SourceFlag&source_flag, const ViewFlag&vie
 
     // label_notes/label_description/label_tags,edit_notes/edit_description/edit_tags
     // 非自己页面的好友时显示(自己可以添加自己为好友)
-    // bool widget_contact_visiable = is_friend && !is_profile;
-    bool widget_contact_visiable = is_friend && !is_profile && !is_search;  // 搜索页面暂未适配同时显示好友资料
+    bool widget_contact_visiable = is_friend && !is_profile;
     set_widget_visiable(m_ui->label_notes      , widget_contact_visiable);
     set_widget_visiable(m_ui->label_description, widget_contact_visiable);
     set_widget_visiable(m_ui->label_tags       , widget_contact_visiable);
@@ -294,6 +296,9 @@ void ContactWindow::updata_show(const SourceFlag&source_flag, const ViewFlag&vie
     set_widget_visiable(m_ui->edit_description , false);
 
     // TODO:未添加的功能
+    set_action_enable(m_action_remove, false);
+    set_widget_visiable(m_ui->button_voice  , false);
+    set_widget_visiable(m_ui->button_video  , false);
     set_widget_visiable(m_ui->button_gender , false);
     set_widget_visiable(m_ui->button_starred, false);
 }
@@ -307,10 +312,10 @@ void ContactWindow::slot_button_manager() {
 }
 
 void ContactWindow::slot_button_avatar() {
-    const auto& contact_data = get_contact_data();
+    auto contact_data = get_contact_data();
     if (!contact_data) { return; }
 
-    const auto&is_edit = get_view_flag() == ViewFlag::Edit;
+    auto is_edit = get_view_flag() == ViewFlag::Edit;
 
     // 非设置头像模式，未设置头像时不响应点击
     if (!is_edit && contact_data->avatar_image.isNull() && contact_data->avatar_id.isEmpty()) {
@@ -336,7 +341,7 @@ void ContactWindow::slot_button_save() {
     set_view_flag(ViewFlag::View);
 
     // 不要修改原先的内容，使用副本进行操作，以便失败时还原  // 包含头像 ID
-    const auto& contact_data = get_contact_data();
+    auto contact_data = get_contact_data();
     if (!contact_data) { return; }
     auto copy_contact_data = std::make_shared<ContactData::ItemData>(*contact_data);
 
@@ -367,7 +372,7 @@ void ContactWindow::slot_button_save() {
     copy_contact_data->modify_self_info = is_self && is_profile;  // 仅应该在修改自身资料时设置
 
     // 从个人页面查看自己资料时才允许修改自己的资料
-    if (is_self && is_profile && Accounts::instance().is_me(copy_contact_data->account_id)) {
+    if (is_self && is_profile && Accounts::instance()->is_me(copy_contact_data->account_id)) {
         copy_contact_data->nickname   = m_ui->edit_nickname ->text();
         // copy_contact_data->user_id = m_ui->edit_userid   ->text();  // 暂不允许修改
         copy_contact_data->region     = m_ui->edit_region   ->text();
@@ -376,7 +381,7 @@ void ContactWindow::slot_button_save() {
         copy_contact_data->emails     = m_ui->edit_emails   ->text().split(";", Qt::SkipEmptyParts);
     }
     // ~~自己可以是自己的好友~~，不允许同时修改个人资料与好友资料
-    else if (is_contact || Accounts::instance().is_friend(copy_contact_data->account_id)) {
+    else if (is_contact || Accounts::instance()->is_friend(copy_contact_data->account_id)) {
         copy_contact_data->notes       = m_ui->edit_notes      ->text();
         // copy_contact_data->description = m_ui->edit_description->text();  // 分类错误，暂时禁用
         copy_contact_data->tags        = m_ui->edit_tags       ->text().split(";", Qt::SkipEmptyParts);
@@ -385,8 +390,8 @@ void ContactWindow::slot_button_save() {
     // 头像 ID
     if (!m_temp_avatar_id.isEmpty()) { copy_contact_data->avatar_id = m_temp_avatar_id; }
 
-    auto callback_update_profile = [this](const update_profile_params&params_update_profile, const update_profile_reply&reply_update_profile) {
-        // qDebug().noquote().nospace() << "Current account contactInfo: " << Utils::Transform::to_string(Accounts::instance().get_current_account());
+    auto callback_update_profile = [this](update_profile_params params_update_profile, update_profile_reply reply_update_profile) {
+        // qDebug().noquote().nospace() << "Current account contactInfo: " << Utils::Transform::to_string(Accounts::instance()->get_current_account());
         if (!reply_update_profile || !reply_update_profile->result().hasSuccessCode() || !reply_update_profile->request().hasContactInfo()) {
             QString error_message = tr("Failed to update profile.");
             if (reply_update_profile && reply_update_profile->result().hasErrorCode()) {
@@ -398,14 +403,16 @@ void ContactWindow::slot_button_save() {
             return;
         }
 
-        std::shared_ptr<ContactInfo> contact_info = std::make_shared<ContactInfo>(reply_update_profile->request().contactInfo());
-        auto contact_data = Utils::Transform::to_contact_data(contact_info);
-        set_contact_data(contact_data, get_source_flag());
-
-        // 发送更新通知
-        if (contact_data->is_me) {
-            Accounts::instance().set_current_account(contact_data);
-        }
+//         // TODO:更新消息由同步获取，此处是否应该保留??
+// 
+//         std::shared_ptr<ContactInfo> contact_info = std::make_shared<ContactInfo>(reply_update_profile->request().contactInfo());
+//         auto contact_data = Utils::Transform::to_contact_data(contact_info);
+//         // set_contact_data(contact_data, get_source_flag());
+// 
+//         // 发送更新通知
+//         if (contact_data->is_me) {
+//             Accounts::instance()->set_current_account(contact_data);
+//         }
     };
     update_profile_text(copy_contact_data, callback_update_profile);
 }
@@ -418,15 +425,15 @@ void ContactWindow::slot_button_cancel() {
 void ContactWindow::slot_button_add() {
     // TODO:添加好友请求支持附带留言
 
-    const auto& contact_data = get_contact_data();
+    auto contact_data = get_contact_data();
     if (!contact_data) { return; }
 
-    emit sig_contact_add(contact_data);
+    emit SignalInner::instance()->sig_contact_add(contact_data);
 
     contact_request_params params_contact_request = std::make_shared<ContactRequestRequest>();
-    params_contact_request->setRequestUserAuth(*Accounts::instance().get_auth_request().get());
+    params_contact_request->setRequestUserAuth(*Accounts::instance()->get_auth_request().get());
     params_contact_request->setTargetUserId(contact_data->user_id);  // TODO: 改为添加账号 ID
-    auto callback_contact_request = [this](const contact_request_params&params_contact_request, const contact_request_reply&reply_contact_request) {
+    auto callback_contact_request = [this](contact_request_params params_contact_request, contact_request_reply reply_contact_request) {
         // 消息发送失败
         if (!reply_contact_request || !reply_contact_request->hasResult() || !reply_contact_request->result().hasSuccessCode()) {
             QString error_message = tr("Failed to send contact request.");
@@ -441,17 +448,17 @@ void ContactWindow::slot_button_add() {
         // 提示消息发送成功
         QMessageBox::information(this, tr("Success"), tr("Send contact request success."), QMessageBox::StandardButton::Ok);
     };
-    NetworkClient::instance().contact_request(params_contact_request, callback_contact_request);
+    NetworkClient::instance()->contact_request(params_contact_request, callback_contact_request);
 }
 
 void ContactWindow::slot_button_accept() {
-    const auto& contact_data = get_contact_data();
+    auto contact_data = get_contact_data();
     if (!contact_data) { return; }
     contact_reply_params params_contact_reply = std::make_shared<ContactReplyRequest>();
-    params_contact_reply->setRequestUserAuth(*Accounts::instance().get_auth_request().get());
+    params_contact_reply->setRequestUserAuth(*Accounts::instance()->get_auth_request().get());
     params_contact_reply->setTargetUserId(contact_data->user_id);  // TODO: 改为添加账号 ID
     params_contact_reply->setReply(ContactReplyCode::CONTACT_REPLY_ACCEPT);
-    auto callback_contact_reply = [this](const contact_reply_params&params_contact_reply, const contact_reply_reply&reply_contact_reply) {
+    auto callback_contact_reply = [this](contact_reply_params params_contact_reply, contact_reply_reply reply_contact_reply) {
         // 消息发送失败
         if (!reply_contact_reply || !reply_contact_reply->hasResult() || !reply_contact_reply->result().hasSuccessCode()) {
             QString error_message = tr("Failed to send contact reply.");
@@ -466,16 +473,16 @@ void ContactWindow::slot_button_accept() {
         // 提示消息发送成功  // 发送成功不必提示
         // QMessageBox::information(this, tr("Success"), tr("Send contact request success."), QMessageBox::StandardButton::Ok);
     };
-    NetworkClient::instance().contact_reply(params_contact_reply, callback_contact_reply);
+    NetworkClient::instance()->contact_reply(params_contact_reply, callback_contact_reply);
 }
 
 void ContactWindow::slot_button_ignore() {
-    const auto& contact_data = get_contact_data();
+    auto contact_data = get_contact_data();
     contact_reply_params params_contact_reply = std::make_shared<ContactReplyRequest>();
-    params_contact_reply->setRequestUserAuth(*Accounts::instance().get_auth_request().get());
+    params_contact_reply->setRequestUserAuth(*Accounts::instance()->get_auth_request().get());
     params_contact_reply->setTargetUserId(contact_data->user_id);  // TODO: 改为添加账号 ID
     params_contact_reply->setReply(ContactReplyCode::CONTACT_REPLY_IGNORE);
-    auto callback_contact_reply = [this](const contact_reply_params&params_contact_reply, const contact_reply_reply&reply_contact_reply) {
+    auto callback_contact_reply = [this](contact_reply_params params_contact_reply, contact_reply_reply reply_contact_reply) {
         // 消息发送失败
         if (!reply_contact_reply || !reply_contact_reply->hasResult() || !reply_contact_reply->result().hasSuccessCode()) {
             QString error_message = tr("Failed to send contact reply.");
@@ -490,24 +497,24 @@ void ContactWindow::slot_button_ignore() {
         // 提示消息发送成功  // 发送成功不必提示
         // QMessageBox::information(this, tr("Success"), tr("Send contact request success."), QMessageBox::StandardButton::Ok);
     };
-    NetworkClient::instance().contact_reply(params_contact_reply, callback_contact_reply);
+    NetworkClient::instance()->contact_reply(params_contact_reply, callback_contact_reply);
 }
 
 void ContactWindow::slot_button_messages() {
-    const auto& contact_data = get_contact_data();
-    emit sig_contact_message(contact_data);
+    auto contact_data = get_contact_data();
+    emit SignalInner::instance()->sig_contact_message(contact_data);
 }
 
 void ContactWindow::slot_button_voice() {
     // TODO: 发起语音通话
-    const auto& contact_data = get_contact_data();
-    emit sig_contact_voice(contact_data);
+    auto contact_data = get_contact_data();
+    emit SignalInner::instance()->sig_contact_voice(contact_data);
 }
 
 void ContactWindow::slot_button_video() {
     // TODO: 发起视频通话
-    const auto& contact_data = get_contact_data();
-    emit sig_contact_video(contact_data);
+    auto contact_data = get_contact_data();
+    emit SignalInner::instance()->sig_contact_video(contact_data);
 }
 
 void ContactWindow::slot_action_edit() {
@@ -525,15 +532,15 @@ void ContactWindow::slot_action_remove() {
     message_box.exec();
     QAbstractButton *button_clicked = message_box.clickedButton();
     if (dynamic_cast<QPushButton*>(button_clicked) == button_remove) {
-        const auto& contact_data = get_contact_data();
-        emit sig_contact_remove(contact_data);
+        auto contact_data = get_contact_data();
+        emit SignalInner::instance()->sig_contact_remove(contact_data);
     }
 }
 
-void ContactWindow::slot_contact_status_changed(const QVector<std::shared_ptr<ContactData::ItemData>>& to_contact_datas) {
+void ContactWindow::slot_contact_status_changed(QVector<std::shared_ptr<ContactData::ItemData>> to_contact_datas) {
     for (auto&contact_data : to_contact_datas) {
         if (contact_data->account_id.isEmpty()) { continue; }
-        const auto& account_id = contact_data->account_id;
+        auto account_id = contact_data->account_id;
         if (account_id != m_contact_data->account_id) { continue; }
         // image??
         set_contact_data(contact_data, get_source_flag());
@@ -541,25 +548,26 @@ void ContactWindow::slot_contact_status_changed(const QVector<std::shared_ptr<Co
     }
 }
 
-void ContactWindow::slot_contact_info_changed(const std::shared_ptr<ContactData::ItemData>& contact_data) {
+void ContactWindow::slot_contact_info_changed(std::shared_ptr<ContactData::ItemData> to_contact_data) {
     do {
-        if (!contact_data) { break; }
-        if ( contact_data->account_id.isEmpty()) { continue; }
-        const auto& account_id = contact_data->account_id;
-        if (account_id != m_contact_data->account_id) { continue; }
+        if (!to_contact_data) { break; }
+        if ( to_contact_data->account_id.isEmpty()) { continue; }
+        if (to_contact_data->account_id != m_contact_data->account_id) { continue; }
+        // 这里不要修改原先内存地址中的内容，其他地方可能共用该地址
+        auto update_contact_info = std::make_shared<ContactData::ItemData>(*to_contact_data);
         // 如果是自己的资料页面，依然保持显示为昵称
         if (get_source_flag() == SourceFlag::Profile) {
-            contact_data->display_name = contact_data->nickname;
+            update_contact_info->display_name = update_contact_info->nickname;
         }
         // image??
-        set_contact_data(contact_data, get_source_flag());
+        set_contact_data(update_contact_info, get_source_flag());
         break;
     } while (false);
 }
 
 // 在弹窗中查看头像
 void ContactWindow::view_avatar() {
-    const auto& contact_data = get_contact_data();
+    auto contact_data = get_contact_data();
     // 获取显示内容
     std::vector<std::shared_ptr<MediaInfo>> play_list = {
         std::make_shared<MediaInfo>(MediaInfo{
@@ -592,19 +600,19 @@ QString ContactWindow::dialog_select_avatar_file() {
 }
 
 // 更新个人资料中的文本信息，支持同时修改头像 ID，不包括鉴权信息
-void ContactWindow::update_profile_text(const std::shared_ptr<ContactData::ItemData>&contact_data, const update_profile_callback&callback_update_profile) {
-    // qDebug().noquote().nospace() << "Current account contactInfo: " << Utils::Transform::to_string(Accounts::instance().get_current_account());
+void ContactWindow::update_profile_text(std::shared_ptr<ContactData::ItemData> contact_data, update_profile_callback callback_update_profile) {
+    // qDebug().noquote().nospace() << "Current account contactInfo: " << Utils::Transform::to_string(Accounts::instance()->get_current_account());
 
     // 联系人信息参数
-    const auto& contact_info = Utils::Transform::to_contact_info(contact_data);
+    auto contact_info = Utils::Transform::to_contact_info(contact_data);
     // 身份验证参数，必填
-    const auto& auth_request = Accounts::instance().get_auth_request();
+    auto auth_request = Accounts::instance()->get_auth_request();
 
     update_profile_params params = std::make_shared<TaoTieChat::UpdateProfileRequest>();
     params->setRequestUserAuth(*auth_request.get());
     params->setContactInfo    (*contact_info.get());
 
-    NetworkClient::instance().update_profile(params, callback_update_profile);
+    NetworkClient::instance()->update_profile(params, callback_update_profile);
 }
 
 // 更新个人资料中的头像，仅上传头像文件并本地显示，点击保存才进行修改
@@ -621,7 +629,7 @@ void ContactWindow::update_profile_avatar(const QString&avatar_path) {
             QMessageBox::information(this, tr("Error"), error_message, QMessageBox::StandardButton::Ok);
             return;
         }
-        const auto& contact_data = get_contact_data();
+        auto contact_data = get_contact_data();
         // 上传成功
         if (notify.ok &&
             notify.code    == int64_t(SuccessCode::SUCCESS) &&
@@ -644,11 +652,11 @@ void ContactWindow::update_profile_avatar(const QString&avatar_path) {
             m_temp_avatar_path  = avatar_path;
             m_temp_avatar_image = QImage(avatar_path);
             if (!m_temp_avatar_image.isNull()) {
-                const auto&avatar_pixamp = QPixmap::fromImage(m_temp_avatar_image)
+                auto avatar_pixamp = QPixmap::fromImage(m_temp_avatar_image)
                     .scaled(m_ui->button_avatar->size(), Qt::IgnoreAspectRatio, Qt::SmoothTransformation);
                 m_ui->button_avatar->setIcon(QIcon(avatar_pixamp));
             }
         }
     };
-    NetworkClient::instance().upload_file(avatar_path, callback_upload_file_notify);
+    NetworkClient::instance()->upload_file(avatar_path, callback_upload_file_notify);
 }

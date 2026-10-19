@@ -83,15 +83,15 @@ public slots:
     /// 清空全部缓存（模型行删除 / 重置 / 数据变化 / 字体变化时调用）
     void clearCache();
 
-signals:
-    void signal_open_link  (const QString &href);
-    void signal_open_file  (const std::shared_ptr<MessageData::ItemData> &message_data);
-    void signal_open_folder(const std::shared_ptr<MessageData::ItemData> &message_data);
-    void signal_open_data  (const std::shared_ptr<MessageData::ItemData> &message_data);
-    void signal_copy_data  (const std::shared_ptr<MessageData::ItemData> &message_data);
-    void signal_copy_file  (const std::shared_ptr<MessageData::ItemData> &message_data);
-    void signal_copy_path  (const std::shared_ptr<MessageData::ItemData> &message_data);
-    void signal_save_to    (const std::shared_ptr<MessageData::ItemData> &message_data);
+// signals:
+//     void signal_open_link  (const QString &href);
+//     void signal_open_file  (std::shared_ptr<MessageData::ItemData> message_data);
+//     void signal_open_folder(std::shared_ptr<MessageData::ItemData> message_data);
+//     void signal_open_data  (std::shared_ptr<MessageData::ItemData> message_data);
+//     void signal_copy_data  (std::shared_ptr<MessageData::ItemData> message_data);
+//     void signal_copy_file  (std::shared_ptr<MessageData::ItemData> message_data);
+//     void signal_copy_path  (std::shared_ptr<MessageData::ItemData> message_data);
+//     void signal_save_to    (std::shared_ptr<MessageData::ItemData> message_data);
 
 private:
     std::shared_ptr<ItemGeometry> itemGeometry(const QStyleOptionViewItem &option, const QModelIndex &index) const;
@@ -111,16 +111,16 @@ private:
 
     /// 用 PaintContext 调色板绘制文档（主题色 + 文字选区高亮都在这里注入）
     void paintDocument(QPainter *painter, const QModelIndex &index,
-        const std::shared_ptr<MessageData::ItemData> &message_data,
-        const std::shared_ptr<ItemGeometry>&item_geometry) const;
+        std::shared_ptr<MessageData::ItemData> message_data,
+        std::shared_ptr<ItemGeometry         > item_geometry) const;
 
     // ---- 文字选择状态 ----
     void beginSelection(const QModelIndex &index, const QPoint &viewportPos,
-        const std::shared_ptr<MessageData::ItemData> &message_data,
-        const std::shared_ptr<ItemGeometry>&item_geometry);
+        std::shared_ptr<MessageData::ItemData> message_data,
+        std::shared_ptr<ItemGeometry         > item_geometry);
     void extendSelection(const QModelIndex &index, const QPoint &viewportPos,
-        const std::shared_ptr<MessageData::ItemData> &message_data,
-        const std::shared_ptr<ItemGeometry>&item_geometry);
+        std::shared_ptr<MessageData::ItemData> message_data,
+        std::shared_ptr<ItemGeometry         > item_geometry);
     void syncSelectedText(QTextDocument *doc);
 
 private:

@@ -3328,3 +3328,417 @@ def handle_new_message(event):
 3.  **状态冲突**：退群后重新加入、多个设备同时操作等场景，需要根据当前状态做合并而非简单覆盖。
 
 这个原则在你的同步系统设计中贯穿始终，无论是会话摘要的更新，还是消息内容的写入，都必须遵守。
+
+## Q4. 事件通知回调(ChatGPT)
+
+### Q4.1 id、回调、过滤器设计
+
+**Q:** Callbacks::add(Callback::set_id("id.lang.open").set_callback([](){ update_text(get_translate_text("id.lang.open")); }, ...).set_filter([]()->bool { return true; }))
+Callbacks::emit("id.lang.open")
+
+Callbacks::add(Callback::set_id("id.file.downloading").set_callback([](...){ update(...); }, ...).set_filter([](auto&file_id)->bool { return file_id == get_file_id(); }))
+Callbacks::emit("id.file.downloading", ...)
+
+通知调用函数，id 为任意字符串，callback 为可变参数函数及可变参数，filter 为普通函数。初始化时注册ID与回调函数，更改时发送消息触发回调，可触发更新界面文本的翻译、更新文件下载进度等功能，应该怎么实现？
+
+---
+**A:** 你的需求本质上是实现一个轻量级的 带 ID、参数匹配过滤器和可变参数回调的事件通知中心。它既可以通知界面翻译文本更新，也可以通知某个文件的下载进度发生变化。
+
+我建议采用 C++17 + `std::any` + `std::function` + 模板参数推导，让注册和发送时都保留你希望的调用风格：
+
+```c++
+// 1. 注册：界面翻译更新
+Callbacks::add(
+    Callback::set_id("id.lang.open")
+        .set_callback([] {
+            update_text(get_translate_text("id.lang.open"));
+        })
+        .set_filter([] {
+            return true;
+        })
+);
+
+// 2. 触发：不需要参数
+Callbacks::emit("id.lang.open");
+
+// 3. 注册：文件下载进度更新
+Callbacks::add(
+    Callback::set_id("id.file.downloading")
+        .set_callback([](const QString& file_id, int progress) {
+            update(file_id, progress);
+        })
+        .set_filter([](const QString& file_id) {
+            return file_id == get_file_id();
+        })
+);
+
+// 4. 触发：传递运行时参数
+Callbacks::emit("id.file.downloading", file_id, progress);
+```
+
+这里有一个重要设计选择：注册时保存回调函数，触发时传入事件参数；过滤器只判断是否接受本次事件，返回 `true` 才调用回调。 因此下载进度不必在注册时就绑定文件 ID。
+
+#### 一、实现思路
+
+为了让 `Callbacks` 能保存各种不同签名的函数，同时支持一个过滤器只读取部分参数，可以把每个事件统一封装为：
+
+- `id`：事件标识。
+- `callback`：接收事件参数的回调。
+- `filter`：接收事件参数的过滤器；可以只声明需要检查的前几个参数。
+- `emit(id, args...)`：发送事件，并在运行时将参数传给匹配的过滤器和回调。
+
+由于不同 ID 的参数类型可能不同，下面用 `std::any` 做参数的类型擦除。它要求存入的类型可复制；触发时如果参数类型不匹配，会输出错误，而不是直接对错误类型进行不安全转换。
+
+#### 二、完整代码：Callbacks.h
+
+下面的实现支持普通函数、函数指针、无捕获或有捕获的 lambda，以及可变数量的事件参数。过滤器的参数必须与事件参数的前缀类型相匹配。
+
+```c++
+#pragma once
+
+#include <any>
+#include <functional>
+#include <iostream>
+#include <mutex>
+#include <string>
+#include <tuple>
+#include <type_traits>
+#include <typeindex>
+#include <unordered_map>
+#include <utility>
+#include <vector>
+#include <stdexcept>
+
+namespace callback_detail {
+
+using Args = std::vector<std::any>;
+using Handler = std::function<void(Args&)>;
+using Filter = std::function<bool(Args&)>;
+
+// 提取普通函数、函数指针、lambda 的参数类型
+template<typename T>
+struct function_traits : function_traits<decltype(&T::operator())> {};
+
+template<typename R, typename... A>
+struct function_traits<R(*)(A...)> {
+    using args_tuple = std::tuple<A...>;
+    static constexpr std::size_t arity = sizeof...(A);
+};
+
+template<typename R, typename... A>
+struct function_traits<R(A...)>
+    : function_traits<R(*)(A...)> {};
+
+template<typename C, typename R, typename... A>
+struct function_traits<R(C::*)(A...) const>
+    : function_traits<R(*)(A...)> {};
+
+template<typename C, typename R, typename... A>
+struct function_traits<R(C::*)(A...)>
+    : function_traits<R(*)(A...)> {};
+
+// 包装回调或过滤器：从 any 参数中按声明类型取值
+template<typename F, std::size_t... I>
+bool invoke_checked(
+    F& fn,
+    Args& args,
+    std::index_sequence<I...>)
+{
+    using Traits = function_traits<std::decay_t<F>>;
+    using Tuple = typename Traits::args_tuple;
+
+    if (args.size() < sizeof...(I)) {
+        throw std::invalid_argument("not enough event arguments");
+    }
+
+    // 参数必须能从对应的 std::any 类型中取出
+    auto values = std::tuple{
+        std::any_cast<
+            std::remove_cv_t<std::remove_reference_t<
+                std::tuple_element_t<I, Tuple>>>*
+        >(&args[I])...
+    };
+
+    bool valid = std::apply(
+        [](auto... ptr) { return (... && (ptr != nullptr)); },
+        values
+    );
+
+    if (!valid) {
+        throw std::invalid_argument("event argument type mismatch");
+    }
+
+    if constexpr (std::is_convertible_v<
+        std::invoke_result_t<
+            F&,
+            decltype(*std::get<I>(values))...
+        >,
+        bool>)
+    {
+        return std::apply(
+            [&](auto... ptr) {
+                return static_cast<bool>(std::invoke(fn, *ptr...));
+            },
+            values
+        );
+    }
+    else {
+        std::apply(
+            [&](auto... ptr) {
+                std::invoke(fn, *ptr...);
+            },
+            values
+        );
+        return true;
+    }
+}
+
+template<typename F>
+Handler make_handler(F fn)
+{
+    using Traits = function_traits<std::decay_t<F>>;
+    return [fn = std::move(fn)](Args& args) mutable {
+        invoke_checked(
+            fn, args,
+            std::make_index_sequence<Traits::arity>{});
+    };
+}
+
+template<typename F>
+Filter make_filter(F fn)
+{
+    using Traits = function_traits<std::decay_t<F>>;
+    return [fn = std::move(fn)](Args& args) mutable {
+        return invoke_checked(
+            fn, args,
+            std::make_index_sequence<Traits::arity>{});
+    };
+}
+
+} // namespace callback_detail
+
+class Callback
+{
+    friend class Callbacks;
+
+    std::string m_id;
+    callback_detail::Handler m_callback;
+    callback_detail::Filter m_filter = [](auto&) {
+        return true;
+    };
+
+public:
+    static Callback set_id(std::string id)
+    {
+        Callback c;
+        c.m_id = std::move(id);
+        return c;
+    }
+
+    template<typename F>
+    Callback& set_callback(F&& fn)
+    {
+        m_callback =
+            callback_detail::make_handler(
+                std::forward<F>(fn));
+        return *this;
+    }
+
+    template<typename F>
+    Callback& set_filter(F&& fn)
+    {
+        m_filter =
+            callback_detail::make_filter(
+                std::forward<F>(fn));
+        return *this;
+    }
+};
+
+class Callbacks
+{
+    struct Entry {
+        callback_detail::Handler callback;
+        callback_detail::Filter filter;
+    };
+
+    static auto& entries()
+    {
+        static std::unordered_map<std::string, Entry> map;
+        return map;
+    }
+
+    static auto& mutex()
+    {
+        static std::mutex m;
+        return m;
+    }
+
+public:
+    static bool add(Callback callback)
+    {
+        if (callback.m_id.empty() || !callback.m_callback)
+            return false;
+
+        std::lock_guard lock(mutex());
+
+        entries()[callback.m_id] = {
+            std::move(callback.m_callback),
+            std::move(callback.m_filter)
+        };
+
+        return true;
+    }
+
+    template<typename... A>
+    static bool emit(const std::string& id, A&&... args)
+    {
+        Entry entry;
+
+        {
+            std::lock_guard lock(mutex());
+
+            auto it = entries().find(id);
+            if (it == entries().end())
+                return false;
+
+            // 拷贝出处理器后立即释放锁，避免回调重入死锁
+            entry = it->second;
+        }
+
+        callback_detail::Args values;
+        values.reserve(sizeof...(A));
+
+        (values.emplace_back(
+            std::forward<A>(args)), ...);
+
+        try {
+            if (entry.filter && !entry.filter(values))
+                return false;
+
+            if (entry.callback)
+                entry.callback(values);
+
+            return true;
+        }
+        catch (const std::exception& e) {
+            std::cerr << "Callbacks::emit [" << id
+                      << "] error: " << e.what() << '\n';
+            return false;
+        }
+    }
+
+    static bool remove(const std::string& id)
+    {
+        std::lock_guard lock(mutex());
+        return entries().erase(id) != 0;
+    }
+
+    static void clear()
+    {
+        std::lock_guard lock(mutex());
+        entries().clear();
+    }
+};
+
+```
+
+#### 三、使用示例
+
+##### 1. 注册翻译更新事件
+
+```c++
+Callbacks::add(
+    Callback::set_id("id.lang.open")
+        .set_callback([] {
+            update_text(get_translate_text("id.lang.open"));
+        })
+        .set_filter([]() -> bool {
+            return true;
+        })
+);
+
+Callbacks::emit("id.lang.open");
+```
+
+不需要参数的事件可以直接 `emit(id)`。
+
+##### 2. 注册文件下载进度事件
+
+```c++
+// 普通函数也可以作为 filter
+bool filter_file_downloading(const QString& file_id)
+{
+    return file_id == get_file_id();
+}
+
+Callbacks::add(
+    Callback::set_id("id.file.downloading")
+        .set_callback(
+            [](const QString& file_id, int progress) {
+                update(file_id, progress);
+            })
+        .set_filter(&filter_file_downloading)
+);
+
+// 发送事件
+Callbacks::emit(
+    "id.file.downloading",
+    QStringLiteral("file-001"),
+    65
+);
+```
+
+过滤器只接收第一个参数 `file_id`，回调接收 `file_id` 和 `progress` 两个参数。参数类型必须与发送时的对应参数一致。
+
+##### 3. 使用普通函数作为 callback
+
+```c++
+void on_file_progress(const QString& file_id, int progress)
+{
+    update(file_id, progress);
+}
+
+Callbacks::add(
+    Callback::set_id("id.file.downloading")
+        .set_callback(&on_file_progress)
+        .set_filter(&filter_file_downloading)
+);
+```
+
+#### 四、需要特别注意的地方
+
+1\. 不要在过滤器中使用无法推导参数类型的泛型 lambda。
+
+下面这种写法：
+
+```c++
+.set_filter([](auto& file_id) {
+    return file_id == get_file_id();
+})
+```
+
+当前实现无法自动提取泛型 lambda 的参数类型。请写成：
+
+```c++
+.set_filter([](const QString& file_id) {
+    return file_id == get_file_id();
+})
+```
+
+2\. 界面更新必须在 GUI 线程执行。
+
+如果下载工作在后台线程调用：
+
+```c++
+Callbacks::emit("id.file.downloading", file_id, progress);
+```
+
+那么上面的普通回调也会在调用 `emit()` 的线程中执行。不要直接从后台线程操作 `QWidget`；Qt 的 GUI 对象必须在 GUI 线程使用。
+
+可以在回调里通过 `QMetaObject::invokeMethod()` 将 UI 更新投递到 GUI 线程，或把这个事件中心改为基于 Qt 信号与槽的队列连接。
+
+3\. 当前版本使用 `std::any`，参数必须可复制。 不适合直接传递不可复制对象或依赖原始引用生命周期的参数。
+
+4\. 当前实现的 `emit()` 是同步调用。 它只负责按 ID 查找、执行过滤器和调用回调，并不提供后台任务队列或定时调度。
+
+最后，如果你的项目所有事件参数都是已知类型（例如 `QString`、`int`、`std::shared_ptr<ContactData::ItemData>`），长期来看我更推荐使用显式事件结构体或 Qt 信号与槽，能够在编译阶段检查更多类型错误，避免 `std::any` 的运行时类型不匹配问题。

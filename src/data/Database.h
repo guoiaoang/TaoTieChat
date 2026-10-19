@@ -12,7 +12,7 @@ private:
     Database& operator=(const Database&) = delete;
 public:
     ~Database() = default;
-    static Database& instance();
+    static Database* instance();
 public:
     class FileIDPathMap {
     public:

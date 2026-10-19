@@ -48,8 +48,8 @@ public:
     ~ContactWindow();
 
 public:
-    const std::shared_ptr<ContactData::ItemData>& get_contact_data() const;
-    void set_contact_data(const std::shared_ptr<ContactData::ItemData>&contact_data, const SourceFlag&source_flag);
+    std::shared_ptr<ContactData::ItemData> get_contact_data() const;
+    void set_contact_data(std::shared_ptr<ContactData::ItemData> contact_data, const SourceFlag&source_flag);
 
 private:
     // 按钮和菜单的槽函数
@@ -66,8 +66,8 @@ private:
     void slot_action_edit    ();
     void slot_action_remove  ();
     // 新添加好友时刷新好友关系状态
-    void slot_contact_status_changed(const QVector<std::shared_ptr<ContactData::ItemData>>& to_contact_datas);
-    void slot_contact_info_changed(const std::shared_ptr<ContactData::ItemData>& contact_data);
+    void slot_contact_status_changed(QVector<std::shared_ptr<ContactData::ItemData>> to_contact_datas);
+    void slot_contact_info_changed  (        std::shared_ptr<ContactData::ItemData>  to_contact_data  );
 
     // view_avatar 在媒体窗口查看当前头像
     void view_avatar();
@@ -75,17 +75,17 @@ private:
     QString dialog_select_avatar_file();
 
     // network
-    void update_profile_text(const std::shared_ptr<ContactData::ItemData>&contact_data, const update_profile_callback&callback_update_profile = nullptr);
+    void update_profile_text(std::shared_ptr<ContactData::ItemData> contact_data, update_profile_callback callback_update_profile = nullptr);
     void update_profile_avatar(const QString&avatar_path);
     // 用户仅修改头像时不应该完全重置资料
-    // void update_profile_avatar_only(const std::shared_ptr<ContactData::ItemData>&avatar_data);
+    // void update_profile_avatar_only(std::shared_ptr<ContactData::ItemData> avatar_data);
 
-Q_SIGNALS:
-    void sig_contact_add    (const std::shared_ptr<ContactData::ItemData>&contact_data);
-    void sig_contact_remove (const std::shared_ptr<ContactData::ItemData>&contact_data);
-    void sig_contact_message(const std::shared_ptr<ContactData::ItemData>&contact_data);
-    void sig_contact_voice  (const std::shared_ptr<ContactData::ItemData>&contact_data);
-    void sig_contact_video  (const std::shared_ptr<ContactData::ItemData>&contact_data);
+// Q_SIGNALS:
+//     void sig_contact_add    (std::shared_ptr<ContactData::ItemData> contact_data);
+//     void sig_contact_remove (std::shared_ptr<ContactData::ItemData> contact_data);
+//     void sig_contact_message(std::shared_ptr<ContactData::ItemData> contact_data);
+//     void sig_contact_voice  (std::shared_ptr<ContactData::ItemData> contact_data);
+//     void sig_contact_video  (std::shared_ptr<ContactData::ItemData> contact_data);
 
 public:
     const SourceFlag get_source_flag() const { return m_source_flag; }
@@ -121,4 +121,3 @@ Q_DECLARE_OPERATORS_FOR_FLAGS(ContactWindow::ShipFlags)
 inline ContactWindow::ShipFlags operator~(ContactWindow::ShipFlag flag) {
     return ~ContactWindow::ShipFlags(flag);
 }
-

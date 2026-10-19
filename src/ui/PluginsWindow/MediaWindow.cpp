@@ -1,5 +1,6 @@
 #include "MediaWindow.h"
 #include "ui_MediaWindow.h"
+#include "SignalInner.h"
 
 MediaWindow::MediaWindow(QWidget *parent)
     : QMainWindow(parent), m_ui(std::make_shared<Ui::MediaWindow>()) {
@@ -109,7 +110,8 @@ MediaWindow::MediaWindow(QWidget *parent)
     // add toolbar to window
     this->addToolBar(m_toolbar);
 
-    connect(this, &MediaWindow::media_changed, m_ui->label, &QLabel::setPixmap);
+    // connect(this, &MediaWindow::media_changed, m_ui->label, &QLabel::setPixmap);
+    connect(SignalInner::instance(), &SignalInner::media_changed, m_ui->label, &QLabel::setPixmap);
     m_ui->label->setAlignment(Qt::AlignCenter);
     // 设置 label 的尺寸策略，使其能够收缩以避免出现滚动条
     m_ui->label->setSizePolicy(QSizePolicy::Ignored, QSizePolicy::Ignored);
@@ -132,7 +134,7 @@ MediaWindow::~MediaWindow() {
 }
 
 // TODO:会被多次重复调用，建议添加缓存或过滤操作
-void MediaWindow::show_media(const std::shared_ptr<MediaInfo>&media_info) {
+void MediaWindow::show_media(std::shared_ptr<MediaInfo> media_info) {
     QString str_title_right = QString("%1 %2").arg(QApplication::applicationName()).arg(tr("Media View"));
     if(!media_info) {
         // reset

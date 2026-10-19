@@ -17,6 +17,7 @@
 #include "ItemModel.h"
 #include "MessageDelegate.h"
 #include "Accounts.h"
+#include "SignalInner.h"
 
 namespace {
 
@@ -349,8 +350,8 @@ QSize MessageDelegate::sizeHint(const QStyleOptionViewItem &option, const QModel
 }
 
 void MessageDelegate::paintDocument(QPainter *painter, const QModelIndex &index,
-        const std::shared_ptr<MessageData::ItemData> &message_data,
-        const std::shared_ptr<ItemGeometry>&item_geometry) const {
+        std::shared_ptr<MessageData::ItemData> message_data,
+        std::shared_ptr<ItemGeometry         > item_geometry) const {
     do {
         // if (!check_is_message_context(index)) { break; }
         // auto message_data  = index.data(ENUMS::role_item_data()).value<std::shared_ptr<MessageData::ItemData>>();
@@ -481,7 +482,7 @@ void MessageDelegate::paint(QPainter *painter, const QStyleOptionViewItem &optio
         }
 
         else if (is_file) {
-            const auto&human_size = message_data->file->human_size;
+            auto human_size = message_data->file->human_size;
             // ---- 文件卡片：图标 + 文件名 + 大小 ----
             const QRectF iconRect(item_geometry->rect_bubble.left() + kBubbleHPad, item_geometry->rect_bubble.top() + (item_geometry->rect_bubble.height() - kFileIconSize) / 2.0, kFileIconSize, kFileIconSize);
             message_data->file->file_icon.paint(painter, iconRect.toRect());
@@ -512,8 +513,8 @@ void MessageDelegate::paint(QPainter *painter, const QStyleOptionViewItem &optio
 // ---------------------------------------------------------------------------
 
 void MessageDelegate::beginSelection(const QModelIndex &index, const QPoint &viewportPos,
-        const std::shared_ptr<MessageData::ItemData> &message_data,
-        const std::shared_ptr<ItemGeometry>&item_geometry) {
+        std::shared_ptr<MessageData::ItemData> message_data,
+        std::shared_ptr<ItemGeometry         > item_geometry) {
     do {
         // if (!check_is_message_context(index)) { break; }
         // auto message_data  = index.data(ENUMS::role_item_data()).value<std::shared_ptr<MessageData::ItemData>>();
@@ -536,8 +537,8 @@ void MessageDelegate::beginSelection(const QModelIndex &index, const QPoint &vie
 }
 
 void MessageDelegate::extendSelection(const QModelIndex &index, const QPoint &viewportPos,
-        const std::shared_ptr<MessageData::ItemData> &message_data,
-        const std::shared_ptr<ItemGeometry>&item_geometry) {
+        std::shared_ptr<MessageData::ItemData> message_data,
+        std::shared_ptr<ItemGeometry         > item_geometry) {
     do {
         // if (!check_is_message_context(index)) { break; }
         // auto message_data  = index.data(ENUMS::role_item_data()).value<std::shared_ptr<MessageData::ItemData>>();
@@ -674,18 +675,18 @@ bool MessageDelegate::editorEvent(QEvent *event, QAbstractItemModel *model, cons
                 }
                 if (item_geometry->rect_bubble.contains(pos_mouse)) {
                     if (!m_pendingLink.isEmpty()) {
-                        emit signal_open_link(m_pendingLink);
+                        emit SignalInner::instance()->signal_open_link(m_pendingLink);
                         m_pendingLink.clear();
                         return true;
                     }
                     // 图片默认为应用内插件查看
                     else if (is_image) {
-                        emit signal_open_data(message_data);
+                        emit SignalInner::instance()->signal_open_data(message_data);
                         return true;
                     }
                     // 其他文件默认为打开文件夹
                     else if (is_file) {
-                        emit signal_open_file(message_data);
+                        emit SignalInner::instance()->signal_open_file(message_data);
                         return true;
                     }
                 }
@@ -814,12 +815,12 @@ void MessageDelegate::showContextMenu(QAbstractItemView *view, const QModelIndex
         const QAction *chosen = menu.exec(globalPos);
         if (!chosen) { break; }
 
-        ;    if (chosen == action_open_data  ) { emit signal_open_data  (message_data); }  // 使用内部插件打开
-        else if (chosen == action_copy_data  ) { emit signal_copy_data  (message_data); }  // 复制文件内容到剪切板，比如图像内容
-        else if (chosen == action_open_file  ) { emit signal_open_file  (message_data); }  // 使用系统默认的应用程序打开文件
-        else if (chosen == action_open_folder) { emit signal_open_folder(message_data); }  // 打开文件所在文件夹
-        else if (chosen == action_save_to    ) { emit signal_save_to    (message_data); }  // 文件复制到指定目录
-        else if (chosen == action_copy_file  ) { emit signal_copy_file  (message_data); }  // 复制文件到剪切板，可在资源管理器中粘贴
-        else if (chosen == action_copy_path  ) { emit signal_copy_path  (message_data); }  // 复制文件路径到剪切板
+        ;    if (chosen == action_open_data  ) { emit SignalInner::instance()->signal_open_data  (message_data); }  // 使用内部插件打开
+        else if (chosen == action_copy_data  ) { emit SignalInner::instance()->signal_copy_data  (message_data); }  // 复制文件内容到剪切板，比如图像内容
+        else if (chosen == action_open_file  ) { emit SignalInner::instance()->signal_open_file  (message_data); }  // 使用系统默认的应用程序打开文件
+        else if (chosen == action_open_folder) { emit SignalInner::instance()->signal_open_folder(message_data); }  // 打开文件所在文件夹
+        else if (chosen == action_save_to    ) { emit SignalInner::instance()->signal_save_to    (message_data); }  // 文件复制到指定目录
+        else if (chosen == action_copy_file  ) { emit SignalInner::instance()->signal_copy_file  (message_data); }  // 复制文件到剪切板，可在资源管理器中粘贴
+        else if (chosen == action_copy_path  ) { emit SignalInner::instance()->signal_copy_path  (message_data); }  // 复制文件路径到剪切板
     } while (false);
 }

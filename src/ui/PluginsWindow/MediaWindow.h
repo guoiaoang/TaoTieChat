@@ -31,10 +31,10 @@ public:
     void set_play_list(const std::vector<std::shared_ptr<MediaInfo>>&play_list);
     const std::vector<std::shared_ptr<MediaInfo>> get_play_list() const;
     bool eventFilter(QObject *watched, QEvent *event) override;
-    void show_media(const std::shared_ptr<MediaInfo>&media_info);
+    void show_media(std::shared_ptr<MediaInfo> media_info);
 
-signals:
-    void media_changed(const QPixmap&pixmap);
+// signals:
+//     void media_changed(const QPixmap&pixmap);
 
 public slots:
     void slot_media_open        (            );

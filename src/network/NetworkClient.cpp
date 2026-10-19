@@ -1,6 +1,7 @@
 #include "NetworkClient.h"
 #include "Accounts.h"
 #include "Database.h"
+#include "SignalInner.h"
 
 bool NetworkClient::init() {
     if (m_inited) { return true; }
@@ -71,7 +72,7 @@ bool NetworkClient::disconnect_sync(const QString& account_id) {
 }
 
 // 成功失败都要返回，失败时要返回错误原因
-bool NetworkClient::signup(const signup_params& params, const signup_callback& callback) {
+bool NetworkClient::signup(signup_params params, signup_callback callback) {
     using namespace Utils::Wrapper;
     using Request  = SignUpRequest;
     using Reply    = SignUpReply;
@@ -134,7 +135,7 @@ bool NetworkClient::signup(const signup_params& params, const signup_callback& c
 }
 
 // 成功失败都要返回，失败时要返回错误原因
-bool NetworkClient::signin(const signin_params& params, const signin_callback& callback) {
+bool NetworkClient::signin(signin_params params, signin_callback callback) {
     using namespace Utils::Wrapper;
     using Request  = SignInRequest;
     using Reply    = SignInReply;
@@ -190,7 +191,7 @@ bool NetworkClient::signin(const signin_params& params, const signin_callback& c
 }
 
 // 精准匹配，不返回包含查询词的内容
-bool NetworkClient::search_user (const search_user_params&params, const search_user_callback&callback) {
+bool NetworkClient::search_user (search_user_params params, search_user_callback callback) {
     using namespace Utils::Wrapper;
     using Request  = SearchUserRequest;
     using Reply    = SearchUserReply;
@@ -244,7 +245,7 @@ bool NetworkClient::search_user (const search_user_params&params, const search_u
 }
 
 // 更新个人资料，服务端支持同时修改头像 ID，不包括鉴权信息
-bool NetworkClient::update_profile(const update_profile_params&params, const update_profile_callback&callback) {
+bool NetworkClient::update_profile(update_profile_params params, update_profile_callback callback) {
     using namespace Utils::Wrapper;
     using Request  = UpdateProfileRequest;
     using Reply    = UpdateProfileReply;
@@ -302,7 +303,7 @@ bool NetworkClient::update_profile(const update_profile_params&params, const upd
 }
 
 // 获取文件上传 ID
-bool NetworkClient::get_file_id(const get_file_id_params&params, const get_file_id_callback&callback) {
+bool NetworkClient::get_file_id(get_file_id_params params, get_file_id_callback callback) {
     using namespace Utils::Wrapper;
     using Request  = GetFileIDRequest;
     using Reply    = GetFileIDReply;
@@ -366,7 +367,7 @@ bool NetworkClient::get_file_id(const get_file_id_params&params, const get_file_
     return true;
 }
 
-bool NetworkClient::contact_request(const contact_request_params& params, const contact_request_callback& callback) {
+bool NetworkClient::contact_request(contact_request_params params, contact_request_callback callback) {
     using namespace Utils::Wrapper;
     using Request  = ContactRequestRequest;
     using Reply    = ContactRequestReply;
@@ -423,7 +424,7 @@ bool NetworkClient::contact_request(const contact_request_params& params, const 
     return true;
 }
 
-bool NetworkClient::contact_reply(const contact_reply_params& params, const contact_reply_callback& callback) {
+bool NetworkClient::contact_reply(contact_reply_params params, contact_reply_callback callback) {
     using namespace Utils::Wrapper;
     using Request  = ContactReplyRequest;
     using Reply    = ContactReplyReply;
@@ -480,11 +481,11 @@ bool NetworkClient::contact_reply(const contact_reply_params& params, const cont
     return true;
 }
 
-bool NetworkClient::get_contact_request(const get_contact_request_params& params, const get_contact_request_callback& callback) {
+bool NetworkClient::get_contact_request(get_contact_request_params params, get_contact_request_callback callback) {
     return false;
 }
 
-bool NetworkClient::get_last_id(const get_last_id_params& params, const get_last_id_callback& callback) {
+bool NetworkClient::get_last_id(get_last_id_params params, get_last_id_callback callback) {
     using namespace Utils::Wrapper;
     using Request  = AuthRequest;
     using Reply    = GetLastIDReply;
@@ -539,7 +540,7 @@ bool NetworkClient::get_last_id(const get_last_id_params& params, const get_last
     return true;
 }
 
-bool NetworkClient::sync(const sync_params& params, const sync_callback& callback) {
+bool NetworkClient::sync(sync_params params, sync_callback callback) {
     using namespace Utils::Wrapper;
     using Request  = SyncRequest;
     using Reply    = SyncReply;
@@ -626,7 +627,7 @@ bool NetworkClient::sync(const sync_params& params, const sync_callback& callbac
     return true;
 }
 
-bool NetworkClient::send_message(const send_message_params& params, const send_message_callback& callback) {
+bool NetworkClient::send_message(send_message_params params, send_message_callback callback) {
     using namespace Utils::Wrapper;
     using Request  = MessageContext;
     using Reply    = MessageReply;
@@ -685,7 +686,7 @@ bool NetworkClient::send_message(const send_message_params& params, const send_m
     return true;
 }
 
-bool NetworkClient::get_file_id(const QString&file_path, network_file_io_notify_callback& callback_get_file_id_notiify) {
+bool NetworkClient::get_file_id(const QString&file_path, network_file_io_notify_callback callback_get_file_id_notiify) {
     using Wrapper  = Utils::Wrapper::FileMetadataWrapper;
     using Notify   = NetworkFileIONotify;
     using Callback = network_file_io_notify_callback;
@@ -724,12 +725,12 @@ bool NetworkClient::get_file_id(const QString&file_path, network_file_io_notify_
     };
     // 构造参数
     get_file_id_params params_get_file_id = std::make_shared<GetFileIDRequest>();
-    params_get_file_id->setRequestUserAuth(*Accounts::instance().get_auth_request().get());
+    params_get_file_id->setRequestUserAuth(*Accounts::instance()->get_auth_request().get());
     params_get_file_id->setFileMetadata(Wrapper{.file_name = file_name, .file_size = file_size, .file_md5 = file_md5}());
 
     // qDebug().noquote().nospace() << Utils::Transform::to_string(params_get_file_id->requestUserAuth());
 
-    get_file_id_callback callback_get_file_id = [callback_get_file_id_notiify, get_file_id_args](const get_file_id_params& request, const get_file_id_reply&reply) {
+    get_file_id_callback callback_get_file_id = [callback_get_file_id_notiify, get_file_id_args](get_file_id_params request, get_file_id_reply reply) {
         // 网络超时或其他错误导致没有收到回复
         if (reply == std::nullopt || !reply->hasResult()) {
             get_file_id_args->notify.ok      = false;
@@ -750,7 +751,7 @@ bool NetworkClient::get_file_id(const QString&file_path, network_file_io_notify_
     return true;
 }
 
-bool NetworkClient::upload_file(const QString&file_path, network_file_io_notify_callback& callback_upload_file_notify) {
+bool NetworkClient::upload_file(const QString&file_path, network_file_io_notify_callback callback_upload_file_notify) {
     using namespace Utils::Wrapper;
     using Request  = FileUploadRequest;
     using Reply    = FileUploadReply;
@@ -794,7 +795,7 @@ bool NetworkClient::upload_file(const QString&file_path, network_file_io_notify_
             // ===============                                                    //
             Request reuest;
             Header  header;
-            header.setRequestUserAuth(*Accounts::instance().get_auth_request().get());
+            header.setRequestUserAuth(*Accounts::instance()->get_auth_request().get());
             header.setFileId(file_upload_args->notify.id);
             // header.setReason("upload file");
             reuest.setHeader(header);
@@ -974,7 +975,7 @@ public:
     QMutex m_mutex;
 };
 
-bool NetworkClient::download_file(const QString&file_id, const QString&notify_id, network_file_io_notify_callback& callback_download_file_notify) {
+bool NetworkClient::download_file(const QString&file_id, const QString&notify_id, network_file_io_notify_callback callback_download_file_notify) {
     using namespace Utils::Wrapper;
     using Request  = FileDownloadRequest;
     using Reply    = FileDownloadReply;
@@ -1000,7 +1001,7 @@ bool NetworkClient::download_file(const QString&file_id, const QString&notify_id
         QString  real_md5      ;  // hash 下载文件得出的结果
         BytesMd5 calculated_md5;  // hash 下载的文件的工具
     };
-    const auto file_path = Database::instance().get_local_file_id_path(file_id);
+    const auto file_path = Database::instance()->get_local_file_id_path(file_id);
     QFileInfo file_info(file_path);
     qint64 downloaded_size = qMax<qint64>(0, file_info.size());
     // 获取下载起始位置
@@ -1024,7 +1025,7 @@ bool NetworkClient::download_file(const QString&file_id, const QString&notify_id
     do {
         // ===============                                                    //
         Request request_download_file_param;
-        request_download_file_param.setRequestUserAuth(*Accounts::instance().get_auth_request().get());
+        request_download_file_param.setRequestUserAuth(*Accounts::instance()->get_auth_request().get());
         request_download_file_param.setFileId(file_download_args->notify.id);
         request_download_file_param.setDownloadedBytes(file_download_args->downloaded_size);  // 断点续传
         std::unique_ptr<Stream> reply_conn = m_client_file->FileDownload(request_download_file_param, m_grpc_call_options);
@@ -1108,7 +1109,7 @@ bool NetworkClient::download_file(const QString&file_id, const QString&notify_id
                     if ( file_download_args->notify.path.isEmpty() && !file_download_args->file_download) {
                         file_download_args->notify.path = QString("%1/%2.part").arg(Utils::user_cache_path()).arg(file_download_args->notify.name);  //  未下载完成时添加标记
                         // 保存 file_id 和 本地路径的映射关系，以便后续根据 file_id 获取本地文件路径进行删除等操作
-                        Database::instance().save_local_file_id_path(file_download_args->notify.id, file_download_args->notify.path); // 未下载完成时也进行存储，下载完成后再重命名及更新记录
+                        Database::instance()->save_local_file_id_path(file_download_args->notify.id, file_download_args->notify.path); // 未下载完成时也进行存储，下载完成后再重命名及更新记录
                         Utils::create_dirs(Utils::get_dir(file_download_args->notify.path));  // 确保目录存在
                         file_download_args->file_download = std::make_shared<QFile>(file_download_args->notify.path);
                         if (!file_download_args->file_download || !file_download_args->file_download->open(QIODevice::ReadWrite)) {
@@ -1236,10 +1237,10 @@ bool NetworkClient::download_file(const QString&file_id, const QString&notify_id
                     QString new_file_path = QString("%1/%2").arg(Utils::user_download_path()).arg(file_download_args->notify.name);  //  下载完成后的保存位置
                     // 会自动创建父目录
                     Utils::rename(file_download_args->notify.path, new_file_path);
-                    Database::instance().save_local_file_id_path(file_download_args->notify.id, new_file_path); // 下载完成后需要更新记录
+                    Database::instance()->save_local_file_id_path(file_download_args->notify.id, new_file_path); // 下载完成后需要更新记录
 
                     // 文件下载完成时的结果通知
-                    emit signal_file_id_downloaded(file_download_args->notify.id);
+                    emit SignalInner::instance()->signal_file_id_downloaded(file_download_args->notify.id);
                     file_download_args->error_occued   = false;
                     file_download_args->notify.ok      = true;
                     file_download_args->notify.code    = int64_t(SuccessCode::SUCCESS);

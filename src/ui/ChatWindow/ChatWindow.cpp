@@ -9,6 +9,7 @@
 #include "ItemModel.h"
 #include "ItemDelegate.h"
 #include "MessageWindow.h"
+#include "SignalInner.h"
 
 ChatWindow::ChatWindow(QWidget *parent) : QMainWindow(parent) {}
 
@@ -30,6 +31,8 @@ void ChatWindow::release_resources() {
     m_action_auto_login     .reset();
     m_action_signout        .reset();
     m_action_exit           .reset();
+    //
+    m_action_clean_search_box.reset();
     // add
     m_menu_add     .reset();
     m_action_add   .reset();
@@ -37,31 +40,31 @@ void ChatWindow::release_resources() {
     // model/view
     m_contact_model   .reset();
     m_contact_delegate.reset();
+    m_contact_proxy    .reset();
+    m_chatroom_model   .reset();
+    m_chatroom_proxy   .reset();
     // 退出时需要关闭及重置的页面
     m_search_window .reset();  // 搜素页面
     m_contact_window.reset();  // 点击头像时显示的个人信息页面
     //
     m_cache_self_data  .reset();
     m_cache_self_avatar.reset();
-    m_chatroom_proxy   .reset();
 
     // 清除好友关系等
-    Accounts::instance().set_contact_list(QVector<std::shared_ptr<ContactData::ItemData>>());
+    Accounts::instance()->set_contact_list(QVector<std::shared_ptr<ContactData::ItemData>>());
 
     // 单客户端单账号：退出登录时释放管道，允许下一次登录
-    Utils::OS::try_grab_account_pipe(Accounts::instance().get_current_account()->user_id, false);
+    Utils::OS::try_grab_account_pipe(Accounts::instance()->get_current_account()->user_id, false);
 
     // 断开实时同步的连接网络
-    // NetworkClient::instance().reset_connection();
-    NetworkClient::instance().disconnect_sync(Accounts::instance().get_current_account()->account_id);
+    // NetworkClient::instance()->reset_connection();
+    NetworkClient::instance()->disconnect_sync(Accounts::instance()->get_current_account()->account_id);
 }
 
 void ChatWindow::init() {
     // 重新初始化界面及数据
     m_ui = std::make_shared<Ui::ChatWindow>();
     m_ui->setupUi(this);
-    //
-    m_action_clean_search_box = std::make_shared<QAction>();
     // 创建对象
     m_menu_settings          = std::make_shared<QMenu  >();
     m_action_settings        = std::make_shared<QAction>();
@@ -69,15 +72,19 @@ void ChatWindow::init() {
     m_action_auto_login      = std::make_shared<QAction>();
     m_action_signout         = std::make_shared<QAction>();
     m_action_exit            = std::make_shared<QAction>();
+    //
+    m_action_clean_search_box = std::make_shared<QAction>();
     // add
     m_menu_add         = std::make_shared<QMenu  >();
     m_action_add       = std::make_shared<QAction>();
     m_action_create    = std::make_shared<QAction>();
     // model/view/proxy
-    m_chatroom_model   = std::make_shared<ChatroomModel>();
     m_contact_model    = std::make_shared<ContactModel >();
     m_contact_delegate = std::make_shared<ItemDelegate >();
+    m_contact_proxy    = std::make_shared<ContactProxy >();
+    m_chatroom_model   = std::make_shared<ChatroomModel>();
     m_chatroom_proxy   = std::make_shared<ChatroomProxy>();
+
     //
     m_search_window    = std::make_shared<SearchWindow>();
     m_search_window->hide();
@@ -86,12 +93,12 @@ void ChatWindow::init() {
     connect(m_ui->navigate_button_avatar   , &QToolButton::clicked, this, &ChatWindow::slot_button_navigate_avatar ); // 点击了头像按钮
     connect(m_ui->navigate_button_chat_room, &QToolButton::clicked, this, &ChatWindow::slot_button_navigate_message); // 点击了聊天室按钮
     connect(m_ui->navigate_button_contact  , &QToolButton::clicked, this, &ChatWindow::slot_button_navigate_contact); // 点击了联系人按钮
-    connect(m_ui->button_settings          , &QToolButton::clicked, this, [&](){ this->slot_show_settings_menu(); }); // 点击了设置按钮
-    connect(m_ui->button_add               , &QToolButton::clicked, this, [&](){ this->slot_show_add_menu     (); }); // 点击了添加按钮
+    connect(m_ui->button_settings          , &QToolButton::clicked, this, &ChatWindow::slot_show_settings_menu     ); // 点击了设置按钮
+    connect(m_ui->button_add               , &QToolButton::clicked, this, &ChatWindow::slot_show_add_menu          ); // 点击了添加按钮
     // 各种菜单事件
     connect(m_action_signout .get(), &QAction::triggered, this, [&](){
         release_resources();
-        emit signout();
+        emit SignalInner::instance()->signout();
     });
     //
     connect(m_action_clean_search_box.get(), &QAction::triggered, this, [this](bool checked = false){ m_ui->edit_search->clear(); });
@@ -106,22 +113,21 @@ void ChatWindow::init() {
     connect(m_action_settings.get(), &QAction::triggered, this, [&](){ qDebug() << "m_action_settings"; });
     connect(m_action_add     .get(), &QAction::triggered, this, [&](){ qDebug() << "m_action_add"     ; });
     connect(m_action_create  .get(), &QAction::triggered, this, [&](){ qDebug() << "m_action_create"  ; });
-    // 连接聊天列表点击事件
-    // connect(m_ui->page_list_chat_room, &QListView::itemClicked, this, &ChatWindow::slot_chat_room_item_clicked);
-    // // 使用 currentChanged 信号支持键盘上下键导航和鼠标点击
-    // connect(m_ui->page_list_contact->selectionModel(), &QItemSelectionModel::currentChanged, this, &ChatWindow::slot_contact_selection_changed);
-    // 用于同步显示搜索词
-    // connect(m_search_window, &SearchWindow::SearchEditTextChanged, m_ui->edit_search, &QLineEdit::setText);
-    connect(&Accounts     ::instance(), &Accounts     ::signal_account_changed     , this, &ChatWindow::current_account_data_changed  );
-    connect(&Accounts     ::instance(), &Accounts     ::signal_contact_info_changed, this, &ChatWindow::slot_update_avatar_info       );
-    connect(&Accounts     ::instance(), &Accounts     ::signal_contact_info_changed, this, &ChatWindow::slot_update_contact_list_info );
-    connect(&Accounts     ::instance(), &Accounts     ::signal_contact_info_changed, this, &ChatWindow::slot_update_chatroom_list_info);
-    connect(&NetworkClient::instance(), &NetworkClient::signal_file_id_downloaded  , this, &ChatWindow::slot_file_id_downloaded       );
+
+    connect(SignalInner::instance(), &SignalInner::signal_account_changed     , this, &ChatWindow::slot_update_current_account_data);  // 更改当前账号信息时触发
+    // connect(SignalInner::instance(), &SignalInner::signal_contact_info_changed, this, &ChatWindow::slot_update_avatar_info      );
+    connect(SignalInner::instance(), &SignalInner::signal_contact_info_changed, this, &ChatWindow::slot_update_contact_list_info   );
+    connect(SignalInner::instance(), &SignalInner::signal_contact_info_changed, this, &ChatWindow::slot_update_chatroom_list_info  );
+    connect(SignalInner::instance(), &SignalInner::signal_file_id_downloaded  , this, &ChatWindow::slot_file_id_downloaded         );
+    connect(SignalInner::instance(), &SignalInner::sig_contact_message        , this, &ChatWindow::slot_message_to                 );
+    connect(SignalInner::instance(), &SignalInner::sig_contact_voice          , this, &ChatWindow::slot_voice_to                   );
+    connect(SignalInner::instance(), &SignalInner::sig_contact_video          , this, &ChatWindow::slot_video_to                   );
+
     connect(m_action_rember_password.get(), &QAction::triggered, this, [&](){
-        auto current_account = Accounts::instance().get_current_account();
+        auto current_account = Accounts::instance()->get_current_account();
         if (!current_account) { return; }
         // 创建副本，不要修改原先的数据，防止恢复为保存登陆信息时数据丢失
-        std::shared_ptr<AuthOpt> auth_opt = std::make_shared<AuthOpt>(*Accounts::instance().get_auth_opt(current_account->account_id).get());
+        std::shared_ptr<AuthOpt> auth_opt = std::make_shared<AuthOpt>(*Accounts::instance()->get_auth_opt(current_account->account_id).get());
         if (!auth_opt) { return; }
         // 保存数据
         auth_opt->rember_password = m_action_rember_password->isChecked();
@@ -134,10 +140,10 @@ void ChatWindow::init() {
         m_action_auto_login     ->setChecked(auth_opt->auto_login     );
     });
     connect(m_action_auto_login     .get(), &QAction::triggered, this, [&](){
-        auto current_account = Accounts::instance().get_current_account();
+        auto current_account = Accounts::instance()->get_current_account();
         if (!current_account) { return; }
         // 创建副本，不要修改原先的数据，防止恢复为保存登陆信息时数据丢失
-        std::shared_ptr<AuthOpt> auth_opt = std::make_shared<AuthOpt>(*Accounts::instance().get_auth_opt(current_account->account_id).get());
+        std::shared_ptr<AuthOpt> auth_opt = std::make_shared<AuthOpt>(*Accounts::instance()->get_auth_opt(current_account->account_id).get());
         if (!auth_opt) { return; }
         // 保存数据
         auth_opt->rember_password = m_action_rember_password->isChecked() || m_action_auto_login->isChecked();  // 自动登陆必须记住密码
@@ -150,28 +156,23 @@ void ChatWindow::init() {
         m_action_auto_login     ->setChecked(auth_opt->auto_login     );
     });
     // 支持单击展开群组
-    connect(m_ui->page_list_contact, &QTreeView::clicked, this, &ChatWindow::handle_contact_item_clicked);
+    connect(m_ui->page_list_contact, &QTreeView::clicked, this, &ChatWindow::slot_contact_item_clicked);
     // // 使用 currentChanged 信号支持键盘上下键导航和鼠标点击  // 需要先 setModel 才能连接
-    // connect(m_ui->page_list_contact->selectionModel(), &QItemSelectionModel::currentChanged, this, &ChatWindow::handle_contact_selection_changed);
-    // 发送消息
-    connect(m_contact_window.get(), &ContactWindow::sig_contact_message, this, &ChatWindow::slot_message_to);
-    connect(m_contact_window.get(), &ContactWindow::sig_contact_voice  , this, &ChatWindow::slot_voice_to  );
-    connect(m_contact_window.get(), &ContactWindow::sig_contact_video  , this, &ChatWindow::slot_video_to  );
+    // connect(m_ui->page_list_contact->selectionModel(), &QItemSelectionModel::currentChanged, this, &ChatWindow::slot_contact_selection_changed);
     // 用于同步显示搜索词
-    connect(m_search_window.get(), &SearchWindow::SearchEditTextChanged, this, [this](const QString &keyword){
+    connect(SignalInner::instance(), &SignalInner::SearchEditTextChanged, this, [this](const QString &keyword){
         m_action_clean_search_box->setVisible(!keyword.isEmpty());
         if (m_ui->edit_search->text() != keyword) {
             m_ui->edit_search->setText(keyword);
         }
     });
     // 搜索框中的发送消息按钮
-    connect(m_search_window->get_user_window().get(), &ContactWindow::sig_contact_message, this, &ChatWindow::slot_message_to);
-    connect(m_search_window->get_user_window().get(), &ContactWindow::sig_contact_voice  , this, &ChatWindow::slot_voice_to  );
-    connect(m_search_window->get_user_window().get(), &ContactWindow::sig_contact_video  , this, &ChatWindow::slot_video_to  );
     // 点击聊天室列表中的项目
-    connect(m_ui->page_list_chat_room, &QTreeView::clicked, this, &ChatWindow::handle_chatroom_item_clicked);
+    connect(m_ui->page_list_chat_room, &QTreeView::clicked, this, &ChatWindow::slot_chatroom_item_clicked);
     // // 使用 currentChanged 信号支持键盘上下键导航和鼠标点击  // 需要先 setModel 才能连接
-    // connect(m_ui->page_list_chat_room->selectionModel(), &QItemSelectionModel::currentChanged, this, &ChatWindow::handle_chatroom_selection_changed);
+    // connect(m_ui->page_list_chat_room->selectionModel(), &QItemSelectionModel::currentChanged, this, &ChatWindow::slot_chatroom_selection_changed);
+    // 连接聊天列表点击事件
+    // connect(m_ui->page_list_chat_room, &QListView::itemClicked, this, &ChatWindow::slot_chat_room_item_clicked);
 
     // 执行操作
     m_ui->chat_splitter->setStretchFactor(0, 0); // 编号 0 的窗口拉伸因子为 0 // 整个窗口调整大小时左侧宽度不调整
@@ -209,8 +210,8 @@ void ChatWindow::init() {
     // 设置应用级别的图标后就不需要再手动设置窗口级别的图标了
     QApplication::setWindowIcon(font_icon.icon.profile);
 
-    auto current_account = Accounts::instance().get_current_account();
-    auto auth_opt = Accounts::instance().get_auth_opt(!current_account ? QString{} : current_account->account_id);
+    auto current_account = Accounts::instance()->get_current_account();
+    auto auth_opt = Accounts::instance()->get_auth_opt(!current_account ? QString{} : current_account->account_id);
     //
     m_action_clean_search_box->setIcon(style()->standardIcon(QStyle::SP_LineEditClearButton));
     m_ui->edit_search->addAction(m_action_clean_search_box.get(), QLineEdit::TrailingPosition);
@@ -264,8 +265,11 @@ void ChatWindow::init() {
     // TODO:设置最小宽度为 ItemChat 宽度 + 滚动条宽度
     // m_ui->stacked_contact_list->setMinimumWidth(ItemChat().minimumWidth() + m_ui->page_list_chat->verticalScrollBar()->sizeHint().width());
 
-    // contact view/model/delegate
-    m_ui->page_list_contact->setModel(m_contact_model.get());
+    // contact view/model/delegate/proxy
+    m_contact_proxy->setSourceModel(m_contact_model.get());  // 将原始 Model 设置给代理 Model
+    m_contact_proxy->sort(0, Qt::AscendingOrder); // 按第 0 列正序排序
+    m_contact_proxy->setDynamicSortFilter(true);  // 开启动态排序（当 Model 内部数据改变时，自动重新排序）
+    m_ui->page_list_contact->setModel(m_contact_proxy.get());
     m_ui->page_list_contact->setItemDelegate(m_contact_delegate.get());
     m_ui->page_list_contact->setHeaderHidden(true); // 隐藏表头，看起来更像 QQ 列表
     m_ui->page_list_contact->setIndentation(0); // m_ui->page_list_contact->indentation() / 2);  // 设置分组缩进  // 必须
@@ -278,7 +282,7 @@ void ChatWindow::init() {
     // m_ui->stacked_contact_list->setMinimumWidth(300);  // 有效
     // m_ui->widget_contact_list ->setMinimumWidth(400);  // 有效
     // // 使用 currentChanged 信号支持键盘上下键导航和鼠标点击  // 需要先 setModel 才能连接
-    connect(m_ui->page_list_contact->selectionModel(), &QItemSelectionModel::currentChanged, this, &ChatWindow::handle_contact_selection_changed);
+    connect(m_ui->page_list_contact->selectionModel(), &QItemSelectionModel::currentChanged, this, &ChatWindow::slot_contact_selection_changed);
 
     // chatroom
     m_chatroom_proxy->setSourceModel(m_chatroom_model.get());  // 将原始 Model 设置给代理 Model
@@ -297,7 +301,7 @@ void ChatWindow::init() {
     // m_ui->page_list_detail->setMinimumWidth(200);
     m_ui->page_list_detail->setMinimumWidth(400);
     // 使用 currentChanged 信号支持键盘上下键导航和鼠标点击  // 需要先 setModel 才能连接
-    connect(m_ui->page_list_chat_room->selectionModel(), &QItemSelectionModel::currentChanged, this, &ChatWindow::handle_chatroom_selection_changed);
+    connect(m_ui->page_list_chat_room->selectionModel(), &QItemSelectionModel::currentChanged, this, &ChatWindow::slot_chatroom_selection_changed);
     // // 绑定搜索框文本改变信号
     // connect(m_ui->edit_search, &QLineEdit::textChanged, this, [this](const QString &text) {
     //     // 设置过滤关键词（区分/不区分大小写）
@@ -320,8 +324,8 @@ void ChatWindow::init() {
 
 #ifdef _DEBUG
     if (0) {
-        // m_contact_model->add_member(ENUMS::ItemGroupType::REQUEST, Accounts::instance().get_current_account());
-        // m_contact_model->add_member(ENUMS::ItemGroupType::FRIENDS, Accounts::instance().get_current_account());
+        // m_contact_model->add_member(ENUMS::ItemGroupType::REQUEST, Accounts::instance()->get_current_account());
+        // m_contact_model->add_member(ENUMS::ItemGroupType::FRIENDS, Accounts::instance()->get_current_account());
         for (int i = 0; i <= 300; ++i) {
             auto contact_data = std::make_shared<ContactData::ItemData>();
             auto num          = QString("%1").arg(i, 5, 10, '0');
@@ -359,13 +363,8 @@ void ChatWindow::init() {
     // 设置要初始化显示的页面
     m_ui->navigate_button_chat_room->click();  // 初始化状态
 
-    // 更新个人信息显示  // 初始化赋值，需要创建副本，而不是共享同一片内存
-    const auto& contact_data = Accounts::instance().get_current_account();
-    // set_cache_contact_data(contact_data);
-    update_contact_data(contact_data);  // 更新信息为 contact_data
-
-    // 从网络获取当前用户的个人信息并更新显示
-    updata_current_account_data();  // 从网络或更新
+    // // 更新个人信息显示  // 初始化赋值，需要创建副本，而不是共享同一片内存
+    // slot_update_current_account_data();  // 触发更新  // 本地更新
 
     // 消息同步
     network_status_sync();
@@ -374,28 +373,14 @@ void ChatWindow::init() {
     m_ui->button_add->setVisible(false);
 }
 
-bool ChatWindow::updata_current_account_data() {
-    // 从网络获取当前用户的个人信息并更新显示
-    auto&user_id = Accounts::instance().get_current_account()->user_id;
-    search_user_params params_search_user = std::make_shared<SearchUserRequest>();
-    params_search_user->setRequestUserAuth(*Accounts::instance().get_auth_request().get());
-    params_search_user->setUserId(user_id);
-    NetworkClient::instance().search_user(params_search_user, [this](const search_user_params&params_search_user, const search_user_reply&reply_search_user) {
-        if (!reply_search_user || !reply_search_user->result().hasSuccessCode()) { return; }
-        // update_contact_info(std::make_shared<ContactData::ItemData>(*reply_search_user->contactInfo().get()));
-        Accounts::instance().set_current_account(Utils::Transform::to_contact_data(std::make_shared<ContactInfo>(reply_search_user->contactInfo())));
-    });
-    return true;
-}
-
 // 服务端消息同步消息
 bool ChatWindow::network_status_sync() {
     auto get_local_last_id = [](SyncType type) {
         return 0;
     };
     // get last id
-    get_last_id_params   params_get_last_id   = Accounts::instance().get_auth_request();
-    get_last_id_callback callback_get_last_id = [&](const get_last_id_params&params_get_last_id, const get_last_id_reply&reply_get_last_id) {
+    get_last_id_params   params_get_last_id   = Accounts::instance()->get_auth_request();
+    get_last_id_callback callback_get_last_id = [&](get_last_id_params params_get_last_id, get_last_id_reply reply_get_last_id) {
         if (!reply_get_last_id) { return; }
         if (!reply_get_last_id->hasResult()) { return; }
         if (!reply_get_last_id->result().hasSuccessCode()) { return; }
@@ -425,10 +410,10 @@ bool ChatWindow::network_status_sync() {
             std::shared_ptr<SyncNotify> notify_sync = std::make_shared<SyncNotify>();
             //
             sync_params params_sync = std::make_shared<SyncRequest>();
-            params_sync->setRequestUserAuth(*Accounts::instance().get_auth_request().get());
+            params_sync->setRequestUserAuth(*Accounts::instance()->get_auth_request().get());
             params_sync->setSyncTag(sync_tags);
             //
-            sync_callback callback_sync = [&, notify_sync](const sync_params&params_sync, const sync_reply&reply_sync) {
+            sync_callback callback_sync = [&, notify_sync](sync_params params_sync, sync_reply reply_sync) {
                 // 鉴权结果
                 if (!notify_sync->inited) {
                     if (!reply_sync->hasHeader() && !reply_sync->header().hasResult() && !reply_sync->header().result().hasSuccessCode()) {
@@ -459,7 +444,7 @@ bool ChatWindow::network_status_sync() {
                             auto contact_data         = Utils::Transform::to_contact_data(std::make_shared<ContactInfo>(request_contact));
                             do {
                                 // messages
-                                const auto&current_account = Accounts::instance().get_current_account();
+                                auto current_account = Accounts::instance()->get_current_account();
                                 if (!current_account) { break; }
                                 if ( current_account->account_id.isEmpty()) { break; }
                                 if ( contact_data   ->account_id.isEmpty()) { break; }
@@ -476,7 +461,7 @@ bool ChatWindow::network_status_sync() {
                             qDebug().noquote().nospace() << "Get sync contact request. form : " << request_contact << ", request_time : " << request_time << ", request_message_text : " << request_message_text;
                             // 添加到联系人列表中，但标记为申请好友（放入申请分组）
                             add_contact(contact_data, ENUMS::ItemGroupType::REQUEST);
-                            // Accounts::instance().set_request_messages();
+                            // Accounts::instance()->set_request_messages();
                             continue;
                         }
                         // 好友申请通过
@@ -491,18 +476,18 @@ bool ChatWindow::network_status_sync() {
                             add_contact(contact_data, ENUMS::ItemGroupType::FRIENDS);
 
                             // 更新好友列表  // 使用昵称及用户 ID 排序，不使用账号 ID 排序  // 联系人列表的排序不在这
-                            auto contact_datas = Accounts::instance().get_contact_list();
+                            auto contact_datas = Accounts::instance()->get_contact_list();
                             contact_datas.append(contact_data);
                             // TODO:排序函数未验证
-                            auto func_contact_sort = [](const std::shared_ptr<ContactData::ItemData>&left, const std::shared_ptr<ContactData::ItemData>&right) {
+                            auto func_contact_sort = [](std::shared_ptr<ContactData::ItemData> left, std::shared_ptr<ContactData::ItemData> right) {
                                 if (!left || ! right) { return false; }
                                 ;    if (left->display_name != right->display_name) { return left->display_name < right->display_name; }
                                 else if (left->user_id      != right->user_id     ) { return left->user_id      < right->user_id     ; }
                                 return false;
                             };
                             std::sort(contact_datas.begin(), contact_datas.end(), func_contact_sort);
-                            Accounts::instance().set_contact_list(contact_datas);
-                            // Accounts::instance().set_contact(contact_data);
+                            Accounts::instance()->set_contact_list(contact_datas);
+                            // Accounts::instance()->set_contact(contact_data);
                             continue;
                         }
                         // 好友资料更新
@@ -512,7 +497,8 @@ bool ChatWindow::network_status_sync() {
                             auto contact_info = sync_contact.update().contactUpdate();
                             auto contact_data = Utils::Transform::to_contact_data(std::make_shared<ContactInfo>(contact_info));
                             qDebug().noquote().nospace() << "Contact updata : " << contact_info;
-                            Accounts::instance().set_contact(contact_data);
+                            // 新账号登陆后获取账号信息也是通过该同步消息初始化获取，因此该窗口之前可能没有账号信息
+                            Accounts::instance()->set_contact(contact_data);
                             continue;
                         }
                     }
@@ -525,10 +511,10 @@ bool ChatWindow::network_status_sync() {
                     }
                 }
             };
-            NetworkClient::instance().sync(params_sync, callback_sync);
+            NetworkClient::instance()->sync(params_sync, callback_sync);
         }
     };
-    NetworkClient::instance().get_last_id(params_get_last_id, callback_get_last_id);
+    NetworkClient::instance()->get_last_id(params_get_last_id, callback_get_last_id);
     return true;
 }
 
@@ -581,9 +567,9 @@ void ChatWindow::add_chat_room(const QString&chatroom_id) {
     // qDebug() << "contact : " << ContactManager(contact).get_nick_name();
     do {
         if ( chatroom_id.isEmpty()) { break; }
-        if ( m_chatroom_model->has_chatroom(chatroom_id)) { break; }
+        if ( m_chatroom_model->get_chatroom_data(chatroom_id)) { break; }
 
-        auto contact_data = Accounts::instance().get_contact(chatroom_id);
+        auto contact_data = Accounts::instance()->get_contact(chatroom_id);
         if (!contact_data) { break; }
         if ( contact_data->account_id.isEmpty()) { break; }
 
@@ -591,7 +577,7 @@ void ChatWindow::add_chat_room(const QString&chatroom_id) {
         auto chatroom_data = std::make_shared<ChatroomData::ItemData>();
         // auto datetime   = QDateTime::currentDateTimeUtc();
         auto avatar_id     = contact_data->avatar_id;
-        auto avatar_path   = Database::instance().get_local_file_id_path(avatar_id + ";size:128*128");
+        auto avatar_path   = Database::instance()->get_local_file_id_path(avatar_id + ";size:128*128");
         auto avatar_image  = QImage(avatar_path);
         if (avatar_image.isNull()) { avatar_image = svg_to_image(avatar_path); }
         // if (avatar_image.isNull()) { avatar_image = Utils::FontIcons().update().icon.contacts; }
@@ -604,7 +590,7 @@ void ChatWindow::add_chat_room(const QString&chatroom_id) {
         chatroom_data->avatar_id             = avatar_id;
         chatroom_data->avatar_path           = avatar_path;
         chatroom_data->avatar_image          = avatar_image;
-        m_chatroom_model->add_chatroom_row(chatroom_data);
+        m_chatroom_model->add_chatroom_data(chatroom_data);
 
         qDebug().noquote().nospace() << "add_chat_room"
             << ", chatroom_id:" << chatroom_id
@@ -638,32 +624,32 @@ void ChatWindow::add_chat_room(const QString&chatroom_id) {
                     // m_chatroom_model->get_chatroom_data(...);
                     // 修改
                     auto avatar_id = chatroom_data->avatar_id;
-                    auto avatar_path  = Database::instance().get_local_file_id_path(avatar_id + ";size:128*128");
+                    auto avatar_path  = Database::instance()->get_local_file_id_path(avatar_id + ";size:128*128");
                     auto avatar_image = QImage(avatar_path);
                     if (avatar_image.isNull()) { avatar_image = svg_to_image(avatar_path); }
                     chatroom_data->avatar_path  = avatar_path;
                     chatroom_data->avatar_image = avatar_image;
                     // 更新
-                    m_chatroom_model->updata_chatroom(chatroom_data);
+                    m_chatroom_model->updata_chatroom_data(chatroom_data);
                 }
             };
             QString notify_id = QString("notify ChatWindow::add_chat_room, chatroom_id:%1, avatar_id:%2").arg(chatroom_data->chatroom_id).arg(avatar_id);
-            NetworkClient::instance().download_file(avatar_id, notify_id, callback_download_file_notify);
+            NetworkClient::instance()->download_file(avatar_id, notify_id, callback_download_file_notify);
         }
     } while(false);
 }
 
 // 显示聊天室聊天消息记录窗口
-void ChatWindow::show_chat_room_messages(const std::shared_ptr<ContactData::ItemData>&contact_data) {
+void ChatWindow::show_chat_room_messages(std::shared_ptr<ContactData::ItemData> contact_data) {
     // qDebug() << "contact : " << ContactManager(contact).get_nick_name();
 }
 
-void ChatWindow::add_contact(const std::shared_ptr<ContactData::ItemData>&contact_data, const ENUMS::ItemGroupType&group_type) {
+void ChatWindow::add_contact(std::shared_ptr<ContactData::ItemData> contact_data, const ENUMS::ItemGroupType&group_type) {
     if (!contact_data || contact_data->account_id.isEmpty()) { return; }
 
     // 如果没有图片则试图加载
     if (contact_data->avatar_image.isNull()) {
-        contact_data->avatar_path = Database::instance().get_local_file_id_path(contact_data->avatar_id);
+        contact_data->avatar_path = Database::instance()->get_local_file_id_path(contact_data->avatar_id);
         contact_data->avatar_image = QImage(contact_data->avatar_path);
     }
 
@@ -676,6 +662,8 @@ void ChatWindow::add_contact(const std::shared_ptr<ContactData::ItemData>&contac
     //     contact_data->is_friend = false;
     // }
 
+    // 是否已经添加相同账号 ID 的信息
+    auto old_contact_data = m_contact_model->get_contact_data(group_type, contact_data->account_id);
     // 填充时间和消息
     if (group_type == ENUMS::ItemGroupType::FRIENDS) {
         contact_data->info_text = contact_data->signature;
@@ -683,14 +671,21 @@ void ChatWindow::add_contact(const std::shared_ptr<ContactData::ItemData>&contac
     }
     else if (group_type == ENUMS::ItemGroupType::REQUEST) {
         if (contact_data->request_messages && !contact_data->request_messages->messages.isEmpty()) {
-            const auto&messages = contact_data->request_messages->messages;
+            auto messages = contact_data->request_messages->messages;
             auto last_message = messages.at(messages.size() - 1);
             contact_data->info_text = last_message.message_text;
             contact_data->info_time = Utils::format_smart_time(last_message.datetime);
         }
     }
 
-    m_contact_model->add_member(group_type, contact_data);
+    // 接收到的是更新消息时，有则改之无则加勉
+    if ( old_contact_data) {
+        // m_contact_model->update_contact(group_type, contact_data);
+        slot_update_contact_list_info(contact_data);
+    }
+    else {
+        m_contact_model->add_member(group_type, contact_data);
+    }
 
     // 如果成功加载了图片则不需要再下载
     if (!contact_data->avatar_image.isNull()) { return; }
@@ -720,7 +715,7 @@ void ChatWindow::add_contact(const std::shared_ptr<ContactData::ItemData>&contac
             contact_data->avatar_id == notify.id
         ) {
             // 头像下载成功时仅需修改头像相关的信息
-            contact_data->avatar_path  = Database::instance().get_local_file_id_path(contact_data->avatar_id);
+            contact_data->avatar_path  = Database::instance()->get_local_file_id_path(contact_data->avatar_id);
             contact_data->avatar_image = QImage(contact_data->avatar_path);
             m_contact_model->update_contact(group_type, contact_data);
         }
@@ -728,16 +723,16 @@ void ChatWindow::add_contact(const std::shared_ptr<ContactData::ItemData>&contac
     auto group_name = QMetaEnum::fromType<ENUMS::ItemGroupType>().valueToKey(quint64(group_type));
     QString notify_id = QString("notify ChatWindow::add_contact group:%1, account_id:%2, avatar_id:%3")
         .arg(group_name).arg(contact_data->account_id).arg(contact_data->avatar_id);
-    NetworkClient::instance().download_file(contact_data->avatar_id, notify_id, callback_download_file_notify);
+    NetworkClient::instance()->download_file(contact_data->avatar_id, notify_id, callback_download_file_notify);
 }
 
 // 按键移动导致所选行变化时触发激活动作
-void ChatWindow::handle_contact_selection_changed(const QModelIndex &current, const QModelIndex &previous) {
-    handle_contact_item_clicked(current);
+void ChatWindow::slot_contact_selection_changed(const QModelIndex &current, const QModelIndex &previous) {
+    slot_contact_item_clicked(current);
 }
 
 // 支持单击动作
-void ChatWindow::handle_contact_item_clicked(const QModelIndex &index) {
+void ChatWindow::slot_contact_item_clicked(const QModelIndex &index) {
     do {
         if (!index.isValid()) { break; }
 
@@ -762,8 +757,8 @@ void ChatWindow::handle_contact_item_clicked(const QModelIndex &index) {
             if (!var_item_data.canConvert<std::shared_ptr<ContactData::ItemData>>()) { break; }
             auto contact_data = var_item_data.value<std::shared_ptr<ContactData::ItemData>>();
             if (!contact_data) { break; }
-            contact_data->is_friend = Accounts::instance().is_me    (contact_data->account_id);
-            contact_data->is_friend = Accounts::instance().is_friend(contact_data->account_id);
+            contact_data->is_friend = Accounts::instance()->is_me    (contact_data->account_id);
+            contact_data->is_friend = Accounts::instance()->is_friend(contact_data->account_id);
             // 获取节点分组
             ENUMS::ItemGroupType parent_group_type = ENUMS::ItemGroupType::UNSET;
             do {
@@ -847,10 +842,10 @@ void ChatWindow::handle_contact_item_clicked(const QModelIndex &index) {
             if (!contact_window) {
                 contact_window = new ContactWindow;
                 m_center_frame->set_child_widget(contact_window);
-                // 发送消息
-                connect(contact_window, &ContactWindow::sig_contact_message, this, &ChatWindow::slot_message_to);
-                connect(contact_window, &ContactWindow::sig_contact_voice  , this, &ChatWindow::slot_voice_to  );
-                connect(contact_window, &ContactWindow::sig_contact_video  , this, &ChatWindow::slot_video_to  );
+                // // 发送消息
+                // connect(contact_window, &ContactWindow::sig_contact_message, this, &ChatWindow::slot_message_to);
+                // connect(contact_window, &ContactWindow::sig_contact_voice  , this, &ChatWindow::slot_voice_to  );
+                // connect(contact_window, &ContactWindow::sig_contact_video  , this, &ChatWindow::slot_video_to  );
             }
             auto source_flag = parent_group_type == ENUMS::ItemGroupType::REQUEST ? ContactWindow::SourceFlag::Request : ContactWindow::SourceFlag::Contact;
             contact_window->set_contact_data(contact_data, source_flag);  // 显示指定信息
@@ -863,12 +858,12 @@ void ChatWindow::handle_contact_item_clicked(const QModelIndex &index) {
 }
 
 // 按键移动导致所选行变化时触发激活动作
-void ChatWindow::handle_chatroom_selection_changed(const QModelIndex &current, const QModelIndex &previous) {
-    handle_chatroom_item_clicked(current);
+void ChatWindow::slot_chatroom_selection_changed(const QModelIndex &current, const QModelIndex &previous) {
+    slot_chatroom_item_clicked(current);
 }
 
 // 单击聊天室
-void ChatWindow::handle_chatroom_item_clicked(const QModelIndex &index) {
+void ChatWindow::slot_chatroom_item_clicked(const QModelIndex &index) {
     do {
         if (!index.isValid()) { break; }
 
@@ -891,7 +886,7 @@ void ChatWindow::handle_chatroom_item_clicked(const QModelIndex &index) {
 }
 
 // 添加服务器聊天消息更新
-void ChatWindow::add_message(const std::shared_ptr<SyncMessage>&sync_message) {
+void ChatWindow::add_message(std::shared_ptr<SyncMessage> sync_message) {
     auto is_supported_image_formats = [](const QString& file_name) {
         static const QSet<QString> supported_image_formats = []() {
             QSet<QString> formats;
@@ -910,9 +905,9 @@ void ChatWindow::add_message(const std::shared_ptr<SyncMessage>&sync_message) {
         return supported_image_formats.contains(suffix);
     };
 
-    auto is_file = [is_supported_image_formats](const std::shared_ptr<SyncMessage>& sync_message) {
+    auto is_file = [is_supported_image_formats](std::shared_ptr<SyncMessage> sync_message) {
         if (!sync_message || !sync_message->hasFile()) { return false; }
-        const auto& file_info = sync_message->file();
+        auto file_info = sync_message->file();
         if (file_info.fileName().isEmpty()) { return false; }
         if (file_info.fileId  ().isEmpty()) { return false; }
         if (file_info.fileMd5 ().isEmpty()) { return false; }
@@ -923,25 +918,27 @@ void ChatWindow::add_message(const std::shared_ptr<SyncMessage>&sync_message) {
     do {
         // 无效数据
         if (!sync_message) { break; }
+        if ( sync_message->chatroomId       ().isEmpty()) { break; }
         if ( sync_message->serverMessageId  ().isEmpty()) { break; }
         if ( sync_message->clientMessageId  ().isEmpty()) { break; }
         if ( sync_message->senderAccountId  ().isEmpty()) { break; }
-        if ( sync_message->receiverAccountId().isEmpty()) { break; }
+        // if ( sync_message->receiverAccountId().isEmpty()) { break; }
         if (!sync_message->hasTimestamp() && !sync_message->timestamp().hasTimestamp()) { break; }
 
         // 读取数据
-        auto subtype = sync_message->subType();
-        auto server_message_id    = sync_message->serverMessageId  ();
-        auto client_message_id    = sync_message->clientMessageId  ();
-        auto sender_account_id    = sync_message->senderAccountId  ();
-        auto receiver_account_id  = sync_message->receiverAccountId();
-        auto timestamp            = sync_message->timestamp        ();
-        auto message_time         = sync_message->timestamp().timestamp().toDateTime();;
-        auto sender_data          = Accounts::instance().get_contact(sender_account_id);
-        auto sender_avatar_id     = sender_data->avatar_id;
-        auto contact_data         = Accounts::instance().get_current_account();
-        auto contact_account_id   = contact_data->account_id;
-        bool is_me                = sender_account_id == contact_account_id;
+        auto subtype             = sync_message->subType          ();
+        auto chatroom_id         = sync_message->chatroomId       ();
+        auto server_message_id   = sync_message->serverMessageId  ();
+        auto client_message_id   = sync_message->clientMessageId  ();
+        auto sender_account_id   = sync_message->senderAccountId  ();
+        auto receiver_account_id = sync_message->receiverAccountId();
+        auto timestamp           = sync_message->timestamp        ();
+        auto message_time        = sync_message->timestamp().timestamp().toDateTime();;
+        auto sender_data         = Accounts::instance()->get_contact(sender_account_id);
+        auto sender_avatar_id    = sender_data->avatar_id;
+        auto contact_data        = Accounts::instance()->get_current_account();
+        auto contact_account_id  = contact_data->account_id;
+        bool is_me               = sender_account_id == contact_account_id;
 
         // 验证是否是当前账号的消息
         if (sender_account_id != contact_account_id && receiver_account_id != contact_account_id) {
@@ -950,17 +947,22 @@ void ChatWindow::add_message(const std::shared_ptr<SyncMessage>&sync_message) {
         }
 
         // 可能耗时的操作验证后再执行
-        auto sender_avatar_path   = Database::instance().get_local_file_id_path(sender_avatar_id);
-        auto sender_avatar_pixamp = QPixmap(Database::instance().get_local_file_id_path(sender_avatar_id + ";size:128*128"));
+        auto sender_avatar_path   = Database::instance()->get_local_file_id_path(sender_avatar_id);
+        auto sender_avatar_pixamp = QPixmap(Database::instance()->get_local_file_id_path(sender_avatar_id + ";size:128*128"));
 
         // =================================================================== //
+        // 添加对话
+        // 一对一聊天中，消息发送者和接收者中必定有一个是当前账号，另外一个账号可作为聊天室 ID
+        // QString chatroom_id = sender_account_id == contact_account_id ? receiver_account_id : sender_account_id;
+        add_chat_room(chatroom_id);
 
         // UI 所需数据
         auto message_data  = std::make_shared<MessageData::ItemData>();
+        message_data->chatroom_id           = chatroom_id;
         message_data->sender_type           = MessageData::SenderType::USER;
         message_data->media_type            = MessageData::MediaType::TEXT;
         message_data->is_me                 = is_me;
-        message_data->message_id            = client_message_id;
+        message_data->message_id            = client_message_id;  // server_message_id;
         message_data->message_time          = message_time;
         if (!message_data->sender) { message_data->sender = std::make_shared<MessageData::SenderData>(); }
         message_data->sender->account_id    = sender_account_id;
@@ -980,7 +982,7 @@ void ChatWindow::add_message(const std::shared_ptr<SyncMessage>&sync_message) {
             if (!message_data->file) { message_data->file = std::make_shared<MessageData::FileData>(); }
             message_data->file->file_size  = sync_message->file().fileSize();
             message_data->file->file_id    = sync_message->file().fileId();
-            message_data->file->file_path  = Database::instance().get_local_file_id_path(message_data->file->file_id);
+            message_data->file->file_path  = Database::instance()->get_local_file_id_path(message_data->file->file_id);
             message_data->file->file_name  = sync_message->file().fileName();
             message_data->file->file_hash  = sync_message->file().fileMd5();
             message_data->file->human_size = Utils::Transform::human_size(message_data->file->file_size);
@@ -996,16 +998,8 @@ void ChatWindow::add_message(const std::shared_ptr<SyncMessage>&sync_message) {
         }
 
         // =================================================================== //
-
-        // 添加消息及对话
-
-        // 添加对话
-        // 一对一聊天中，消息发送者和接收者中必定有一个是当前账号，另外一个账号可作为聊天室 ID
-        QString charroom_id = sender_account_id == contact_account_id ? receiver_account_id : sender_account_id;
-        add_chat_room(charroom_id);
-
         // 添加消息
-        MessageWindow* target_message_window = get_message_window(charroom_id);
+        MessageWindow* target_message_window = get_message_window(chatroom_id);
         target_message_window->add_message(message_data);
         // 不需要切换显示
         // m_ui->stacked_contact_detail->setCurrentWidget(target_message_window);
@@ -1037,39 +1031,35 @@ void ChatWindow::add_message(const std::shared_ptr<SyncMessage>&sync_message) {
                     message_data->sender->avatar_id == notify.id
                 ) {
                     auto sender_avatar_id     = message_data->sender->avatar_id;
-                    auto sender_avatar_pixamp = QPixmap(Database::instance().get_local_file_id_path(sender_avatar_id + ";size:128*128"));
+                    auto sender_avatar_pixamp = QPixmap(Database::instance()->get_local_file_id_path(sender_avatar_id + ";size:128*128"));
                     message_data->sender->avatar_pixmap = sender_avatar_pixamp;
                     target_message_window->update_message(message_data);
                 }
             };
             auto avatar_id = message_data->sender->avatar_id;
             QString notify_id = QString("notify ChatWindow::add_message, message_id:%1, avatar_id:%2").arg(message_data->message_id).arg(avatar_id);
-            NetworkClient::instance().download_file(avatar_id, notify_id, callback_download_file_notify);
+            NetworkClient::instance()->download_file(avatar_id, notify_id, callback_download_file_notify);
         }
 
     } while (false);
 }
 
 // 账号当前用户信息被修改时触发
-void ChatWindow::current_account_data_changed() {
-    update_contact_data(Accounts::instance().get_current_account());
+void ChatWindow::slot_update_current_account_data() {
+    slot_update_contact_data(Accounts::instance()->get_current_account());
 }
 
-void ChatWindow::update_contact_data(const std::shared_ptr<ContactData::ItemData>&contact_data) {
-    bool is_self = contact_data->is_me;
-    if (is_self) {
+void ChatWindow::slot_update_contact_data(std::shared_ptr<ContactData::ItemData> contact_data) {
+    do {
+        if (!contact_data) { break; }
+        if (!contact_data->is_me) { break; }
         // 更新头像显示
-        const QString& old_avatar_id = m_cache_self_data ? m_cache_self_data->avatar_id : "";
-        const QString& to_avatar_id  = contact_data      ? contact_data->avatar_id      : "";
-        if (old_avatar_id != to_avatar_id) {
-            update_contact_avatar(to_avatar_id);
+        const QString& old_avatar_id = get_cache_contact_data() ? get_cache_contact_data()->avatar_id : "";
+        const QString& new_avatar_id = contact_data             ? contact_data->avatar_id             : "";
+        if (old_avatar_id != new_avatar_id) {
+            update_contact_avatar(new_avatar_id);
         }
-        m_cache_self_data = std::make_shared<ContactData::ItemData>(*contact_data.get());
-    }
-    else {
-        // // 更新联系人列表中的信息
-        // Accounts::instance().set_contact_list(Accounts::instance().get_contact_list());  // 触发联系人列表更新信号
-    }
+    } while (false);
 }
 
 bool ChatWindow::eventFilter(QObject *obj, QEvent *event) {
@@ -1101,7 +1091,7 @@ bool ChatWindow::eventFilter(QObject *obj, QEvent *event) {
 }
 
 void ChatWindow::slot_button_navigate_avatar() {
-    auto current_account = Accounts::instance().get_current_account();
+    auto current_account = Accounts::instance()->get_current_account();
     if (!current_account) { return; }
     current_account->is_me = true;  // 标记为查看自身资料
     current_account->display_name = current_account->nickname;  // 自身资料显示为昵称，不能为备注
@@ -1120,9 +1110,9 @@ void ChatWindow::slot_button_navigate_avatar() {
     // 更新成功，刷新显示
     // update(params_update_profile->contact());
     search_user_params params_search_user = std::make_shared<TaoTieChat::SearchUserRequest>();
-    params_search_user->setRequestUserAuth(*Accounts::instance().get_auth_request().get());
+    params_search_user->setRequestUserAuth(*Accounts::instance()->get_auth_request().get());
     params_search_user->setUserId(user_id);
-    NetworkClient::instance().search_user(params_search_user, [this](const search_user_params&params_search_user, const search_user_reply&reply_search_user) {
+    NetworkClient::instance()->search_user(params_search_user, [this](search_user_params params_search_user, search_user_reply reply_search_user) {
         if (!reply_search_user || !reply_search_user->result().hasSuccessCode()) { return; }
         auto contact_info = Utils::Transform::to_contact_data(std::make_shared<ContactInfo>(reply_search_user->contactInfo()));
         contact_info->is_me = true;  // 标记为查看自身资料
@@ -1143,109 +1133,164 @@ void ChatWindow::slot_button_navigate_contact() {
     m_ui->navigate_button_contact  ->setEnabled(false);
 }
 
-void ChatWindow::slot_message_to(const std::shared_ptr<ContactData::ItemData>&contact_data) {
+void ChatWindow::slot_message_to(std::shared_ptr<ContactData::ItemData> contact_data) {
     if (!contact_data) { return; }
-    const auto& chatroom_id = contact_data->account_id;
-    if ( chatroom_id.isEmpty()) { return; }
+    if ( contact_data->account_id.isEmpty()) { return; }
 
     // 先查找或添加对话
+    auto old_chatroom_data = m_chatroom_model->get_chatroom_data(contact_data->account_id);
+    auto new_chatroom_data = std::make_shared<ChatroomData::ItemData>();
+    // copy data // 保留最后消息及时间显示
+    new_chatroom_data->chatroom_id           = contact_data->account_id;
+    new_chatroom_data->last_message_text     = old_chatroom_data ? old_chatroom_data->last_message_text     : QString{};
+    new_chatroom_data->last_message_datetime = old_chatroom_data ? old_chatroom_data->last_message_datetime : QDateTime{};
+    // cache
+    new_chatroom_data->display_datetime = Utils::format_smart_time(new_chatroom_data->last_message_datetime);
+    new_chatroom_data->display_name     = Utils::get_display_name(contact_data);
+    new_chatroom_data->avatar_id        = contact_data->avatar_id;
+    new_chatroom_data->avatar_path      = contact_data->avatar_path;
+    new_chatroom_data->avatar_image     = contact_data->avatar_image;
+    if (!old_chatroom_data) {
+        m_chatroom_model->add_chatroom_data(new_chatroom_data);
+    }
+    else {
+        m_chatroom_model->updata_chatroom_data(new_chatroom_data);
+    }
+
+    // qDebug().noquote().nospace() << "new_chatroom_data addr : " << (void*)&new_chatroom_data
+    //     << ", display_name : " << new_chatroom_data->display_name
+    //     << ", avatar_image : " << !contact_data->avatar_image.isNull();
 
     // 1. 显示聊天列表
     slot_button_navigate_message();
-    auto chatroom_data = std::make_shared<ChatroomData::ItemData>();
-    chatroom_data->chatroom_id = chatroom_id;
-    int row = m_chatroom_model->add_chatroom_row(chatroom_data);
-
     // 2. 高亮当前对话
-    highlight_chatroom(chatroom_id);
-
+    highlight_chatroom(contact_data->account_id);
     // 3. 显示对话
-    MessageWindow* target_message_window = get_message_window(chatroom_id);
+    MessageWindow* target_message_window = get_message_window(contact_data->account_id);
     m_ui->stacked_contact_detail->setCurrentWidget(target_message_window);
 }
 
-void ChatWindow::slot_voice_to(const std::shared_ptr<ContactData::ItemData>&contact_data) {
+void ChatWindow::slot_voice_to(std::shared_ptr<ContactData::ItemData> contact_data) {
     // 先查找或添加对话
 }
 
-void ChatWindow::slot_video_to(const std::shared_ptr<ContactData::ItemData>&contact_data) {
+void ChatWindow::slot_video_to(std::shared_ptr<ContactData::ItemData> contact_data) {
     // 先查找或添加对话
 }
 
-// 左上角头像与窗口图标
-// to_contact_data 为不定账号，可能不是当前账号，必须校验账号 ID
-void ChatWindow::slot_update_avatar_info(const std::shared_ptr<ContactData::ItemData>&to_contact_data) {
-    do {
-        if (!to_contact_data || to_contact_data->account_id.isEmpty()) { break; }
-        const auto& from_contact_data = get_cache_contact_data();
-        const auto& from_account_id   = from_contact_data ? from_contact_data->account_id : "";
-        const auto& to_account_id     = to_contact_data->account_id;
-        const auto& to_avatar_id      = to_contact_data->avatar_id;
-        if (from_account_id != to_account_id) { break; }
-
-        if (to_avatar_id.isEmpty()) {
-            m_ui->navigate_button_avatar->setIcon(QIcon{});
-            break;
-        }
-
-        update_contact_avatar(to_avatar_id);
-    } while (false);
-}
+// // 左上角头像与窗口图标
+// // to_contact_data 为不定账号，可能不是当前账号，必须校验账号 ID
+// void ChatWindow::slot_update_avatar_info(std::shared_ptr<ContactData::ItemData> to_contact_data) {
+//     do {
+//         if (!to_contact_data || to_contact_data->account_id.isEmpty()) { break; }
+//         auto from_contact_data = get_cache_contact_data();
+//         auto from_account_id   = from_contact_data ? from_contact_data->account_id : "";
+//         auto to_account_id     = to_contact_data->account_id;
+//         auto to_avatar_id      = to_contact_data->avatar_id;
+//         // 设置了当前账号但不一致时不处理
+//         if (!from_account_id.isEmpty() && from_account_id != to_account_id) { break; }
+// 
+//         // // 更新个人信息  // Accounts::set_contact() 中已经调用
+//         // Accounts::instance()->set_current_account(to_contact_data);
+// 
+// //         if (to_avatar_id.isEmpty()) {
+// //             m_ui->navigate_button_avatar->setIcon(QIcon{});
+// //             break;
+// //         }
+// // 
+// //         update_contact_avatar(to_avatar_id);
+//     } while (false);
+// }
 
 // 联系人列表与好友申请
-void ChatWindow::slot_update_contact_list_info(const std::shared_ptr<ContactData::ItemData>&to_contact_data) {
+void ChatWindow::slot_update_contact_list_info(std::shared_ptr<ContactData::ItemData> to_contact_data) {
+    // 对多个分组都需要操作
+
+    // ENUMS::ItemGroupType::REQUEST
     do {
         if (!to_contact_data || to_contact_data->account_id.isEmpty()) { break; }
         // 更新好友申请列表与联系人列表  // 无则忽略有则修改
 
         // 好友申请列表要显示消息与时间
-        auto old_request_contact_info = m_contact_model->get_contact_data(ENUMS::ItemGroupType::REQUEST, to_contact_data->account_id);
-        auto new_request_contact_info = std::make_shared<ContactData::ItemData>(*to_contact_data);
+        auto old_contact_info = m_contact_model->get_contact_data(ENUMS::ItemGroupType::REQUEST, to_contact_data->account_id);
+        if (!old_contact_info) { break; }  // 没有该信息时不需要更新
+
+        auto new_contact_info = std::make_shared<ContactData::ItemData>(*to_contact_data);
         // 重新获取
-        new_request_contact_info->is_me            = Accounts::instance().is_me(old_request_contact_info->account_id);
-        new_request_contact_info->is_friend        = Accounts::instance().is_friend(old_request_contact_info->account_id);
-        new_request_contact_info->display_name     = Utils::get_display_name(new_request_contact_info);
-        new_request_contact_info->avatar_path      = Database::instance().get_local_file_id_path(new_request_contact_info->avatar_id);
-        new_request_contact_info->avatar_image     = QImage(new_request_contact_info->avatar_path);
+        new_contact_info->is_me        = Accounts::instance()->is_me(old_contact_info->account_id);
+        new_contact_info->is_friend    = Accounts::instance()->is_friend(old_contact_info->account_id);
+        new_contact_info->display_name = Utils::get_display_name(new_contact_info);
+        new_contact_info->avatar_path  = Database::instance()->get_local_file_id_path(new_contact_info->avatar_id);
+        new_contact_info->avatar_image = QImage(new_contact_info->avatar_path);
+
+        // if (!new_contact_info->request_messages->messages.isEmpty()) {
+        //     auto&messages = new_contact_info->request_messages->messages;
+        //     qDebug().noquote().nospace() << "new_contact_info messages size : " << messages.size();
+        //     for(auto&msg:messages) {
+        //         qDebug().noquote().nospace() << "new_contact_info messages id : " << msg.message_id << ", datetime : " << Utils::format_smart_time(msg.datetime);
+        //     }
+        // }
+
         // 复制
         // 消息仅追加
-        if (   new_request_contact_info                                        && old_request_contact_info
-            && new_request_contact_info->request_messages                      && old_request_contact_info->request_messages
-            && new_request_contact_info->request_messages->sender_account_id   == old_request_contact_info->request_messages->sender_account_id
-            && new_request_contact_info->request_messages->receiver_account_id == old_request_contact_info->request_messages->receiver_account_id
+        if (   new_contact_info                                        && old_contact_info
+            && new_contact_info->request_messages                      && old_contact_info->request_messages
+            && new_contact_info->request_messages->sender_account_id   == old_contact_info->request_messages->sender_account_id
+            && new_contact_info->request_messages->receiver_account_id == old_contact_info->request_messages->receiver_account_id
         ) {
-            new_request_contact_info->request_messages->messages.append(old_request_contact_info->request_messages->messages);
+            new_contact_info->request_messages->messages.append(old_contact_info->request_messages->messages);
         }
         else {
-            new_request_contact_info->request_messages = old_request_contact_info->request_messages;
+            new_contact_info->request_messages = old_contact_info->request_messages;
         }
         // 排序去重
-        auto&messages = new_request_contact_info->request_messages->messages;
-        auto func_sort_by_time = [](const auto &a, const auto &b) { return a.datetime > b.datetime; };
+        auto&messages = new_contact_info->request_messages->messages;
+        auto func_sort_by_time = [](const auto &a, const auto &b) { return a.datetime < b.datetime; };
         std::sort(messages.begin(), messages.end(), func_sort_by_time);
         auto func_unique_by_message_id = [](const auto &a, const auto &b) { return a.message_id == b.message_id; };
         messages.erase(std::unique(messages.begin(), messages.end(), func_unique_by_message_id), messages.end());
-        if (new_request_contact_info->request_messages && !new_request_contact_info->request_messages->messages.isEmpty()) {
-            const auto&messages = new_request_contact_info->request_messages->messages;
+        if (new_contact_info->request_messages && !new_contact_info->request_messages->messages.isEmpty()) {
+            auto messages = new_contact_info->request_messages->messages;
             auto last_message = messages.at(messages.size() - 1);
-            new_request_contact_info->info_text = last_message.message_text;
-            new_request_contact_info->info_time = Utils::format_smart_time(last_message.datetime);  // 同时可刷新时间显示
+            new_contact_info->info_text = last_message.message_text;
+            new_contact_info->info_time = Utils::format_smart_time(last_message.datetime);  // 同时可刷新时间显示
         }
-        m_contact_model->update_contact(ENUMS::ItemGroupType::REQUEST, new_request_contact_info);
+        m_contact_model->update_contact(ENUMS::ItemGroupType::REQUEST, new_contact_info);
 
-        // 联系人列表要显示签名
-        auto friend_contact_info = std::make_shared<ContactData::ItemData>(*new_request_contact_info);  // 复制，减少重复获取
-        friend_contact_info->info_text = friend_contact_info->signature;
-        friend_contact_info->info_time = QString{}; // 好友列表不需要时间
-        m_contact_model->update_contact(ENUMS::ItemGroupType::FRIENDS, friend_contact_info);
+        // // 联系人列表要显示签名
+        // auto friend_contact_info = std::make_shared<ContactData::ItemData>(*new_contact_info);  // 复制，减少重复获取
+        // friend_contact_info->info_text = friend_contact_info->signature;
+        // friend_contact_info->info_time = QString{}; // 好友列表不需要时间
+        // m_contact_model->update_contact(ENUMS::ItemGroupType::FRIENDS, friend_contact_info);
+    } while (false);
+
+    // ENUMS::ItemGroupType::FRIENDS
+    do {
+        if (!to_contact_data || to_contact_data->account_id.isEmpty()) { break; }
+        // 更新好友申请列表与联系人列表  // 无则忽略有则修改
+
+        // 好友申请列表要显示消息与时间
+        auto old_contact_info = m_contact_model->get_contact_data(ENUMS::ItemGroupType::FRIENDS, to_contact_data->account_id);
+        if (!old_contact_info) { break; }  // 没有该信息时不需要更新
+
+        // 复制并刷新
+        auto new_contact_info          = std::make_shared<ContactData::ItemData>(*to_contact_data);
+        new_contact_info->is_me        = Accounts::instance()->is_me(old_contact_info->account_id);
+        new_contact_info->is_friend    = Accounts::instance()->is_friend(old_contact_info->account_id);
+        new_contact_info->display_name = Utils::get_display_name(new_contact_info);
+        new_contact_info->avatar_path  = Database::instance()->get_local_file_id_path(new_contact_info->avatar_id);
+        new_contact_info->avatar_image = QImage(new_contact_info->avatar_path);
+        new_contact_info->info_text    = new_contact_info->signature;
+        new_contact_info->info_time    = QString{}; // 好友列表不需要时间
+        m_contact_model->update_contact(ENUMS::ItemGroupType::FRIENDS, new_contact_info);
     } while (false);
 }
 
 // 对话列表
-void ChatWindow::slot_update_chatroom_list_info(const std::shared_ptr<ContactData::ItemData>&to_contact_data) {
+void ChatWindow::slot_update_chatroom_list_info(std::shared_ptr<ContactData::ItemData> to_contact_data) {
     do {
         if (!to_contact_data || to_contact_data->account_id.isEmpty()) { break; }
-        const auto& chatroom_id = to_contact_data->account_id;
+        auto chatroom_id = to_contact_data->account_id;
 
         // 修改
         auto chatroom_data = m_chatroom_model->get_chatroom_data(chatroom_id);
@@ -1255,7 +1300,7 @@ void ChatWindow::slot_update_chatroom_list_info(const std::shared_ptr<ContactDat
         // auto display_name = Utils::get_display_name(to_contact_data);
         auto display_name  = to_contact_data->display_name;
         auto avatar_id     = to_contact_data->avatar_id;
-        auto avatar_path   = Database::instance().get_local_file_id_path(avatar_id + ";size:128*128");
+        auto avatar_path   = Database::instance()->get_local_file_id_path(avatar_id + ";size:128*128");
         auto avatar_image  = QImage(avatar_path);
         if (avatar_image.isNull()) { avatar_image = svg_to_image(avatar_path); }
 
@@ -1266,16 +1311,19 @@ void ChatWindow::slot_update_chatroom_list_info(const std::shared_ptr<ContactDat
         chatroom_data->avatar_image = avatar_image;
 
         // 更新
-        m_chatroom_model->updata_chatroom(chatroom_data);
+        m_chatroom_model->updata_chatroom_data(chatroom_data);
     } while (false);
 }
 
-void ChatWindow::set_cache_contact_data(const std::shared_ptr<ContactData::ItemData>&contact_data) {
-    // m_cache_self_data = m_cache_self_data == contact_data ? std::make_shared<ContactData::ItemData>(*contact_data.get()) : contact_data;
+void ChatWindow::set_cache_contact_data(std::shared_ptr<ContactData::ItemData> contact_data) {
+    if (!contact_data) {
+        m_cache_self_data = std::make_shared<ContactData::ItemData>();
+        return;
+    }
     m_cache_self_data = std::make_shared<ContactData::ItemData>(*contact_data.get());  // 必须直接创建副本
 }
 
-void ChatWindow::show_avatar(const std::shared_ptr<QImage>&avatar_image) {
+void ChatWindow::show_avatar(std::shared_ptr<QImage> avatar_image) {
     // 设置头像按钮
     QIcon icon_avatar(QPixmap::fromImage(avatar_image->scaled(m_ui->navigate_button_avatar->iconSize(), Qt::KeepAspectRatio, Qt::SmoothTransformation)));
     m_ui->navigate_button_avatar->setIcon(icon_avatar);
@@ -1288,7 +1336,7 @@ void ChatWindow::show_avatar(const std::shared_ptr<QImage>&avatar_image) {
 
 // 获取聊天记录窗口
 MessageWindow* ChatWindow::get_message_window(const QString&account_id) {
-    auto update_message_data   = [                   ](const QPointer<MessageWindow>&safe_window, const std::shared_ptr<MessageData::ItemData> &message_data) {
+    auto update_message_data   = [                   ](QPointer<MessageWindow> safe_window, std::shared_ptr<MessageData::ItemData> message_data) {
         // 检查窗口对象是否依然存活
         if (!safe_window) { return; }
 
@@ -1296,7 +1344,7 @@ MessageWindow* ChatWindow::get_message_window(const QString&account_id) {
         // 下载完成时更新视图
         // 下载完成时去主线程加载 QPixmap（QPixmap 必须在 GUI 主线程构建）
         while (message_data && message_data->file && message_data->file->downloaded_file_size == message_data->file->file_size) {
-            const QString file_path = Database::instance().get_local_file_id_path(message_data->file->file_id);
+            const QString file_path = Database::instance()->get_local_file_id_path(message_data->file->file_id);
             // if (!QFileInfo::exists(file_path)) { break; }
             // if ( QImageReader::imageFormat(file_path).isEmpty()) { break; }
             // if (!message_data->image) { message_data->image = std::make_shared<MessageData::ImageData>(); }
@@ -1334,7 +1382,7 @@ MessageWindow* ChatWindow::get_message_window(const QString&account_id) {
         // 刷新 UI 视图
         safe_window->update_message(message_data);
     };
-    auto message_file_download = [update_message_data](const QPointer<MessageWindow>&safe_window, const std::shared_ptr<MessageData::ItemData> &message_data) {
+    auto message_file_download = [update_message_data](QPointer<MessageWindow> safe_window, std::shared_ptr<MessageData::ItemData> message_data) {
         do {
             if (!safe_window) { break; }
             if (!message_data) { break; }
@@ -1343,11 +1391,11 @@ MessageWindow* ChatWindow::get_message_window(const QString&account_id) {
             if (!message_data->sender) { break; }
             // 自己发送的文件也要下载，防止文件不存在(有利于多设备登录时的消息同步)  // 发送时可直接复制到目标位置
             // // 如果是自己发送的文件则不需要下载
-            // auto current_account_id = Accounts::instance().get_current_account()->account_id;
+            // auto current_account_id = Accounts::instance()->get_current_account()->account_id;
             // if ( message_data->sender->account_id == current_account_id) { break; }
             // 获取本地文件信息
-            const auto&file_id = message_data->file->file_id;
-            // const auto file_path = Database::instance().get_local_file_id_path(file_id);
+            auto file_id = message_data->file->file_id;
+            // const auto file_path = Database::instance()->get_local_file_id_path(file_id);
             // auto file_size = QFileInfo(file_path).size();
             // // 目前仅校验文件大小
             // if (file_size == message_data->file->file_size) { break; }
@@ -1386,8 +1434,8 @@ MessageWindow* ChatWindow::get_message_window(const QString&account_id) {
                     // 取出该文件 ID 的缓存
                     auto window_messages = id_messages.value(notify.id);
                     for (auto ite = window_messages.begin(); ite != window_messages.end(); ++ite) {
-                        const auto& safe_window  = ite.key();  // 消息所在窗口
-                        const auto& messages = ite.value();    // 该窗口中的消息列表
+                        auto safe_window  = ite.key();  // 消息所在窗口
+                        auto messages = ite.value();    // 该窗口中的消息列表
                         for (auto&message_data : messages) {
                             if (!message_data) { continue; }
                             if (!message_data->file) { continue; }
@@ -1402,7 +1450,7 @@ MessageWindow* ChatWindow::get_message_window(const QString&account_id) {
             };
             // 存在多条消息引用同一个文件的情况
             QString notify_id = QString("notify message_file_download, message_id:%1, file_id:%2").arg(message_data->message_id).arg(file_id);
-            NetworkClient::instance().download_file(file_id, notify_id, callback_download_file_notify);
+            NetworkClient::instance()->download_file(file_id, notify_id, callback_download_file_notify);
         } while (false);
     };
 
@@ -1415,7 +1463,7 @@ MessageWindow* ChatWindow::get_message_window(const QString&account_id) {
         // 获取信息
         auto contact_widget = message_window->get_contact();
         if (!contact_widget) { continue; }
-        const auto& account_id_widget = contact_widget->account_id;
+        auto account_id_widget = contact_widget->account_id;
         // 比较存储
         if (account_id != account_id_widget) { continue; }
         target_message_window = message_window;
@@ -1424,19 +1472,21 @@ MessageWindow* ChatWindow::get_message_window(const QString&account_id) {
     // 找不到窗口时进行添加
     if (!target_message_window) {
         target_message_window = new MessageWindow;
-        target_message_window->set_contact(Accounts::instance().get_contact(account_id));
+        target_message_window->set_contact(Accounts::instance()->get_contact(account_id));
         m_ui->stacked_contact_detail->addWidget(target_message_window);
         // 使用 QPointer 安全监控窗口生命周期，防止窗口被销毁后空指针调用的崩溃
         QPointer<MessageWindow> safe_window = target_message_window;
         // 连接更新信号
-        connect(target_message_window, &MessageWindow::signal_new_message, this,
-            [this, account_id](const std::shared_ptr<MessageData::ItemData>&last_message) {
-                update_last_message(account_id, last_message);
+        // connect(target_message_window, &MessageWindow::signal_new_message, this,
+        connect(SignalInner::instance(), &SignalInner::signal_new_message, this,
+            [this](std::shared_ptr<MessageData::ItemData> last_message) {
+                update_last_message(last_message);
             }
         );
         // 如果需要下载文件
-        connect(target_message_window, &MessageWindow::signal_new_message, this,
-            [message_file_download, safe_window](const std::shared_ptr<MessageData::ItemData>&message_data) {
+        // connect(target_message_window, &MessageWindow::signal_new_message, this,
+        connect(SignalInner::instance(), &SignalInner::signal_new_message, this,
+            [message_file_download, safe_window](std::shared_ptr<MessageData::ItemData> message_data) {
                 message_file_download(safe_window, message_data);  // TODO:move to thread
                 // auto thread = QThread::create(message_file_download, target_message_window, message_data);
                 // connect(thread, &QThread::finished, thread, &QThread::deleteLater);
@@ -1450,33 +1500,36 @@ MessageWindow* ChatWindow::get_message_window(const QString&account_id) {
 }
 
 // 更新列表中显示的最后一条消息
-void ChatWindow::update_last_message(const QString&chatroom_id, const std::shared_ptr<MessageData::ItemData>&last_message) {
-    // 更新列表中显示的内容
-    if (!last_message) { return; }
-    if (!m_chatroom_model) { return; }
-    auto chatroom_data = m_chatroom_model->get_chatroom_data(chatroom_id);
-    if (!chatroom_data) { return; }
+void ChatWindow::update_last_message(std::shared_ptr<MessageData::ItemData> last_message) {
+    do {
+        // 更新列表中显示的内容
+        if (!last_message) { break; }
+        if (!m_chatroom_model) { break; }
+        if ( last_message->chatroom_id.isEmpty()) { break; }
+        auto chatroom_data = m_chatroom_model->get_chatroom_data(last_message->chatroom_id);
+        if (!chatroom_data) { break; }
 
-    // 生成要显示的文字
-    QString last_message_text;
-    if (last_message->text) {
-        last_message_text = last_message->text->text.trimmed().replace("\n", "");
-    }
-    else if(last_message->file) {
-        QFileInfo fileinfo(last_message->file->file_name);
-        last_message_text = tr("[File]%1").arg(fileinfo.fileName());
-    }
+        // 生成要显示的文字
+        QString last_message_text;
+        if (last_message->text) {
+            last_message_text = last_message->text->text.trimmed().replace("\n", "");
+        }
+        else if(last_message->file) {
+            QFileInfo fileinfo(last_message->file->file_name);
+            last_message_text = tr("[File]%1").arg(fileinfo.fileName());
+        }
 
-    // 保存文字和时间
-    chatroom_data->last_message_text     = last_message_text;
-    chatroom_data->last_message_datetime = last_message->message_time;
-    chatroom_data->display_datetime      = Utils::format_smart_time(chatroom_data->last_message_datetime);
+        // 保存文字和时间
+        chatroom_data->last_message_text     = last_message_text;
+        chatroom_data->last_message_datetime = last_message->message_time;
+        chatroom_data->display_datetime      = Utils::format_smart_time(chatroom_data->last_message_datetime);
 
-    // 通知界面更新
-    m_chatroom_model->updata_chatroom(chatroom_data);  // 界面更新应由model更新数据触发
+        // 通知界面更新
+        m_chatroom_model->updata_chatroom_data(chatroom_data);  // 界面更新应由model更新数据触发
 
-    // // 对聊天列表进行排序
-    // m_chatroom_model->sort(0);
+        // // 对聊天列表进行排序
+        // m_chatroom_model->sort(0);
+    } while(false);
 }
 
 void ChatWindow::update_contact_avatar(const QString&avatar_id, bool local_only) {
@@ -1484,9 +1537,9 @@ void ChatWindow::update_contact_avatar(const QString&avatar_id, bool local_only)
     // 必须创建副本
     // 本地有则直接加载
     // 先尝试加载缩略图，失败再用原图兜底
-    auto avatar_image = std::make_shared<QImage>(Database::instance().get_local_file_id_path(avatar_id + ";size:128*128"));
+    auto avatar_image = std::make_shared<QImage>(Database::instance()->get_local_file_id_path(avatar_id + ";size:128*128"));
     if (avatar_image->isNull()) {
-        avatar_image = std::make_shared<QImage>(Database::instance().get_local_file_id_path(avatar_id));
+        avatar_image = std::make_shared<QImage>(Database::instance()->get_local_file_id_path(avatar_id));
     }
     if (!avatar_image->isNull()) {
         show_avatar(avatar_image);
@@ -1513,13 +1566,13 @@ void ChatWindow::update_contact_avatar(const QString&avatar_id, bool local_only)
             return;
         }
         // 下载成功，文件已保存到本地，可以直接显示了
-        auto avatar_image = std::make_shared<QImage>(Database::instance().get_local_file_id_path(avatar_id + ";size:128*128"));
+        auto avatar_image = std::make_shared<QImage>(Database::instance()->get_local_file_id_path(avatar_id + ";size:128*128"));
         // m_cache_self_avatar = avatar_pixmap;
         // m_ui->navigate_button_avatar->setIcon(QIcon(m_cache_self_avatar->scaled(m_ui->navigate_button_avatar->iconSize(), Qt::KeepAspectRatio, Qt::SmoothTransformation)));
         show_avatar(avatar_image);
     };
     QString notify_id = QString("notify ChatWindow::update_contact_avatar %1").arg(avatar_id);
-    NetworkClient::instance().download_file(avatar_id, notify_id, callback_download_file_notify);
+    NetworkClient::instance()->download_file(avatar_id, notify_id, callback_download_file_notify);
 }
 
 std::shared_ptr<ContactData::ItemData> ChatWindow::get_cache_contact_data() const {

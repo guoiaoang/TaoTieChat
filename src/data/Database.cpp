@@ -1,8 +1,8 @@
 #include "Database.h"
 
-Database& Database::instance() {
+Database* Database::instance() {
     static Database s_database;
-    return s_database;
+    return &s_database;
 }
 
 // 使用示例：将 64x64 的 SVG 放大渲染保存为 1024x1024 的 PNG
@@ -165,7 +165,7 @@ bool Database::FileIDPathMap::reload() {
     if (!ini_file.read(ini_data)) { return false; }
 
     if ( ini_data.has(m_section_name.toStdString())) {
-        const auto&section_data = ini_data[m_section_name.toStdString()];
+        auto section_data = ini_data[m_section_name.toStdString()];
         for (const auto&kv : section_data) {
             auto file_id       = QString::fromStdString(kv.first ).trimmed();
             auto path_relative = QString::fromStdString(kv.second).trimmed();

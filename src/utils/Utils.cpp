@@ -46,7 +46,7 @@ QString users_data_path() {
 
 QString user_home_path(QString user_id) {
     if(user_id.isEmpty()) {
-        const auto& contact_data = Accounts::instance().get_current_account();
+        auto contact_data = Accounts::instance()->get_current_account();
         if(contact_data && !contact_data->account_id.isEmpty()) {
             user_id = contact_data->account_id;
         }
@@ -480,26 +480,6 @@ void set(Result&result, const ErrorCode&error_code) {
     result.setMessage(Utils::Transform::to_string(error_code));
 }
 
-// // ====================================================================== //
-// 
-// // 查找指定 id 的好友
-// std::shared_ptr<ContactData::ItemData> get_contact_data(const QVector<std::shared_ptr<ContactData::ItemData>>&contact_datas, const QString& contact_account_id) {
-//     for(const auto &contact_data : contact_datas) {
-//         if(contact_data->account_id == contact_account_id) {
-//             return contact_data;
-//         }
-//     }
-//     return std::make_shared<ContactData::ItemData>();
-// }
-// 
-// // 从好友列表中获取第 index 个好友
-// std::shared_ptr<ContactData::ItemData> get_contact_data(const QVector<std::shared_ptr<ContactData::ItemData>>&contact_datas, int index) {
-//     if(index >= 0 && index < contact_datas.size()) {
-//         return contact_datas->at(index);
-//     }
-//     return std::make_shared<ContactData::ItemData>();
-// }
-
 // ====================================================================== //
 
 // 时间戳转字符串
@@ -557,12 +537,12 @@ QString format_smart_time(const QDateTime &datetime) {
 }
 
 // 获取显示名称的接口
-QString get_display_name(const std::shared_ptr<ContactInfo>&contact_info) {
+QString get_display_name(std::shared_ptr<ContactInfo> contact_info) {
     QString display_name;
     do {
         if (!contact_info) { break; }
         if (!contact_info->hasBaseInfo()) { break; }
-        const auto&base_info = contact_info->baseInfo();
+        auto base_info = contact_info->baseInfo();
 
         // 默认显示昵称
         display_name = base_info.nickname();
@@ -574,7 +554,7 @@ QString get_display_name(const std::shared_ptr<ContactInfo>&contact_info) {
     return display_name;
 }
 // 获取显示名称的接口
-QString get_display_name(const std::shared_ptr<ContactData::ItemData>&contact_data) {
+QString get_display_name(std::shared_ptr<ContactData::ItemData> contact_data) {
     QString display_name;
     do {
         if (!contact_data || contact_data->account_id.isEmpty()) { break; }
@@ -582,7 +562,7 @@ QString get_display_name(const std::shared_ptr<ContactData::ItemData>&contact_da
         display_name = contact_data->nickname;
         // 有备注时显示备注
         // if (contact_data->is_friend && !contact_data->notes.isEmpty()) {
-        if (Accounts::instance().is_friend(contact_data->account_id) && !contact_data->notes.isEmpty()) {
+        if (Accounts::instance()->is_friend(contact_data->account_id) && !contact_data->notes.isEmpty()) {
             display_name = contact_data->notes;
         }
     } while(false);
@@ -614,7 +594,7 @@ QString to_string(SuccessCode code) {
         {SuccessCode::SUCCESS       , "Success"},
         {SuccessCode::STATUS_SUCCESS, "Success"},
         {SuccessCode::STATUS_RUNNING, "Running"},
-        {SuccessCode::STATUS_ONLINE , "Online"},
+        {SuccessCode::STATUS_ONLINE , "Online" },
     };
     if (map_codes.contains(code)) {
         return map_codes[code];
@@ -624,73 +604,28 @@ QString to_string(SuccessCode code) {
 
 // 获取错误信息
 QString to_string(ErrorCode code) {
-    static const QMap<ErrorCode, QString> map_codes = {
-        {ErrorCode::ERROR_UNSET                , "Unset Error Code"                },
-        {ErrorCode::UNKNOWN                    , "Unknown Error Code"              },
-        {ErrorCode::DEFAULT                    , "Default Error"                   },
-        {ErrorCode::ERROR_INIT                 , "Error on Init"                   },
-        {ErrorCode::ERROR_CONN                 , "Error on connect"                },
-        {ErrorCode::ERROR_RECV                 , "Error on Recv or Parse"          },
-        {ErrorCode::ERROR_SEND                 , "Error on Send"                   },
-        {ErrorCode::DB_QUERY                   , "DB Query Failed"                 },
-        {ErrorCode::DB_QUERY_EMPTY             , "DB Query Empty"                  },
-        {ErrorCode::DB_EXECUTE                 , "DB Execute Failed"               },
-        {ErrorCode::DB_EXECUTE_EMPTY           , "DB Execute Empty"                },
-        {ErrorCode::DB_CHECK                   , "DB Check Failed"                 },
-        {ErrorCode::DB_CHECK_EMPTY             , "DB Check Empty"                  },
-        {ErrorCode::DB_RECORD_NOT_FOUND        , "DB Record Not Found"             },
-        {ErrorCode::USER_ID_EMPTY              , "User ID is empty"                },
-        {ErrorCode::USER_ID_NOT_FOUND          , "User ID not found"               },
-        {ErrorCode::USER_ID_EXISTS             , "User ID already exists"          },
-        {ErrorCode::ACCOUNT_ID_EMPTY           , "Account ID is empty"             },
-        {ErrorCode::ACCOUNT_ID_NOT_FOUND       , "Account ID not found"            },
-        {ErrorCode::PASSWORD_EMPTY             , "Password is empty"               },
-        {ErrorCode::PASSWORD_NOT_FOUND         , "Password not found"              },
-        {ErrorCode::TOKEN_EMPTY                , "Token is empty"                  },
-        {ErrorCode::TOKEN_NOT_FOUND            , "Token not found"                 },
-        {ErrorCode::CONFIRM_PASSWORD_EMPTY     , "Confirm Password is empty"       },
-        {ErrorCode::SECURITY_QUESTION_EMPTY    , "Security Question is empty"      },
-        {ErrorCode::SECURITY_ANSWER_EMPTY      , "Security Answer is empty"        },
-        {ErrorCode::TARGET_USER_ID_EMPTY       , "Target User ID is empty"         },
-        {ErrorCode::TARGET_USER_ID_NOT_FOUND   , "Target User ID not found"        },
-        {ErrorCode::AUTH_ID_EMPTY              , "Auth ID is empty"                },
-        {ErrorCode::AUTH_METHOD_EMPTY          , "Auth method is empty"            },
-        {ErrorCode::AUTH_FAILED                , "Authentication failed"           },
-        {ErrorCode::DIFF_PASSWORD_WITH_CONFIRM , "Confirm Password is not equal"   },
-        {ErrorCode::TARGET_ID_REQUESTED        , "Target already requested"        },
-        {ErrorCode::CONTEXT_REQUIRED           , "Context is required"             },
-        {ErrorCode::CLIENT_MESSAGE_ID_REQUIRED , "Client message ID is required"   },
-        {ErrorCode::DUPLICATE_MESSAGE_ID       , "Duplicate message ID"            },
-        {ErrorCode::FRIEND_REQUEST_NOT_FOUND   , "Friend request not found"        },
-    };
-    if (map_codes.contains(code)) {
-        return map_codes[code];
+    const auto it = s_map_error_code_strings.find(code);
+    if (it != s_map_error_code_strings.end()) {
+        return QCoreApplication::translate("Utils::Transform", it->second);
     }
-    return "Unknown Error Code";
+    return QCoreApplication::translate("Utils::Transform", "Unknown Error Code");
+
+    // if (s_map_error_code_strings.contains(code)) {
+    //     return s_map_error_code_strings.at(code);
+    // }
+    // return "Unknown Error Code";
 }
 
 QString to_string(FileStatusCode file_status_code) {
-    static std::map<FileStatusCode, QString> map_file_status_strings = {
-        { FileStatusCode::FILE_STATUS_NONE     , "FILE_STATUS_NONE"      },
-        { FileStatusCode::FILE_STATUS_UPLOADED , "FILE_STATUS_UPLOADED"  },
-        { FileStatusCode::FILE_STATUS_UPLOADING, "FILE_STATUS_UPLOADING" },
-        { FileStatusCode::FILE_STATUS_NOT_FOUND, "FILE_STATUS_NOT_FOUND" },
-    };
-    if(map_file_status_strings.contains(file_status_code)) {
-        return map_file_status_strings.at(file_status_code);
+    if(s_map_file_status_code_strings.contains(file_status_code)) {
+        return s_map_file_status_code_strings.at(file_status_code);
     }
     return 0;
 }
 
 int to_int(const FileStatusCode& file_status_code) {
-    static std::map<FileStatusCode, int> map_file_status_codes = {
-        { FileStatusCode::FILE_STATUS_NONE     , 0 },
-        { FileStatusCode::FILE_STATUS_UPLOADED , 1 },
-        { FileStatusCode::FILE_STATUS_UPLOADING, 2 },
-        { FileStatusCode::FILE_STATUS_NOT_FOUND, 3 },
-    };
-    if(map_file_status_codes.contains(file_status_code)) {
-        return map_file_status_codes.at(file_status_code);
+    if(s_map_file_status_string_ints.contains(file_status_code)) {
+        return s_map_file_status_string_ints.at(file_status_code);
     }
     return 0;
 }
@@ -725,12 +660,12 @@ QString human_size(qint64 bytes) {
 
 #include "Database.h"
 namespace Utils::Transform {
-std::shared_ptr<ContactData::ItemData> to_contact_data(const std::shared_ptr<ContactInfo>&contact_info) {
+std::shared_ptr<ContactData::ItemData> to_contact_data(std::shared_ptr<ContactInfo> contact_info) {
     auto contact_data = std::make_shared<ContactData::ItemData>();
     do {
         if (!contact_info) { break; }
         if ( contact_info->hasBaseInfo()) {
-            const auto&base_info       = contact_info->baseInfo();
+            auto base_info       = contact_info->baseInfo();
             contact_data->account_id   = base_info.accountId  ();
             contact_data->user_id      = base_info.userId     ();
             contact_data->avatar_id    = base_info.avatarId   ();
@@ -747,7 +682,7 @@ std::shared_ptr<ContactData::ItemData> to_contact_data(const std::shared_ptr<Con
             contact_data->groups_id    = base_info.groupsId   ();
         }
         if ( contact_info->hasFriendInfo()) {
-            const auto&friend_info     = contact_info->friendInfo();
+            auto friend_info     = contact_info->friendInfo();
             contact_data->status       = friend_info.status     ();
             contact_data->starred      = friend_info.starred    ();
             contact_data->silent       = friend_info.silent     ();
@@ -757,7 +692,7 @@ std::shared_ptr<ContactData::ItemData> to_contact_data(const std::shared_ptr<Con
             contact_data->tags         = friend_info.tags       ();
         }
         if ( contact_info->hasSelfInfo()) {
-            const auto&self_info            = contact_info->selfInfo();
+            auto self_info            = contact_info->selfInfo();
             contact_data->modify_self_info  = self_info.modifySelfInfo  ();
             contact_data->password          = self_info.password        ();
             contact_data->token             = self_info.token           ();
@@ -765,16 +700,16 @@ std::shared_ptr<ContactData::ItemData> to_contact_data(const std::shared_ptr<Con
             contact_data->security_answer   = self_info.securityAnswer  ();
         }
         // cache
-        contact_data->is_me        = Accounts::instance().is_me    (contact_data->account_id);
-        contact_data->is_friend    = Accounts::instance().is_friend(contact_data->account_id);
+        contact_data->is_me        = Accounts::instance()->is_me    (contact_data->account_id);
+        contact_data->is_friend    = Accounts::instance()->is_friend(contact_data->account_id);
         contact_data->display_name = Utils::get_display_name(contact_info);
-        contact_data->avatar_path  = Database::instance().get_local_file_id_path(contact_data->avatar_id);
+        contact_data->avatar_path  = Database::instance()->get_local_file_id_path(contact_data->avatar_id);
         contact_data->avatar_image = QImage(contact_data->avatar_path);
     } while(false);
     return contact_data;
 }
 
-std::shared_ptr<ContactInfo> to_contact_info(const std::shared_ptr<ContactData::ItemData>&contact_data) {
+std::shared_ptr<ContactInfo> to_contact_info(std::shared_ptr<ContactData::ItemData> contact_data) {
     auto contact_info = std::make_shared<ContactInfo>();
     do {
         if (!contact_data) { break; }

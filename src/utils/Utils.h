@@ -46,8 +46,8 @@ QIcon to_icon(const QString&text, const QPen&pen = QPen(Qt::white), const QSize 
 QPixmap to_pixmap(const QString&text, const QSize size = QSize(128, 128));
 
 // 获取显示名称的接口
-QString get_display_name(const std::shared_ptr<ContactInfo>&contact_info);
-QString get_display_name(const std::shared_ptr<ContactData::ItemData>&contact_data);
+QString get_display_name(std::shared_ptr<ContactInfo          > contact_info);
+QString get_display_name(std::shared_ptr<ContactData::ItemData> contact_data);
 
 // ====================================================================== //
 // 内存中展开布局器 In-Memory Layout Expander  // 窗口不需要显示即可应用实际布局
@@ -296,8 +296,8 @@ QString human_size(qint64 bytes); // 字节数 → 人类可读大小（KB/MB/GB
 }
 
 namespace Utils::Transform {
-std::shared_ptr<ContactData::ItemData> to_contact_data(const std::shared_ptr<ContactInfo          >&contact_info);
-std::shared_ptr<ContactInfo          > to_contact_info(const std::shared_ptr<ContactData::ItemData>&contact_data);
+std::shared_ptr<ContactData::ItemData> to_contact_data(std::shared_ptr<ContactInfo          > contact_info);
+std::shared_ptr<ContactInfo          > to_contact_info(std::shared_ptr<ContactData::ItemData> contact_data);
 
 }
 
@@ -669,6 +669,139 @@ namespace Utils::OS {
 // 检查账号操作是否已经被占用
 // windows 管道可以被多个进程同时访问
 bool try_grab_account_pipe(const QString& user_id, bool grab = true);
+}
+
+namespace Utils::Transform {
+    // static const 是在翻译加载前存储的，因此直接使用的话不会加载翻译
+    // static const 会有多个副本，可以使用 inline const (c++17) 代替
+
+    inline const std::map<ErrorCode, const char*> s_map_error_code_strings = {
+        // option allow_alias = true;  // 允许不同名但同值的枚举值  // 没有重名会报错
+        { ErrorCode::ERROR_UNSET                        , QT_TRANSLATE_NOOP("Utils::Transform", "Unset error code"                  ) },  // = 0x00000000;  // 未设置错误码
+        // 通用错误码  // 0x00000000 - 0x00000FFF
+        { ErrorCode::UNKNOWN                            , QT_TRANSLATE_NOOP("Utils::Transform", "Unknown error code"                ) },  // = 0x00000001;  // 未知错误
+        { ErrorCode::DEFAULT                            , QT_TRANSLATE_NOOP("Utils::Transform", "Default error"                     ) },  // = 0x00000002;  // 发生错误
+        // grpc 相关的错误码  // 0x00001001 - 0x00001FFF
+        { ErrorCode::ERROR_INIT                         , QT_TRANSLATE_NOOP("Utils::Transform", "Error on init"                     ) },  // = 0x00001001;  // 初始化失败
+        { ErrorCode::ERROR_CONN                         , QT_TRANSLATE_NOOP("Utils::Transform", "Error on connect"                  ) },  // = 0x00001002;  // QT 建立连接失败，无法触发 connect 动作
+        { ErrorCode::ERROR_RECV                         , QT_TRANSLATE_NOOP("Utils::Transform", "Error on recv or parse"            ) },  // = 0x00001003;  // 接收到的数据不完整或解析失败
+        { ErrorCode::ERROR_SEND                         , QT_TRANSLATE_NOOP("Utils::Transform", "Error on send"                     ) },  // = 0x00001004;  // 发送数据失败
+        // 数据库相关错误码  // 0x00002001 - 0x00002FFF
+        { ErrorCode::DB_QUERY                           , QT_TRANSLATE_NOOP("Utils::Transform", "DB query failed"                   ) },  // = 0x00002001;  // 数据库查询失败
+        { ErrorCode::DB_QUERY_EMPTY                     , QT_TRANSLATE_NOOP("Utils::Transform", "DB query empty"                    ) },  // = 0x00002002;  // 数据库查询为空
+        { ErrorCode::DB_EXECUTE                         , QT_TRANSLATE_NOOP("Utils::Transform", "DB execute failed"                 ) },  // = 0x00002003;  // 数据库命令执行失败
+        { ErrorCode::DB_EXECUTE_EMPTY                   , QT_TRANSLATE_NOOP("Utils::Transform", "DB execute empty"                  ) },  // = 0x00002004;  // 数据库命令执行为空
+        { ErrorCode::DB_CHECK                           , QT_TRANSLATE_NOOP("Utils::Transform", "DB check failed"                   ) },  // = 0x00002005;  // 数据库数据插入检查失败
+        { ErrorCode::DB_CHECK_EMPTY                     , QT_TRANSLATE_NOOP("Utils::Transform", "DB check empty"                    ) },  // = 0x00002006;  // 数据库数据插入检查为空
+        { ErrorCode::DB_RECORD_NOT_FOUND                , QT_TRANSLATE_NOOP("Utils::Transform", "DB record not found"               ) },  // = 0x00002007;  // 数据库记录未找到
+        // 状态等相关错误码  // 0x00003001 - 0x00003FFF
+        { ErrorCode::UNSUPPORTED                        , QT_TRANSLATE_NOOP("Utils::Transform", "Unsupported"                       ) },  // = 0x00003001;  // 不支持的操作
+        { ErrorCode::PENDING                            , QT_TRANSLATE_NOOP("Utils::Transform", "Pending"                           ) },  // = 0x00003002;  // 待处理    // 如：好友请求待处理
+        { ErrorCode::ACCEPTED                           , QT_TRANSLATE_NOOP("Utils::Transform", "Accepted"                          ) },  // = 0x00003003;  // 已接受    // 如：同意添加为好友
+        { ErrorCode::IGNORED                            , QT_TRANSLATE_NOOP("Utils::Transform", "Ignored"                           ) },  // = 0x00003004;  // 忽略      // 如：不提醒该条消息
+        { ErrorCode::REFUSED                            , QT_TRANSLATE_NOOP("Utils::Transform", "Refused"                           ) },  // = 0x00003005;  // 拒绝      // 如：不同意添加为好友
+        { ErrorCode::BLOCKED                            , QT_TRANSLATE_NOOP("Utils::Transform", "Blocked"                           ) },  // = 0x00003006;  // 被拉黑    // 如：被对方拉黑
+        { ErrorCode::UNASSOCIATED                       , QT_TRANSLATE_NOOP("Utils::Transform", "Unassociated"                      ) },  // = 0x00003101;  // 未关联    // 如：还不是好友
+        { ErrorCode::ASSOCIATED                         , QT_TRANSLATE_NOOP("Utils::Transform", "Associated"                        ) },  // = 0x00003102;  // 已关联    // 如：已经是好友
+        { ErrorCode::PERMISSION_DENIED                  , QT_TRANSLATE_NOOP("Utils::Transform", "Permission denied"                 ) },  // = 0x00003103;  // 权限不足  // 如：没有权限访问文件
+        // 单参数  // 0x00011011 - 0x00011FFF
+        { ErrorCode::USER_ID_ERROR                      , QT_TRANSLATE_NOOP("Utils::Transform", "User id error"                     ) },  // = 0x00011011;  // 用户 ID 错误
+        { ErrorCode::USER_ID_EMPTY                      , QT_TRANSLATE_NOOP("Utils::Transform", "User id is empty"                  ) },  // = 0x00011012;  // 用户 ID 为空
+        { ErrorCode::USER_ID_NOT_FOUND                  , QT_TRANSLATE_NOOP("Utils::Transform", "User id not found"                 ) },  // = 0x00011013;  // 用户 id 不存在
+        { ErrorCode::USER_ID_EXISTS                     , QT_TRANSLATE_NOOP("Utils::Transform", "User id already exists"            ) },  // = 0x00011014;  // 用户 id 已存在
+        { ErrorCode::ACCOUNT_ID_ERROR                   , QT_TRANSLATE_NOOP("Utils::Transform", "Account id error"                  ) },  // = 0x00011021;  // 账号 ID 错误
+        { ErrorCode::ACCOUNT_ID_EMPTY                   , QT_TRANSLATE_NOOP("Utils::Transform", "Account id is empty"               ) },  // = 0x00011022;  // 账号 ID 为空
+        { ErrorCode::ACCOUNT_ID_NOT_FOUND               , QT_TRANSLATE_NOOP("Utils::Transform", "Account id not found"              ) },  // = 0x00011023;  // 账号 ID 不存在
+        { ErrorCode::PASSWORD_ERROR                     , QT_TRANSLATE_NOOP("Utils::Transform", "Password error"                    ) },  // = 0x00011031;  // 密码错误
+        { ErrorCode::PASSWORD_EMPTY                     , QT_TRANSLATE_NOOP("Utils::Transform", "Password is empty"                 ) },  // = 0x00011032;  // 密码为空
+        { ErrorCode::PASSWORD_NOT_FOUND                 , QT_TRANSLATE_NOOP("Utils::Transform", "Password not found"                ) },  // = 0x00011033;  // 密码未找到
+        { ErrorCode::TOKEN_ERROR                        , QT_TRANSLATE_NOOP("Utils::Transform", "Token error"                       ) },  // = 0x00011041;  // token 错误
+        { ErrorCode::TOKEN_EMPTY                        , QT_TRANSLATE_NOOP("Utils::Transform", "Token is empty"                    ) },  // = 0x00011042;  // token 为空
+        { ErrorCode::TOKEN_NOT_FOUND                    , QT_TRANSLATE_NOOP("Utils::Transform", "Token not found"                   ) },  // = 0x00011043;  // token 未找到
+        { ErrorCode::CONFIRM_PASSWORD_ERROR             , QT_TRANSLATE_NOOP("Utils::Transform", "Confirm password error"            ) },  // = 0x00011051;  // 确认密码错误
+        { ErrorCode::CONFIRM_PASSWORD_EMPTY             , QT_TRANSLATE_NOOP("Utils::Transform", "Confirm password is empty"         ) },  // = 0x00011052;  // 确认密码为空
+        { ErrorCode::CONFIRM_PASSWORD_NOT_FOUND         , QT_TRANSLATE_NOOP("Utils::Transform", "Confirm password not found"        ) },  // = 0x00011053;  // 确认密码未找到
+        { ErrorCode::SECURITY_QUESTION_ERROR            , QT_TRANSLATE_NOOP("Utils::Transform", "Security question error"           ) },  // = 0x00011061;  // 安全问题错误
+        { ErrorCode::SECURITY_QUESTION_EMPTY            , QT_TRANSLATE_NOOP("Utils::Transform", "Security question is empty"        ) },  // = 0x00011062;  // 安全问题为空
+        { ErrorCode::SECURITY_QUESTION_NOT_FOUND        , QT_TRANSLATE_NOOP("Utils::Transform", "Security question not found"       ) },  // = 0x00011063;  // 安全问题未找到
+        { ErrorCode::SECURITY_ANSWER_ERROR              , QT_TRANSLATE_NOOP("Utils::Transform", "Security answer error"             ) },  // = 0x00011071;  // 安全答案错误
+        { ErrorCode::SECURITY_ANSWER_EMPTY              , QT_TRANSLATE_NOOP("Utils::Transform", "Security answer is empty"          ) },  // = 0x00011072;  // 安全答案为空
+        { ErrorCode::SECURITY_ANSWER_NOT_FOUND          , QT_TRANSLATE_NOOP("Utils::Transform", "Security answer not found"         ) },  // = 0x00011073;  // 安全答案未找到
+        // 目标错误  // 0x00012011 - 0x00012FFF
+        { ErrorCode::TARGET_USER_ID_ERROR               , QT_TRANSLATE_NOOP("Utils::Transform", "Target user id error"              ) },  // = 0x00012011;  // 目标用户 id 错误
+        { ErrorCode::TARGET_USER_ID_EMPTY               , QT_TRANSLATE_NOOP("Utils::Transform", "Target user id is empty"           ) },  // = 0x00012012;  // 目标用户 id 为空
+        { ErrorCode::TARGET_USER_ID_NOT_FOUND           , QT_TRANSLATE_NOOP("Utils::Transform", "Target user id not found"          ) },  // = 0x00012013;  // 目标用户 id 未找到
+        { ErrorCode::TARGET_USER_ID_EXISTS              , QT_TRANSLATE_NOOP("Utils::Transform", "Target user id exists"             ) },  // = 0x00012014;  // 目标用户 id 已存在
+        { ErrorCode::TARGET_ACCOUNT_ID_ERROR            , QT_TRANSLATE_NOOP("Utils::Transform", "Target account id error"           ) },  // = 0x00012021;  // 目标账号 id 错误
+        { ErrorCode::TARGET_ACCOUNT_ID_EMPTY            , QT_TRANSLATE_NOOP("Utils::Transform", "Target account id empty"           ) },  // = 0x00012022;  // 目标账号 id 为空
+        { ErrorCode::TARGET_ACCOUNT_ID_NOT_FOUND        , QT_TRANSLATE_NOOP("Utils::Transform", "Target account id not found"       ) },  // = 0x00012023;  // 目标账号 id 未找到
+        { ErrorCode::TARGET_PASSWORD_ERROR              , QT_TRANSLATE_NOOP("Utils::Transform", "Target password error"             ) },  // = 0x00012031;  // 目标密码错误
+        { ErrorCode::TARGET_PASSWORD_EMPTY              , QT_TRANSLATE_NOOP("Utils::Transform", "Target password empty"             ) },  // = 0x00012032;  // 目标密码为空
+        { ErrorCode::TARGET_PASSWORD_NOT_FOUND          , QT_TRANSLATE_NOOP("Utils::Transform", "Target password not found"         ) },  // = 0x00012033;  // 目标密码未找到
+        { ErrorCode::TARGET_CONFIRM_PASSWORD_ERROR      , QT_TRANSLATE_NOOP("Utils::Transform", "Target confirm password error"     ) },  // = 0x00012051;  // 目标确认密码错误
+        { ErrorCode::TARGET_CONFIRM_PASSWORD_EMPTY      , QT_TRANSLATE_NOOP("Utils::Transform", "Target confirm password empty"     ) },  // = 0x00012052;  // 目标确认密码为空
+        { ErrorCode::TARGET_CONFIRM_PASSWORD_NOT_FOUND  , QT_TRANSLATE_NOOP("Utils::Transform", "Target confirm password not found" ) },  // = 0x00012053;  // 目标确认密码未找到
+        { ErrorCode::TARGET_SECURITY_QUESTION_ERROR     , QT_TRANSLATE_NOOP("Utils::Transform", "Target security question error"    ) },  // = 0x00012061;  // 目标安全问题错误
+        { ErrorCode::TARGET_SECURITY_QUESTION_EMPTY     , QT_TRANSLATE_NOOP("Utils::Transform", "Target security question empty"    ) },  // = 0x00012062;  // 目标安全问题为空
+        { ErrorCode::TARGET_SECURITY_QUESTION_NOT_FOUND , QT_TRANSLATE_NOOP("Utils::Transform", "Target security question not found") },  // = 0x00012063;  // 目标安全问题未找到
+        { ErrorCode::TARGET_SECURITY_ANSWER_ERROR       , QT_TRANSLATE_NOOP("Utils::Transform", "Target security answer error"      ) },  // = 0x00012071;  // 目标安全答案错误
+        { ErrorCode::TARGET_SECURITY_ANSWER_EMPTY       , QT_TRANSLATE_NOOP("Utils::Transform", "Target security answer empty"      ) },  // = 0x00012072;  // 目标安全答案为空
+        { ErrorCode::TARGET_SECURITY_ANSWER_NOT_FOUND   , QT_TRANSLATE_NOOP("Utils::Transform", "Target security answer not found"  ) },  // = 0x00012073;  // 目标安全答案未找到
+        { ErrorCode::TARGET_GROUP_ID_ERROR              , QT_TRANSLATE_NOOP("Utils::Transform", "Target group id error"             ) },  // = 0x00012081;  // 目标群组 ID 错误
+        { ErrorCode::TARGET_GROUP_ID_EMPTY              , QT_TRANSLATE_NOOP("Utils::Transform", "Target group id empty"             ) },  // = 0x00012082;  // 目标群组 ID 为空
+        { ErrorCode::TARGET_GROUP_ID_NOT_FOUND          , QT_TRANSLATE_NOOP("Utils::Transform", "Target group id not found"         ) },  // = 0x00012083;  // 目标群组 ID 未找到
+        // 聊天消息  // 0x00013011 - 0x00013FFF
+        { ErrorCode::MESSAGE_TEXT_ERROR                 , QT_TRANSLATE_NOOP("Utils::Transform", "Message text error"                ) },  // = 0x00013011;  // 消息文本错误
+        { ErrorCode::MESSAGE_TEXT_EMPTY                 , QT_TRANSLATE_NOOP("Utils::Transform", "Message text empty"                ) },  // = 0x00013012;  // 消息文本为空
+        { ErrorCode::MESSAGE_TEXT_NOT_FOUND             , QT_TRANSLATE_NOOP("Utils::Transform", "Message text not found"            ) },  // = 0x00013013;  // 消息文本未找到
+        { ErrorCode::MESSAGE_FILE_ERROR                 , QT_TRANSLATE_NOOP("Utils::Transform", "Message file error"                ) },  // = 0x00013021;  // 消息文件错误
+        { ErrorCode::MESSAGE_FILE_EMPTY                 , QT_TRANSLATE_NOOP("Utils::Transform", "Message file empty"                ) },  // = 0x00013022;  // 消息文件为空
+        { ErrorCode::MESSAGE_FILE_NOT_FOUND             , QT_TRANSLATE_NOOP("Utils::Transform", "Message file not found"            ) },  // = 0x00013023;  // 消息文件未找到
+        { ErrorCode::MESSAGE_CONTEXT_ERROR              , QT_TRANSLATE_NOOP("Utils::Transform", "Message context error"             ) },  // = 0x00013031;  // 消息内容错误
+        { ErrorCode::MESSAGE_CONTEXT_EMPTY              , QT_TRANSLATE_NOOP("Utils::Transform", "Message context empty"             ) },  // = 0x00013032;  // 消息内容为空
+        { ErrorCode::MESSAGE_CONTEXT_NOT_FOUND          , QT_TRANSLATE_NOOP("Utils::Transform", "Message context not found"         ) },  // = 0x00013033;  // 消息内容未找到
+        // 文件上传相关错误码  // 0x00004001 - 0x00004FFF
+        { ErrorCode::FILE_READ_ERROR                    , QT_TRANSLATE_NOOP("Utils::Transform", "File read error"                   ) },  // = 0x00014001;  // 文件读取错误
+        { ErrorCode::FILE_WRITE_ERROR                   , QT_TRANSLATE_NOOP("Utils::Transform", "File write error"                  ) },  // = 0x00014002;  // 文件写入失败
+        { ErrorCode::FILE_REQUIRED                      , QT_TRANSLATE_NOOP("Utils::Transform", "File required"                     ) },  // = 0x00014003;  // 文件不能为空
+        { ErrorCode::FILE_NOT_FOUND                     , QT_TRANSLATE_NOOP("Utils::Transform", "File not found"                    ) },  // = 0x00014004;  // 文件未找到
+        { ErrorCode::FILE_ID_REQUIRED                   , QT_TRANSLATE_NOOP("Utils::Transform", "File id required"                  ) },  // = 0x00014005;  // 需要文件 ID ，但未提供
+        { ErrorCode::FILE_HEADER_REQUIRED               , QT_TRANSLATE_NOOP("Utils::Transform", "File header required"              ) },  // = 0x00014006;  // 需要文件信息，但未提供
+        { ErrorCode::FILE_NAME_EMPTY                    , QT_TRANSLATE_NOOP("Utils::Transform", "File name empty"                   ) },  // = 0x00014007;  // 文件名不能为空
+        { ErrorCode::FILE_SIZE_INVALID                  , QT_TRANSLATE_NOOP("Utils::Transform", "File size invalid"                 ) },  // = 0x00014008;  // 文件大小无效
+        { ErrorCode::FILE_MD5_EMPTY                     , QT_TRANSLATE_NOOP("Utils::Transform", "File md5 empty"                    ) },  // = 0x00014009;  // 文件检验码不能为空
+        { ErrorCode::FILE_MD5_MISMATCH                  , QT_TRANSLATE_NOOP("Utils::Transform", "File md5 mismatch"                 ) },  // = 0x00014010;  // 文件校验码不匹配
+        { ErrorCode::FILE_UPLOAD_ERROR                  , QT_TRANSLATE_NOOP("Utils::Transform", "File upload error"                 ) },  // = 0x00014011;  // 文件上传失败
+        { ErrorCode::FILE_DOWNLOAD_ERROR                , QT_TRANSLATE_NOOP("Utils::Transform", "File download error"               ) },  // = 0x00014012;  // 文件下载失败
+        // 多参 // 0x00021011 - 0x00021FFF
+        // 鉴权
+        { ErrorCode::AUTH_INFO_NONE                     , QT_TRANSLATE_NOOP("Utils::Transform", "Auth info none"                    ) },  // = 0x00021011;  // 没有必要的认证信息
+        { ErrorCode::AUTH_ID_EMPTY                      , QT_TRANSLATE_NOOP("Utils::Transform", "Auth id empty"                     ) },  // = 0x00021012;  // 认证 id 为空   // 无 user_id 及 account_id
+        { ErrorCode::AUTH_METHOD_EMPTY                  , QT_TRANSLATE_NOOP("Utils::Transform", "Auth method empty"                 ) },  // = 0x00021013;  // 认证方法为空  // 无 token 及 password
+        { ErrorCode::AUTH_FAILED                        , QT_TRANSLATE_NOOP("Utils::Transform", "Auth failed"                       ) },  // = 0x00021014;  // 认证失败
+        { ErrorCode::DIFF_PASSWORD_WITH_CONFIRM         , QT_TRANSLATE_NOOP("Utils::Transform", "Diff password with confirm"        ) },  // = 0x00021021;  // 确认密码与密码不一致
+        { ErrorCode::TARGET_ID_REQUESTED                , QT_TRANSLATE_NOOP("Utils::Transform", "Target id requested"               ) },  // = 0x00021022;  // 多参 // 发送聊天消息时，需要提供目标 ID，但未提供
+        { ErrorCode::CONTEXT_REQUIRED                   , QT_TRANSLATE_NOOP("Utils::Transform", "Context required"                  ) },  // = 0x00021023;  // 多参 // 发送聊天消息时，需要上下文信息，但未提供
+        // 业务  // 0x00031011 - 0x00031FFF
+        { ErrorCode::CLIENT_MESSAGE_ID_REQUIRED         , QT_TRANSLATE_NOOP("Utils::Transform", "Client message id is required"     ) },  // = 0x10011011;  // 需要客户端消息 ID，但未提供
+        { ErrorCode::DUPLICATE_MESSAGE_ID               , QT_TRANSLATE_NOOP("Utils::Transform", "Duplicate message id"              ) },  // = 0x10011012;  // 重复的客户端消息 id
+        { ErrorCode::FRIEND_REQUEST_NOT_FOUND           , QT_TRANSLATE_NOOP("Utils::Transform", "Friend request not found"          ) },  // = 0x10011013;  // 好友请求未找到
+    };
+
+    inline const std::map<FileStatusCode, QString> s_map_file_status_code_strings = {
+        { FileStatusCode::FILE_STATUS_NONE     , "FILE_STATUS_NONE"      },
+        { FileStatusCode::FILE_STATUS_UPLOADED , "FILE_STATUS_UPLOADED"  },
+        { FileStatusCode::FILE_STATUS_UPLOADING, "FILE_STATUS_UPLOADING" },
+        { FileStatusCode::FILE_STATUS_NOT_FOUND, "FILE_STATUS_NOT_FOUND" },
+    };
+
+    inline const std::map<FileStatusCode, int> s_map_file_status_string_ints = {
+        { FileStatusCode::FILE_STATUS_NONE     , 0 },
+        { FileStatusCode::FILE_STATUS_UPLOADED , 1 },
+        { FileStatusCode::FILE_STATUS_UPLOADING, 2 },
+        { FileStatusCode::FILE_STATUS_NOT_FOUND, 3 },
+    };
+
 }
 
 // 重载 QDebug 运算符

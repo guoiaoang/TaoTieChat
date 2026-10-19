@@ -184,7 +184,7 @@ public:
 
 public:
     const TreeItemData* data_root() const { return m_data_root; }
-    void clean() { delete m_data_root; m_data_root = new TreeItemData; }
+    void clean() { beginResetModel(); delete m_data_root; m_data_root = new TreeItemData; endResetModel(); }
 protected:
     TreeItemData* data_root() { return m_data_root; }
 private:
@@ -214,37 +214,9 @@ public:
     }
 #endif // _DEBUG
 
-// public:
-//     void add_group() {
-//         ;
-//     }
-//     void add_member() {
-//         ;
-//     }
-//     // ====================================================================== //
-//     // 添加数据
-//     void add(const std::shared_ptr<ItemDelegate>&item);
-//     // 移除数据
-//     void remove(const std::shared_ptr<ItemDelegate>&item);
-//     // 清空或替换
-//     void reset(const std::vector<std::shared_ptr<ItemDelegate>>&items = std::vector<std::shared_ptr<ItemDelegate>>{});
-//     // 获取数据组
-//     const std::vector<std::shared_ptr<ItemDelegate>>& get() const;
-//     // 获取位置所在数据
-//     std::shared_ptr<ItemDelegate> get(int pos) const;
-//     // 替换指定位置的元素
-//     bool replace(int pos, std::shared_ptr<ItemDelegate>&provider);
-//     // 获取数据所在位置
-//     int get(const std::shared_ptr<ItemDelegate>&item_providers) const;
-// private:
-//     // 获取数据组  // get_ref();
-//     std::vector<std::shared_ptr<ItemDelegate>>& get();
-// private:
-//     // 修改数据频繁，建议使用 vector 而不是 list
-//     std::vector<std::shared_ptr<ItemDelegate>> m_items;
 };
 
-struct IndexData {
+struct IndexContactData {
     QModelIndex index;
     TreeItemData* data = nullptr;
     std::shared_ptr<ContactData::ItemData> contact = nullptr;
@@ -271,7 +243,6 @@ public:
 // #endif // __DEBUG
 
 public:
-
     // 返回添加的分组节点  // 分组不重复
     auto add_group(ENUMS::ItemGroupType group_type) -> TreeItemData* {
         // return data_root()->add_child(new TreeItemData(0, ENUMS::role_item_data(), QVariant::fromValue<ENUMS::ItemGroupType>(group_type)));
@@ -310,16 +281,16 @@ public:
         return item_group;
     }
 
-    // 返回添加的成员节点  // 1.分组不重复；2.contact 必须有 account_id 且同样不允许重复
-    auto add_member(ENUMS::ItemGroupType group_type, const std::shared_ptr<ContactData::ItemData>&contact_data) -> TreeItemData* {
+    // 返回添加的成员节点
+    // 1.分组不重复；2.contact 必须有 account_id 且同样不允许重复
+    // 修改后需要重新排序(dataChanged 会自动触发 ContactProxy 重排序)
+    auto add_member(ENUMS::ItemGroupType group_type, std::shared_ptr<ContactData::ItemData> contact_data) -> TreeItemData* {
         // ============================ 过滤重复 ============================ //
-
         if (!contact_data) { return nullptr; }
         if ( contact_data->account_id.isEmpty()) { return nullptr; }
-
         // 能找到说明已经添加
         auto index_data = get_contact_index_data(group_type, contact_data->account_id);
-        if (index_data->contact) { return nullptr; }
+        if (index_data && index_data->contact) { return nullptr; }
 
         // ============================ 添加成员 ============================ //
 
@@ -346,79 +317,106 @@ public:
         // var_item[Qt::StatusTipRole] = text_display;  // 效果不好
         var_item[Qt::WhatsThisRole ] = text_display;
 
-        // 查找视图中的插入位置  // 判断条件是先判断昵称，昵称相同再判断用户 ID
-        auto func_find_pos = [](const std::vector<TreeItemData*>&childs, const std::shared_ptr<ContactData::ItemData>&contact_data) -> int {
-            int pos = -1;  // -1：不插入，0：置顶插入
-            do {
-                // 无效值不插入
-                if (!contact_data) {
-                    pos = -1;
-                    break;
-                }
-
-                // 没有可比较的数据时
-                if (contact_data->display_name.isEmpty() && contact_data->user_id.isEmpty()) {
-                    pos = 0;  // 插入到顶部
-                    break;
-                }
-
-                // 空值前置  // 插入位置在 ite 前
-                auto ite = childs.begin();
-                for (; ite != childs.end(); ++ite) {
-                    // 跳过已有的无效值
-                    const TreeItemData*tree_item_data = *ite;
-                    if (!tree_item_data) { continue; }
-
-                    for (auto&data_column : tree_item_data->get_data_columns()) {
-                        using T = std::shared_ptr<ContactData::ItemData>;
-                        // 不是目标数据
-                        if (!data_column.contains(ENUMS::role_item_data())) { continue; }
-                        // 获取目标数据容器
-                        const QVariant&var_column = data_column.at(ENUMS::role_item_data());
-                        if (!var_column.isValid()) { continue; }
-                        if (!var_column.canConvert<T>()) { continue; }
-                        // 对比目标数据容器内数据
-                        T val = var_column.value<T>();
-                        // if (var_column.value<T>() == group_type) { return true; }
-                        if (!val) { continue; }
-                        // 使用 Qt 的 localeAwareCompare 实现支持中文拼音/本地化排序的对比升序排序
-                        // localeAwareCompare(left, right), left > right -> 1
-                        int rdn  = QString::localeAwareCompare(contact_data->display_name, val->display_name);
-                        int ruid = QString::localeAwareCompare(contact_data->user_id     , val->user_id     );
-                        int raid = QString::localeAwareCompare(contact_data->account_id  , val->account_id  );
-                        // 昵称一样时才比较用户 ID  // 插入到 ite 前面
-                        if (rdn < 0 || (rdn == 0 && ruid < 0) || (rdn == 0 && ruid == 0 && raid < 0)) {
-                            pos = static_cast<int>(std::distance(childs.begin(), ite));
-                            break;
-                        }
-                    }
-                    if (pos != -1) {
-                        break;  // 找到插入位置时跳出循环
-                    }
-                }
-                // 循环结束时未找到可插入节点前的位置时，则排序时应该插入到列表尾部
-                if (pos == -1) {
-                    // pos = childs.size() - 1;
-                    pos = static_cast<int>(std::distance(childs.begin(), ite));
-                }
-            } while (false);
-            return pos;
-        };
-
-        int pos_insert = static_cast<int>(item_group->get_item_childs().size()); // 默认不排序
-        // 判断分组，查找插入位置
-        // 好友群组需要排序，好友申请列表不需要排序
-        if (group_type == ENUMS::ItemGroupType::FRIENDS) {
-            pos_insert = func_find_pos(item_group->get_item_childs(), contact_data);
-            qDebug().noquote().nospace() << "insert pos : " << pos_insert << ", contact display_name : " << contact_data->display_name;
-        }
-        if (pos_insert < 0) { return nullptr; }
-
-        auto row_item = static_cast<int>(pos_insert);
+//         // 查找视图中的插入位置  // 判断条件是先判断昵称，昵称相同再判断用户 ID
+//         auto func_find_pos = [](ENUMS::ItemGroupType group_type, const std::vector<TreeItemData*>&childs, std::shared_ptr<ContactData::ItemData> contact_data) -> int {
+//             int pos = -1;  // -1：不插入，0：置顶插入
+//             do {
+//                 // 无效值不插入
+//                 if (!contact_data) {
+//                     pos = -1;
+//                     break;
+//                 }
+// 
+//                 // 没有可比较的数据时
+//                 if (contact_data->display_name.isEmpty() && contact_data->user_id.isEmpty()) {
+//                     pos = 0;  // 插入到顶部
+//                     break;
+//                 }
+// 
+//                 // 空值前置  // 插入位置在 ite 前
+//                 auto ite = childs.begin();
+//                 for (; ite != childs.end(); ++ite) {
+//                     // 跳过已有的无效值
+//                     const TreeItemData*tree_item_data = *ite;
+//                     if (!tree_item_data) { continue; }
+// 
+//                     for (auto&data_column : tree_item_data->get_data_columns()) {
+//                         using T = std::shared_ptr<ContactData::ItemData>;
+//                         // 不是目标数据
+//                         if (!data_column.contains(ENUMS::role_item_data())) { continue; }
+//                         // 获取目标数据容器
+//                         const QVariant&var_column = data_column.at(ENUMS::role_item_data());
+//                         if (!var_column.isValid()) { continue; }
+//                         if (!var_column.canConvert<T>()) { continue; }
+//                         // 对比目标数据容器内数据
+//                         T val = var_column.value<T>();
+//                         if (!val) { continue; }
+//                         // 好友申请分组，按时间排序
+//                         if (group_type == ENUMS::ItemGroupType::REQUEST) {
+//                             bool is_valid = false;
+//                             do {
+//                                 if (!contact_data) { break; }
+//                                 if (!contact_data->request_messages) { break; }
+//                                 if ( contact_data->request_messages->messages.isEmpty()) { break; }
+//                                 if (!val) { break; }
+//                                 if (!val->request_messages) { break; }
+//                                 if ( val->request_messages->messages.isEmpty()) { break; }
+//                                 const auto& new_messages     = contact_data->request_messages->messages;
+//                                 const auto& new_last_message = new_messages.at(new_messages.size() - 1);
+//                                 const auto& old_messages     = val->request_messages->messages;
+//                                 const auto& old_last_message = old_messages.at(old_messages.size() - 1);
+//                                 if (new_last_message.datetime > old_last_message.datetime) {
+//                                     is_valid = true;
+//                                 }
+//                             } while(false);
+//                             if (is_valid) {
+//                                 pos = static_cast<int>(std::distance(childs.begin(), ite));
+//                                 break;
+//                             }
+//                         }
+//                         // 好友分组，按显示名称、用户 ID 、账号 ID 排序
+//                         else if (group_type == ENUMS::ItemGroupType::FRIENDS) {
+//                             // 使用 Qt 的 localeAwareCompare 实现支持中文拼音/本地化排序的对比升序排序
+//                             // localeAwareCompare(left, right), left > right -> 1
+//                             int rdn  = QString::localeAwareCompare(contact_data->display_name, val->display_name);
+//                             int ruid = QString::localeAwareCompare(contact_data->user_id     , val->user_id     );
+//                             int raid = QString::localeAwareCompare(contact_data->account_id  , val->account_id  );
+//                             // 昵称一样时才比较用户 ID  // 插入到 ite 前面
+//                             if (rdn < 0 || (rdn == 0 && ruid < 0) || (rdn == 0 && ruid == 0 && raid < 0)) {
+//                                 pos = static_cast<int>(std::distance(childs.begin(), ite));
+//                                 break;
+//                             }
+//                         }
+//                     }
+//                     if (pos != -1) {
+//                         break;  // 找到插入位置时跳出循环
+//                     }
+//                 }
+//                 // 循环结束时未找到可插入节点前的位置时，则排序时应该插入到列表尾部
+//                 if (pos == -1) {
+//                     pos = static_cast<int>(std::distance(childs.begin(), ite));
+//                 }
+//             } while (false);
+//             return pos;
+//         };
+// 
+//         int pos_insert = static_cast<int>(item_group->get_item_childs().size() - 1); // 默认不排序
+//         // 判断分组，查找插入位置
+//         // 好友群组需要排序，好友申请列表不需要排序
+//         // if (group_type == ENUMS::ItemGroupType::FRIENDS) {
+//         //     pos_insert = func_find_pos(item_group->get_item_childs(), contact_data);
+//         //     qDebug().noquote().nospace() << "insert pos : " << pos_insert << ", contact display_name : " << contact_data->display_name;
+//         // }
+//         pos_insert = func_find_pos(group_type, item_group->get_item_childs(), contact_data);
+//         qDebug().noquote().nospace() << "insert pos : " << pos_insert << ", contact display_name : " << contact_data->display_name;
+//         if (pos_insert < 0) { return nullptr; }
+// 
+//         auto row_item = static_cast<int>(pos_insert);
+        int row_item = 0;
         const QModelIndex parent_index = index_group(group_type);
         beginInsertRows(parent_index, row_item, row_item);
         // 需要支持按位置插入
-        auto item_member = item_group->insert_child(pos_insert, new TreeItemData(get_data_column(), var_item));
+        auto item_member = item_group->insert_child(row_item, new TreeItemData(get_data_column(), var_item));
         endInsertRows();
         return item_member;
     }
@@ -542,8 +540,8 @@ public:
         return row_group(group_type) != -1;
     }
 
-    // 更新信息
-    bool update_contact(ENUMS::ItemGroupType group_type, const std::shared_ptr<ContactData::ItemData>&contact_data) {
+    // 更新信息  // 修改后需要重新排序(dataChanged 会自动触发 ContactProxy 重排序)
+    bool update_contact(ENUMS::ItemGroupType group_type, std::shared_ptr<ContactData::ItemData> contact_data) {
         if (!contact_data) { return false; }
         if ( contact_data->account_id.isEmpty()) { return false; }
         QModelIndex contact_index = index_contact(group_type, contact_data->account_id);
@@ -575,27 +573,29 @@ public:
         auto index_data = get_contact_index_data(group_type, account_id);
         return index_data->contact;
     }
+
     // 生成一个占位图标，否则获取图标大小会异常
     QIcon icon_init() const {
         static auto icons = Utils::FontIcons().update();
         return icons.icon.contacts;
     }
+
 private:
-    std::shared_ptr<IndexData> get_contact_index_data(ENUMS::ItemGroupType group_type, const QString&account_id) {
-        auto index_data = std::make_shared<IndexData>();
+    std::shared_ptr<IndexContactData> get_contact_index_data(ENUMS::ItemGroupType group_type, const QString&account_id) {
+        auto index_data = std::make_shared<IndexContactData>();
         do {
             if ( account_id.isEmpty()) { break; }
             int group_row = row_group(group_type);
             if (group_row < 0) { break; }
-            const auto&group_index = index_group(group_type);  // 群组节点
+            auto group_index = index_group(group_type);  // 群组节点
             if (!group_index.isValid()) { break; }
             auto group_item = data_root()->get_item_childs().at(group_row);  // 群组数据
             if (!group_item) { break; }
-            const auto& childs = group_item->get_item_childs();  // 群组子节点列表
+            auto childs = group_item->get_item_childs();  // 群组子节点列表
             for (size_t row = 0; row < childs.size(); ++row) {
-                index_data->data = childs.at(row);
-                if (!index_data->data) { continue; }
-                for (const auto& data_column : index_data->data->get_data_columns()) {
+                TreeItemData* item_child = childs.at(row);
+                if (!item_child) { continue; }
+                for (const auto& data_column : item_child->get_data_columns()) {
                     using T = std::shared_ptr<ContactData::ItemData>;
                     // 不是目标数据
                     if (!data_column.contains(ENUMS::role_item_data())) { continue; }
@@ -604,18 +604,22 @@ private:
                     if (!var_column.isValid()) { continue; }
                     if (!var_column.canConvert<T>()) { continue; }
                     // 对比目标数据容器内数据
-                    index_data->contact = var_column.value<T>();
-                    if (!index_data->contact) { continue; }
+                    auto val = var_column.value<T>();
+                    if (!val) { continue; }
                     // 匹配账号 ID
-                    if (account_id == index_data->contact->account_id) {
-                        index_data->row = static_cast<int>(row);
+                    if (account_id == val->account_id) {
+                        index_data->data    = item_child;
+                        index_data->contact = val;
+                        index_data->row     = static_cast<int>(row);
                         break;
                     }
                 }
                 if (index_data->row != -1) { break; }
             }
             // 获取子节点在父节点中的 index
-            if (index_data->row != -1) { index_data->index = this->index(index_data->row, 0, group_index); }
+            if (index_data->row != -1) {
+                index_data->index = this->index(index_data->row, 0, group_index);
+            }
         } while (false);
         return index_data;
     }
@@ -641,52 +645,22 @@ public:
 // #endif // __DEBUG
 
 public:
-
     // 返回添加的成员节点  // 1.分组不重复；2.contact 必须有 account_id 且同样不允许重复
-    auto add_member(const std::shared_ptr<ContactData::ItemData> contact_data) -> TreeItemData* {
+    auto add_member(std::shared_ptr<ContactData::ItemData> contact_data) -> TreeItemData* {
         // ============================ 过滤重复 ============================ //
         if (!contact_data) { return nullptr; }
-
-        // 获取账号 ID 作为重复判断条件
-        const auto& account_id = contact_data->account_id;
-        if (account_id.isEmpty()) {
-            qWarning() << "Contact account id is EMPTY!";
-            return nullptr;
-        }
-
-        auto func_check_dupe = [account_id](const std::map<int, QVariant>&data_column) {
-            using T = std::shared_ptr<ContactData::ItemData>;
-            // 不是目标数据
-            if (!data_column.contains(ENUMS::role_item_data())) { return false; }
-            // 获取目标数据容器
-            const QVariant&var_column = data_column.at(ENUMS::role_item_data());
-            if (!var_column.canConvert<T>()) { return false; }
-            // 对比目标数据容器内数据
-            T val = var_column.value<T>();
-            if (account_id == val->account_id) { return true; }
-            return false;
-        };
-        auto func_cmp_dupe = [func_check_dupe](const TreeItemData* item_ite) {
-            if (!item_ite) { return false; }
-            auto vec_filter = item_ite->get_data_columns() | std::views::filter(func_check_dupe);
-            return !vec_filter.empty();
-        };
-        auto func_has_dupe = [this, func_cmp_dupe]() {
-            auto& childs = data_root()->get_item_childs();
-            auto it = std::ranges::find_if(childs, func_cmp_dupe);
-            return it != childs.end();
-        };
-        Q_UNUSED(func_has_dupe);
-
-        if (func_has_dupe()) { return nullptr; }
+        if ( contact_data->account_id.isEmpty()) { return nullptr; }
+        // 能找到说明已经添加
+        auto index_data = get_contact_index_data(contact_data->account_id);
+        if (index_data && index_data->contact) { return nullptr; }
 
         // ============================ 添加成员 ============================ //
 
         // 获取分组节点
-        TreeItemData*item_group = data_root();
+        TreeItemData*item_data = data_root();
 
         // 分组节点添加成员  // 未校验重复
-        auto text_display = account_id;
+        auto text_display = contact_data->display_name;
         std::map<int, QVariant> var_item;
         var_item[ENUMS::role_item_type()] = QVariant::fromValue<ENUMS::ItemDataType>(ENUMS::ItemDataType::CONTACT);
         var_item[ENUMS::role_item_data()] = QVariant::fromValue<std::shared_ptr<ContactData::ItemData>>(contact_data);
@@ -698,9 +672,9 @@ public:
         // var_item[Qt::StatusTipRole] = text_display;  // 效果不好
         var_item[Qt::WhatsThisRole ] = text_display;
 
-        auto row = static_cast<int>(item_group->get_item_childs().size());
+        auto row = static_cast<int>(item_data->get_item_childs().size());
         beginInsertRows(QModelIndex(), row, row);
-        auto item_member = item_group->add_child(new TreeItemData(get_data_column(), var_item));
+        auto item_member = item_data->add_child(new TreeItemData(get_data_column(), var_item));
         endInsertRows();
         return item_member;
     }
@@ -716,7 +690,7 @@ public:
         return index_data->contact;
     }
 
-    bool update_contact(const std::shared_ptr<ContactData::ItemData>&contact_data) {
+    bool update_contact(std::shared_ptr<ContactData::ItemData> contact_data) {
         if (!contact_data) { return false; }
         if ( contact_data->account_id.isEmpty()) { return false; }
         QModelIndex contact_index = index_contact(contact_data->account_id);
@@ -750,15 +724,16 @@ public:
     }
 
 private:
-    std::shared_ptr<IndexData> get_contact_index_data(const QString&account_id) {
-        auto index_data = std::make_shared<IndexData>();
+    std::shared_ptr<IndexContactData> get_contact_index_data(const QString&account_id) {
+        auto index_data = std::make_shared<IndexContactData>();
         do {
             if ( account_id.isEmpty()) { break; }
-            const auto& childs = data_root()->get_item_childs();  // 群组子节点列表
+            auto childs = data_root()->get_item_childs();  // 群组子节点列表
             for (size_t row = 0; row < childs.size(); ++row) {
-                index_data->data = childs.at(row);
-                if (!index_data->data) { continue; }
-                for (const auto& data_column : index_data->data->get_data_columns()) {
+                TreeItemData* item_child = childs.at(row);
+                // index_data->data = childs.at(row);
+                if (!item_child) { continue; }
+                for (const auto& data_column : item_child->get_data_columns()) {
                     using T = std::shared_ptr<ContactData::ItemData>;
                     // 不是目标数据
                     if (!data_column.contains(ENUMS::role_item_data())) { continue; }
@@ -767,105 +742,112 @@ private:
                     if (!var_column.isValid()) { continue; }
                     if (!var_column.canConvert<T>()) { continue; }
                     // 对比目标数据容器内数据
-                    index_data->contact = var_column.value<T>();
-                    if (!index_data->contact) { continue; }
+                    auto val = var_column.value<T>();
+                    // index_data->contact = var_column.value<T>();
+                    if (!val) { continue; }
                     // 匹配账号 ID
-                    if (account_id == index_data->contact->account_id) {
-                        index_data->row = static_cast<int>(row);
+                    if (account_id == val->account_id) {
+                        index_data->data    = item_child;
+                        index_data->contact = val;
+                        index_data->row     = static_cast<int>(row);
                         break;
                     }
                 }
                 if (index_data->row != -1) { break; }
             }
             // 获取子节点在父节点中的 index
-            if (index_data->row != -1) { index_data->index = this->index(index_data->row, 0, QModelIndex()); }
+            if (index_data->row != -1) {
+                index_data->index = this->index(index_data->row, 0, QModelIndex());
+            }
         } while (false);
         return index_data;
     }
+};
+
+struct IndexChatroomData {
+    QModelIndex index;
+    TreeItemData* data = nullptr;
+    std::shared_ptr<ChatroomData::ItemData> chatroom = nullptr;
+    int row = -1;
 };
 
 class ChatroomModel : public TreeModel {
 public:
     using TreeModel::TreeModel;
 
-private:
+public:
+    // 返回添加的成员节点  // 1.分组不重复；2.contact 必须有 account_id 且同样不允许重复
+    auto add_chatroom_data(std::shared_ptr<ChatroomData::ItemData> chatroom_data) -> TreeItemData* {
+        // ============================ 过滤重复 ============================ //
+        if (!chatroom_data) { return nullptr; }
+        if ( chatroom_data->chatroom_id.isEmpty()) { return nullptr; }
+        // 能找到说明已经添加
+        auto index_data = get_chatroom_index_data(chatroom_data->chatroom_id);
+        if (index_data && index_data->chatroom) { return nullptr; }
 
-    // 添加对话
-    TreeItemData* add_chatroom_item(const std::shared_ptr<ChatroomData::ItemData>&chatroom_data) {
-        TreeItemData* chatroom = nullptr;
-        if (!chatroom_data) { return chatroom; }
-        chatroom = get_chatroom_item(chatroom_data);
-        if (chatroom) { return chatroom; }
+        // ============================ 添加成员 ============================ //
 
-        // 填充数据
-        auto text_display = chatroom_data->display_name;
+        // 获取分组节点
+        TreeItemData*item_data = data_root();
+
+        // 分组节点添加成员  // 未校验重复
+        QString text_display = chatroom_data->display_name;
+        QPixmap pixmap = chatroom_data->avatar_image.isNull() ? icon_init().pixmap(128) : QPixmap::fromImage(chatroom_data->avatar_image);
         std::map<int, QVariant> var_item;
         var_item[ENUMS::role_item_type()] = QVariant::fromValue<ENUMS::ItemDataType>(ENUMS::ItemDataType::CHATROOM);
         var_item[ENUMS::role_item_data()] = QVariant::fromValue<std::shared_ptr<ChatroomData::ItemData>>(chatroom_data);
         // 设置一些默认显示的数据，防止未设置 delegete 显示为空
         var_item[Qt::DisplayRole   ] = text_display;
-        var_item[Qt::DecorationRole] = chatroom_data->avatar_image;
+        var_item[Qt::DecorationRole] = pixmap; // 设置默认图标样式，实际不使用
         var_item[Qt::EditRole      ] = text_display;
         // var_item[Qt::ToolTipRole  ] = text_display;
         // var_item[Qt::StatusTipRole] = text_display;  // 效果不好
         var_item[Qt::WhatsThisRole ] = text_display;
+        // 设置回节点数据列中
 
-        // 插入到第一行即可，更新时间时再进行排序
-        auto row_item = 0;
-        const QModelIndex parent_index = get_item_chatroom_index(chatroom);
-        beginInsertRows(parent_index, row_item, row_item);
-        // 需要支持按位置插入
-        chatroom = data_root()->insert_child(row_item, new TreeItemData(get_data_column(), var_item));
+        auto row = static_cast<int>(item_data->get_item_childs().size());
+        beginInsertRows(QModelIndex(), row, row);
+        auto item_member = item_data->add_child(new TreeItemData(get_data_column(), var_item));
         endInsertRows();
-        return chatroom;
+        return item_member;
     }
 
-    // 获取数据
-    TreeItemData* get_chatroom_item(const std::shared_ptr<ChatroomData::ItemData>&chatroom_data) const {
-        TreeItemData* chatroom = nullptr;
-        if (!chatroom_data) { return chatroom; }
-        return get_chatroom_item(chatroom_data->chatroom_id);
+    QModelIndex index_chatroom_data(const QString&chatroom_id) {
+        auto index_data = get_chatroom_index_data(chatroom_id);
+        return index_data->index;
     }
 
-    // 获取数据
-    TreeItemData* get_chatroom_item(const QString&chatroom_id) const {
-        // 从列表中查找相同的账号 ID  // 聊天室没有分组信息
-        TreeItemData * last_chatroom = nullptr;
-        const std::vector<TreeItemData*>& item_chatrooms = data_root()->get_item_childs();
-        for (TreeItemData * const & item_chatroom : item_chatrooms) {
-            if (!item_chatroom) { continue; }
-            for (const std::map<int, QVariant>&item_data_column : item_chatroom->get_data_columns()) {
-                // 获取数据所在列
-                if (!item_data_column.contains(ENUMS::role_item_data())) { continue; }
-                QVariant item_var_data = item_data_column.at(ENUMS::role_item_data());
-                // 获取数据
-                if (!item_var_data.canConvert<std::shared_ptr<ChatroomData::ItemData>>()) { continue; }
-                auto chatroom_data = item_var_data.value<std::shared_ptr<ChatroomData::ItemData>>();
-                if (chatroom_id == chatroom_data->chatroom_id) {
-                    last_chatroom = item_chatroom;
-                    break;
-                }
-            }
-            if (last_chatroom) { break; }
+    // 这里的返回值不能使用引用，引用无法延长临时变量的生命周期，会导致被调用时必然崩溃
+    std::shared_ptr<ChatroomData::ItemData> get_chatroom_data(const QString&chatroom_id) {
+        auto index_data = get_chatroom_index_data(chatroom_id);
+        return index_data->chatroom;
+    }
+
+    bool updata_chatroom_data(std::shared_ptr<ChatroomData::ItemData> chatroom_data) {
+        if (!chatroom_data) { return false; }
+        if ( chatroom_data->chatroom_id.isEmpty()) { return false; }
+        QModelIndex chatroom_index = index_chatroom_data(chatroom_data->chatroom_id);
+        if (!chatroom_index.isValid()) { return false; }
+        // 获取节点内部的 TreeItemData* 指针并更新存储数据
+        TreeItemData* item_data = static_cast<TreeItemData*>(chatroom_index.internalPointer());
+        if (item_data) {
+            QString text_display = chatroom_data->display_name;
+            QPixmap pixmap = chatroom_data->avatar_image.isNull() ? icon_init().pixmap(128) : QPixmap::fromImage(chatroom_data->avatar_image);
+            std::map<int, QVariant> var_item;
+            var_item[ENUMS::role_item_type()] = QVariant::fromValue<ENUMS::ItemDataType>(ENUMS::ItemDataType::CHATROOM);
+            var_item[ENUMS::role_item_data()] = QVariant::fromValue<std::shared_ptr<ChatroomData::ItemData>>(chatroom_data);
+            // 设置一些默认显示的数据，防止未设置 delegete 显示为空
+            var_item[Qt::DisplayRole   ] = text_display;
+            var_item[Qt::DecorationRole] = pixmap; // 设置默认图标样式，实际不使用
+            var_item[Qt::EditRole      ] = text_display;
+            // var_item[Qt::ToolTipRole  ] = text_display;
+            // var_item[Qt::StatusTipRole] = text_display;  // 效果不好
+            var_item[Qt::WhatsThisRole ] = text_display;
+            // 设置回节点数据列中
+            item_data->set_column_data(0, var_item);
         }
-        return last_chatroom;
-    }
-
-    int get_item_chatroom_row(const TreeItemData*chatroom) const {
-        if (!chatroom) { return -1; }
-        const std::vector<TreeItemData*>& item_chatrooms = data_root()->get_item_childs();
-        auto ite = item_chatrooms.begin();
-        for (; ite != item_chatrooms.end(); ++ite) {
-            if (*ite == chatroom) { break; }
-        }
-        if (ite != item_chatrooms.end()) { return std::distance(item_chatrooms.begin(), ite); }
-        return -1;
-    }
-
-    QModelIndex get_item_chatroom_index(const TreeItemData*chatroom) const {
-        if (!chatroom) { return QModelIndex(); }
-        auto row = get_item_chatroom_row(chatroom);
-        return row == -1 ? QModelIndex() : createIndex(row, 0, data_root()->get_item_childs().at(row));
+        emit dataChanged(chatroom_index, chatroom_index);
+        return true;
     }
 
     // 生成一个占位图标，否则获取图标大小会异常
@@ -874,49 +856,42 @@ private:
         return icons.icon.contacts;
     }
 
-public:
-    // 外部只需要知道行号即可
-    int add_chatroom_row(const std::shared_ptr<ChatroomData::ItemData>&chatroom_data) {
-        return get_item_chatroom_row(add_chatroom_item(chatroom_data));
-    }
-    int get_chatroom_row(const std::shared_ptr<ChatroomData::ItemData>&chatroom_data) const {
-        return get_item_chatroom_row(get_chatroom_item(chatroom_data));
-    }
-    bool has_chatroom(const QString&chatroom_id) {
-        // if ( chatroom_id.isEmpty()) { return false; }
-        if ( get_chatroom_item(chatroom_id)) { return true; }
-        return false;
-    }
-    std::shared_ptr<ChatroomData::ItemData> get_chatroom_data(const QString&chatroom_id) const {
-        std::shared_ptr<ChatroomData::ItemData> chatroom_data;
+private:
+    std::shared_ptr<IndexChatroomData> get_chatroom_index_data(const QString&chatroom_id) {
+        auto index_data = std::make_shared<IndexChatroomData>();
         do {
-            auto item_chatroom = get_chatroom_item(chatroom_id);
-            if (!item_chatroom) { break; }
-            for (const std::map<int, QVariant>&item_data_column : item_chatroom->get_data_columns()) {
-                // 获取数据所在列
-                if (!item_data_column.contains(ENUMS::role_item_data())) { continue; }
-                QVariant item_var_data = item_data_column.at(ENUMS::role_item_data());
-                // 获取数据
-                if (!item_var_data.canConvert<std::shared_ptr<ChatroomData::ItemData>>()) { continue; }
-                auto item_chatroom_data = item_var_data.value<std::shared_ptr<ChatroomData::ItemData>>();
-                if (chatroom_id == item_chatroom_data->chatroom_id) {
-                    chatroom_data = item_chatroom_data;
-                    break;
+            if ( chatroom_id.isEmpty()) { break; }
+            auto childs = data_root()->get_item_childs();  // 群组子节点列表
+            for (size_t row = 0; row < childs.size(); ++row) {
+                TreeItemData* item_child = childs.at(row);
+                if (!item_child) { continue; }
+                for (const auto& data_column : item_child->get_data_columns()) {
+                    using T = std::shared_ptr<ChatroomData::ItemData>;
+                    // 不是目标数据
+                    if (!data_column.contains(ENUMS::role_item_data())) { continue; }
+                    // 获取目标数据容器
+                    const QVariant&var_column = data_column.at(ENUMS::role_item_data());
+                    if (!var_column.isValid()) { continue; }
+                    if (!var_column.canConvert<T>()) { continue; }
+                    // 对比目标数据容器内数据
+                    auto val = var_column.value<T>();
+                    if (!val) { continue; }
+                    // 匹配账号 ID
+                    if (chatroom_id == val->chatroom_id) {
+                        index_data->data     = item_child;
+                        index_data->chatroom = val;
+                        index_data->row      = static_cast<int>(row);
+                        break;
+                    }
                 }
+                if (index_data->row != -1) { break; }
+            }
+            // 获取子节点在父节点中的 index
+            if (index_data->row != -1) {
+                index_data->index = this->index(index_data->row, 0, QModelIndex());
             }
         } while (false);
-        return chatroom_data;
-    }
-    bool updata_chatroom(const std::shared_ptr<ChatroomData::ItemData>&chatroom_data) {
-        do {
-            auto index = get_item_chatroom_index(get_chatroom_item(chatroom_data));
-            if (!index.isValid()) { break; }
-            int row = index.row();
-            if (row < 0) { break; }  // 没有找到时
-            emit dataChanged(index, index);
-            return true;
-        } while (false);
-        return false;
+        return index_data;
     }
 };
 
@@ -924,7 +899,7 @@ class MessageModel : public TreeModel {
 public:
     using TreeModel::TreeModel;
 public:
-    TreeItemData* add_message(const std::shared_ptr<MessageData::ItemData>&message_data) {
+    TreeItemData* add_message(std::shared_ptr<MessageData::ItemData> message_data) {
         // 先获取消息列表，再进行排序，查找插入位置，与上一条消息间隔时间过长时添加一条时间提示
         TreeItemData* item_data = nullptr;
         do {
@@ -972,7 +947,7 @@ public:
     }
 
     // 获取最后一条消息以便列表显示
-    const std::shared_ptr<MessageData::ItemData> get_last_message() {
+    std::shared_ptr<MessageData::ItemData> get_last_message() {
         // 获取行号
         auto last_row_index = (int)data_root()->row_count() - 1;
         if ( last_row_index < 0) { return nullptr; }
@@ -991,7 +966,7 @@ public:
     auto row_count() { return data_root()->row_count(); }
 
     int get_item_message_row(const TreeItemData*item_message) const {
-        const auto&index = get_item_message_index(item_message);
+        auto index = get_item_message_index(item_message);
         if (!index.isValid()) { return -1; }
         return index.row();
     }
@@ -999,33 +974,33 @@ public:
     QModelIndex get_item_message_index(const TreeItemData*item_message) const {
         do {
             if (!item_message) { break; }
-            const auto&data_columns = item_message->get_data_columns();
+            auto data_columns = item_message->get_data_columns();
             if ( data_columns.size() <= get_data_column()) { break; }
-            const auto&data_column = data_columns.at(get_data_column());
+            auto data_column = data_columns.at(get_data_column());
             // if ( data_column.size() <= ENUMS::role_item_data()) { break; }
             if (!data_column.contains(ENUMS::role_item_data())) { break; }
-            const auto&var_data = data_column.at(ENUMS::role_item_data());
+            auto var_data = data_column.at(ENUMS::role_item_data());
             if (!var_data.canConvert<std::shared_ptr<MessageData::ItemData>>()) { break; }
-            const auto&item_data = var_data.value<std::shared_ptr<MessageData::ItemData>>();
+            auto item_data = var_data.value<std::shared_ptr<MessageData::ItemData>>();
             return get_item_message_index(item_data);
         } while (false);
         return QModelIndex();
     }
 
-    QModelIndex get_item_message_index(const std::shared_ptr<MessageData::ItemData>&item_data) const {
+    QModelIndex get_item_message_index(std::shared_ptr<MessageData::ItemData> item_data) const {
         do {
             if (!item_data) { break; }
-            const auto&message_id = item_data->message_id;
+            auto message_id = item_data->message_id;
             if (!message_id.isEmpty()) { break; }
             if (!m_cache_message_id_index.contains(message_id)) { break; }
-            const auto&index = m_cache_message_id_index.value(message_id);
+            auto index = m_cache_message_id_index.value(message_id);
             return index;
         } while (false);
         return QModelIndex();
     }
 
     // 更新消息显示
-    void update_message(const std::shared_ptr<MessageData::ItemData>&message_data) {
+    void update_message(std::shared_ptr<MessageData::ItemData> message_data) {
         do {
             auto index = get_item_message_index(message_data);
             if (!index.isValid()) { break; }
@@ -1038,12 +1013,12 @@ public:
     std::shared_ptr<MessageData::ItemData> get_message(const QString&message_id) const {
         do {
             if (!m_cache_message_id_index.contains(message_id)) { break; }
-            const auto&index =  m_cache_message_id_index.value(message_id);
+            auto index =  m_cache_message_id_index.value(message_id);
             if (!index.isValid()) { break; }
-            const auto&var_data = index.data(ENUMS::role_item_data());  // 空则返回默认值 QVariant{}
+            auto var_data = index.data(ENUMS::role_item_data());  // 空则返回默认值 QVariant{}
             if (!var_data.isValid()) { break; }
             if (!var_data.canConvert<std::shared_ptr<MessageData::ItemData>>()) { break; }
-            const auto&item_data = var_data.value<std::shared_ptr<MessageData::ItemData>>();
+            auto item_data = var_data.value<std::shared_ptr<MessageData::ItemData>>();
             return item_data;
         } while (false);
         return nullptr;
@@ -1109,3 +1084,119 @@ protected:
     }
 };
 
+class ContactProxy : public QSortFilterProxyModel {
+public:
+protected:
+    // 过滤函数
+    bool filterAcceptsRow(int source_row, const QModelIndex &source_parent) const override {
+        return QSortFilterProxyModel::filterAcceptsRow(source_row, source_parent);
+        // // 获取原始 Model 的 index
+        // QModelIndex index = sourceModel()->index(source_row, 0, source_parent);
+
+        // // 获取自定义数据（例如在线状态）
+        // bool is_online = index.data(CustomRoles::OnlineRole).toBool();
+        // QString name   = index.data(Qt::DisplayRole).toString();
+
+        // // 仅显示在线且符合搜索关键字的联系人
+        // return is_online && name.contains(filterRegularExpression());
+    }
+
+    // 仅比较时间
+    // 排序函数，该函数返回正序，由 `QSortFilterProxyModel::sort(0, Qt::AscendingOrder);` 设置为倒序
+    bool lessThan(const QModelIndex &left_index, const QModelIndex &right_index) const {
+        bool is_valid = false;
+        do {
+            // 校验 index
+            if (!left_index .isValid()) { break; }
+            if (!right_index.isValid()) { break; }
+            // 只处理第 0 列
+            if ( left_index .column() != get_data_column()) { break; }
+            if ( right_index.column() != get_data_column()) { break; }
+            // 获取列中存储的数据
+            auto left_data  = left_index .data(ENUMS::role_item_data());
+            auto right_data = right_index.data(ENUMS::role_item_data());
+            // 校验数据是否可用
+            if (!left_data .isValid()) { break; }
+            if (!right_data.isValid()) { break; }
+
+            // 校验数据类型
+            // 分组标题不需要排序
+            if ( left_data .canConvert<ENUMS::ItemGroupType>()) {
+                // is_valid = false;
+                is_valid = left_index.row() < right_index.row();
+                break;
+            }
+            if ( right_data.canConvert<ENUMS::ItemGroupType>()) {
+                // is_valid = false;
+                is_valid = left_index.row() < right_index.row();
+                break;
+            }
+
+            // 两个待比较节点必须属于同一个父节点。
+            // 对一级分组的比较不进行重排，保持源模型的分组顺序。
+            const QModelIndex left_parent_index  = left_index.parent();
+            const QModelIndex right_parent_index = right_index.parent();
+            if (left_parent_index != right_parent_index) { break; }
+            // 二级节点：成员。根据所属分组选择规则。
+            auto left_parent_data = left_parent_index.data(ENUMS::role_item_data());
+            if (!left_parent_data.canConvert<ENUMS::ItemGroupType>()) { break; }
+            const auto group_type = left_parent_data.value<ENUMS::ItemGroupType>();
+
+            // 联系人条目
+            if (!left_data .canConvert<std::shared_ptr<ContactData::ItemData>>()) { break; }
+            if (!right_data.canConvert<std::shared_ptr<ContactData::ItemData>>()) { break; }
+            // 获取实际数据
+            auto left_contact  = left_data .value<std::shared_ptr<ContactData::ItemData>>();
+            auto right_contact = right_data.value<std::shared_ptr<ContactData::ItemData>>();
+            if (!left_contact ) { break; }
+            if (!right_contact) { break; }
+
+            if (group_type == ENUMS::ItemGroupType::REQUEST) {
+                do {
+                    if (!left_contact) { break; }
+                    if (!left_contact->request_messages) { break; }
+                    if ( left_contact->request_messages->messages.isEmpty()) { break; }
+                    if (!right_contact) { break; }
+                    if (!right_contact->request_messages) { break; }
+                    if ( right_contact->request_messages->messages.isEmpty()) { break; }
+                    const auto& new_messages     = left_contact->request_messages->messages;
+                    const auto& new_last_message = new_messages.at(new_messages.size() - 1);
+                    const auto& old_messages     = right_contact->request_messages->messages;
+                    const auto& old_last_message = old_messages.at(old_messages.size() - 1);
+                    if (new_last_message.datetime > old_last_message.datetime) {
+                        is_valid = true;
+                    }
+                } while(false);
+                // return is_valid;
+            }
+            else if (group_type == ENUMS::ItemGroupType::FRIENDS) {
+                // 好友分组，按显示名称、用户 ID 、账号 ID 排序
+                // 使用 Qt 的 localeAwareCompare 实现支持中文拼音/本地化排序的对比升序排序
+                // localeAwareCompare(left, right), left > right -> 1
+                int rdn  = QString::localeAwareCompare(left_contact->display_name, right_contact->display_name);
+                int ruid = QString::localeAwareCompare(left_contact->user_id     , right_contact->user_id     );
+                int raid = QString::localeAwareCompare(left_contact->account_id  , right_contact->account_id  );
+                // 昵称一样时才比较用户 ID  // 插入到 ite 前面
+                if (rdn < 0 || (rdn == 0 && ruid < 0) || (rdn == 0 && ruid == 0 && raid < 0)) {
+                    is_valid = true;
+                }
+            }
+
+            // // 校验数据类型
+            // if (!left_data .canConvert<std::shared_ptr<ChatroomData::ItemData>>()) { break; }
+            // if (!right_data.canConvert<std::shared_ptr<ChatroomData::ItemData>>()) { break; }
+            // // 获取实际数据
+            // auto left_chatroom  = left_data .value<std::shared_ptr<ChatroomData::ItemData>>();
+            // auto right_chatroom = right_data.value<std::shared_ptr<ChatroomData::ItemData>>();
+            // if (!left_chatroom ) { break; }
+            // if (!right_chatroom) { break; }
+            // // 获取时间
+            // if (!left_chatroom ->last_message_datetime.isValid()) { break; }
+            // if (!right_chatroom->last_message_datetime.isValid()) { break; }
+            // return left_chatroom->last_message_datetime < right_chatroom->last_message_datetime;  // 正序
+        } while(false);
+        return is_valid;
+        return QSortFilterProxyModel::lessThan(left_index, right_index);
+        // return QString::localeAwareCompare(left_name, right_name) < 0;
+    }
+};

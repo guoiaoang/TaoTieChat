@@ -4,6 +4,7 @@
 #include "NetworkClient.h"
 #include "Accounts.h"
 #include "Database.h"
+#include "SignalInner.h"
 
 AuthWindow::AuthWindow(QWidget *parent)
     : QDialog(parent), m_ui(std::make_shared<Ui::AuthWindow>()) {
@@ -12,17 +13,17 @@ AuthWindow::AuthWindow(QWidget *parent)
     connect(m_ui->signup_button_signin, &QToolButton::clicked, this, [&](){ m_ui->auth_stacked->setCurrentWidget(m_ui->page_signin); });
     // connect(m_ui->signin_button_signin, &QToolButton::clicked, this, &AuthWindow::accepted);  // 登录成功显示主界面
     // connect(m_ui->signup_button_signup, &QToolButton::clicked, this, &AuthWindow::accepted);  // 注册成功直接登录
-    connect(m_ui->signup_button_signup, &QToolButton::clicked, this, &AuthWindow::handle_signup);  // 注册成功直接登录
-    connect(m_ui->signin_button_signin, &QToolButton::clicked, this, &AuthWindow::handle_signin);  // 登录成功显示主界面
+    connect(m_ui->signup_button_signup, &QToolButton::clicked, this, &AuthWindow::slot_signup);  // 注册成功直接登录
+    connect(m_ui->signin_button_signin, &QToolButton::clicked, this, &AuthWindow::slot_signin);  // 登录成功显示主界面
     // 登陆页面清除错误提示
-    connect(m_ui->signin_combo_username, &QComboBox::currentTextChanged, this, &AuthWindow::handle_page_signin_tips_clean);
-    connect(m_ui->signin_edit_password , &QLineEdit::textChanged       , this, &AuthWindow::handle_page_signin_tips_clean);
+    connect(m_ui->signin_combo_username, &QComboBox::currentTextChanged, this, &AuthWindow::slot_page_signin_tips_clean);
+    connect(m_ui->signin_edit_password , &QLineEdit::textChanged       , this, &AuthWindow::slot_page_signin_tips_clean);
     // 注册页面清除错误提示
-    connect(m_ui->signup_edit_username, &QLineEdit::textChanged, this, &AuthWindow::handle_page_signup_tips_clean);
-    connect(m_ui->signup_edit_password, &QLineEdit::textChanged, this, &AuthWindow::handle_page_signup_tips_clean);
-    connect(m_ui->signup_edit_confirm , &QLineEdit::textChanged, this, &AuthWindow::handle_page_signup_tips_clean);
-    connect(m_ui->signup_edit_question, &QLineEdit::textChanged, this, &AuthWindow::handle_page_signup_tips_clean);
-    connect(m_ui->signup_edit_answer  , &QLineEdit::textChanged, this, &AuthWindow::handle_page_signup_tips_clean);
+    connect(m_ui->signup_edit_username, &QLineEdit::textChanged, this, &AuthWindow::slot_page_signup_tips_clean);
+    connect(m_ui->signup_edit_password, &QLineEdit::textChanged, this, &AuthWindow::slot_page_signup_tips_clean);
+    connect(m_ui->signup_edit_confirm , &QLineEdit::textChanged, this, &AuthWindow::slot_page_signup_tips_clean);
+    connect(m_ui->signup_edit_question, &QLineEdit::textChanged, this, &AuthWindow::slot_page_signup_tips_clean);
+    connect(m_ui->signup_edit_answer  , &QLineEdit::textChanged, this, &AuthWindow::slot_page_signup_tips_clean);
     // 记住密码与自动登录选项
     connect(m_ui->signin_check_rember, &QCheckBox::checkStateChanged, this, [this](){
         if(!m_ui->signin_check_rember->isChecked()) {
@@ -66,8 +67,8 @@ AuthWindow::AuthWindow(QWidget *parent)
     m_ui->signin_label_info->setSizePolicy(sizePolicy);
     m_ui->signin_label_info->setVisible(false); // 初始状态下先隐藏
 
-    if(!NetworkClient::instance().init()) {
-        qDebug().nospace().noquote() << "NetworkClient::instance().init() failed.";
+    if(!NetworkClient::instance()->init()) {
+        qDebug().nospace().noquote() << "NetworkClient::instance()->init() failed.";
     }
 
     // 加载登录记录
@@ -141,31 +142,49 @@ void AuthWindow::view() {
     show();
 }
 
-void AuthWindow::handle_page_signin_tips_error(const QString&message) {
+void AuthWindow::slot_page_signin_tips_show(TipsLevel level, const QString&message) {
+    // clear() 会导致布局调整，设置为空字符串则不会
+    // if (level == TipsLevel::CLEAN) { m_ui->signin_label_info->clear(); return; }
+
+    auto tips_color = QColor(Qt::green);
+    ;    if (level == TipsLevel::SUCCEEDED  ) { tips_color = QColor(Qt::green     ); }
+    else if (level == TipsLevel::INFORMATION) { tips_color = QColor(Qt::darkYellow); }
+    else if (level == TipsLevel::FAILED     ) { tips_color = QColor(Qt::red       ); }
+
     auto palette = m_ui->signin_label_info->palette();
-    palette.setBrush(QPalette::WindowText, QBrush(QColor(Qt::red)));
+    palette.setBrush(QPalette::WindowText, QBrush(tips_color));
     m_ui->signin_label_info->setPalette(palette);
-    m_ui->signin_label_info->setText(message);
+    m_ui->signin_label_info->setText(level == TipsLevel::CLEAN ? QString{} : message);
     m_ui->signin_label_info->setVisible(true);  // 确保显示
 }
 
-void AuthWindow::handle_page_signin_tips_clean() {
+void AuthWindow::slot_page_signin_tips_clean() {
     // m_ui->signin_label_info->clear();
-    m_ui->signin_label_info->setVisible(false);  // 需要在初始化时设置为隐藏时不移除空间占用
+    // m_ui->signin_label_info->setVisible(false);  // 需要在初始化时设置为隐藏时不移除空间占用
+    slot_page_signin_tips_show(TipsLevel::CLEAN);
 }
 
-void AuthWindow::handle_page_signup_tips_error(const QString&message) {
+void AuthWindow::slot_page_signup_tips_show(TipsLevel level, const QString&message) {
+    // clear() 会导致布局调整，设置为空字符串则不会
+    // if (level == TipsLevel::CLEAN) { m_ui->signup_label_info->clear(); return; }
+
+    auto tips_color = QColor(Qt::green);
+    ;    if (level == TipsLevel::SUCCEEDED  ) { tips_color = QColor(Qt::green     ); }
+    else if (level == TipsLevel::INFORMATION) { tips_color = QColor(Qt::darkYellow); }
+    else if (level == TipsLevel::FAILED     ) { tips_color = QColor(Qt::red       ); }
+
     auto palette = m_ui->signup_label_info->palette();
-    palette.setBrush(QPalette::WindowText, QBrush(QColor(Qt::red)));
+    palette.setBrush(QPalette::WindowText, QBrush(tips_color));
     m_ui->signup_label_info->setPalette(palette);
-    m_ui->signup_label_info->setText(message);
+    m_ui->signup_label_info->setText(level == TipsLevel::CLEAN ? QString{} : message);
 }
 
-void AuthWindow::handle_page_signup_tips_clean() {
-    m_ui->signup_label_info->clear();
+void AuthWindow::slot_page_signup_tips_clean() {
+    // m_ui->signup_label_info->clear();
+    slot_page_signup_tips_show(TipsLevel::CLEAN);
 }
 
-bool AuthWindow::handle_signup() {
+bool AuthWindow::slot_signup() {
     signup_params params_signup = std::make_shared<TaoTieChat::SignUpRequest>();
     params_signup->setUserId          (m_ui->signup_edit_username->text());
     params_signup->setPassword        (m_ui->signup_edit_password->text());
@@ -175,7 +194,7 @@ bool AuthWindow::handle_signup() {
     return signup(params_signup);
 }
 
-bool AuthWindow::handle_signin() {
+bool AuthWindow::slot_signin() {
     signin_params params_signin = std::make_shared<TaoTieChat::SignInRequest>();
     TaoTieChat::AuthRequest auth;
     auth.setUserId  (m_ui->signin_combo_username->currentText());
@@ -190,31 +209,46 @@ bool AuthWindow::handle_signin() {
     return signin(params_signin, auth_opt);
 }
 
-bool AuthWindow::signup(const signup_params& params_signup) {
+bool AuthWindow::signup(signup_params params_signup) {
     status_signup_unblock(false);
-    auto callback = [this](const signup_params& params_signup, const signup_reply& reply_signup){
+    auto callback = [this](signup_params params_signup, signup_reply reply_signup){
         status_signup_unblock(true);
         // 账号注册成功
         if(reply_signup && reply_signup->hasResult() && reply_signup->result().hasSuccessCode()) {
-            handle_signup_successd(params_signup);
+            slot_signup_successd(params_signup);
             return;
         }
         // 账号注册失败
-        QString error_info = tr("login failed!");
+        QString error_info = tr("signup failed!");
         if(reply_signup && reply_signup->hasResult() && reply_signup->result().hasErrorCode()) {
             auto code = reply_signup->result().errorCode();
-            error_info = reply_signup->result().message();
+            // error_info = reply_signup->result().message();
+
+            // 注册界面是否需要修改返回错误代码?
+            static QMap<ErrorCode, ErrorCode> s_map_codes = {
+                // { ErrorCode::AUTH_ID_EMPTY    ,  ErrorCode::USER_ID_EMPTY  },
+                // { ErrorCode::AUTH_METHOD_EMPTY,  ErrorCode::PASSWORD_EMPTY },
+            };
+            if (s_map_codes.contains(code)) {
+                error_info = Utils::Transform::to_string(s_map_codes.value(code));
+            }
+            else if (Utils::Transform::s_map_error_code_strings.contains(code)) {
+                error_info = Utils::Transform::to_string(code);
+            }
+            else {
+                error_info = reply_signup->result().message();
+            }
         }
-        handle_page_signup_tips_error(error_info);
+        slot_page_signup_tips_show(TipsLevel::FAILED, error_info);
     };
-    return NetworkClient::instance().signup(params_signup, callback);
+    return NetworkClient::instance()->signup(params_signup, callback);
 }
 
-bool AuthWindow::signin(const signin_params& params_signin, const std::shared_ptr<AuthOpt>& auth_opt) {
+bool AuthWindow::signin(signin_params params_signin, std::shared_ptr<AuthOpt> auth_opt) {
     // 尝试抢占管道，防止多开登录同一账号导致的状态混乱问题，抢占成功返回 true，抢占失败返回 false
     if(!Utils::OS::try_grab_account_pipe(auth_opt->user_id)) {
         // 账号已登陆
-        handle_page_signin_tips_error(tr("User %1 already Logined!").arg(auth_opt->user_id));
+        slot_page_signin_tips_show(TipsLevel::FAILED, tr("User %1 already Logined!").arg(auth_opt->user_id));
         return false;
     }
 
@@ -222,30 +256,45 @@ bool AuthWindow::signin(const signin_params& params_signin, const std::shared_pt
     // 2. 执行失败后立即解除禁用状态
     // 3. 执行成功时不在这里进行状态解除，防止登陆过程过快导致用户误以为窗口闪烁的问题，便于用户看到登陆过程
     status_signin_unblock(false);
-    auto callback = [this, auth_opt](const signin_params& params_signin, const signin_reply& reply_signin) {
+    auto callback = [this, auth_opt](signin_params params_signin, signin_reply reply_signin) {
         // 用户登录成功
         if(reply_signin && reply_signin->hasResult() && reply_signin->result().hasSuccessCode()) {
-            handle_signin_successd(params_signin, reply_signin, auth_opt);
+            slot_signin_successd(params_signin, reply_signin, auth_opt);
             return;
         }
 
         // 用户登录失败
         status_signin_unblock(true);
-        QString error_info = tr("login failed!");
+        QString error_info = tr("signin failed!");
         if(reply_signin && reply_signin->hasResult() && reply_signin->result().hasErrorCode()) {
             auto code = reply_signin->result().errorCode();
-            ;    if(code == ErrorCode::AUTH_ID_EMPTY    ) { error_info = tr("User id empty"); }
-            else if(code == ErrorCode::AUTH_METHOD_EMPTY) { error_info = tr("Password empty"); }
-            // else if(code == ErrorCode::ERROR_INIT    ) { error_info = tr(""); }
-            else { error_info = reply_signin->result().message(); }
+            // ;    if(code == ErrorCode::AUTH_ID_EMPTY    ) { error_info = tr("User id empty"); }
+            // else if(code == ErrorCode::AUTH_METHOD_EMPTY) { error_info = tr("Password empty"); }
+            // // else if(code == ErrorCode::ERROR_INIT    ) { error_info = tr(""); }
+            // else { error_info = reply_signin->result().message(); }
+
+            // 登陆界面修改返回错误代码为用户名、密码为空/错误
+            static QMap<ErrorCode, ErrorCode> s_map_codes = {
+                { ErrorCode::AUTH_ID_EMPTY    ,  ErrorCode::USER_ID_EMPTY  },
+                { ErrorCode::AUTH_METHOD_EMPTY,  ErrorCode::PASSWORD_EMPTY },
+            };
+            if (s_map_codes.contains(code)) {
+                error_info = Utils::Transform::to_string(s_map_codes.value(code));
+            }
+            else if (Utils::Transform::s_map_error_code_strings.contains(code)) {
+                error_info = Utils::Transform::to_string(code);
+            }
+            else {
+                error_info = reply_signin->result().message();
+            }
         }
-        handle_page_signin_tips_error(error_info);
+        slot_page_signin_tips_show(TipsLevel::FAILED, error_info);
     };
-    return NetworkClient::instance().signin(params_signin, callback);
+    return NetworkClient::instance()->signin(params_signin, callback);
 }
 
-bool AuthWindow::handle_signup_successd(const signup_params& params_signup) {
-    QMessageBox::information(this, tr("tips"), tr("SignUp success. close this dialog to SignIn."));
+bool AuthWindow::slot_signup_successd(signup_params params_signup) {
+    // QMessageBox::information(this, tr("tips"), tr("SignUp success. close this dialog to SignIn."));
 
     // 清除界面数据
     m_ui->signup_edit_username->clear();
@@ -253,6 +302,19 @@ bool AuthWindow::handle_signup_successd(const signup_params& params_signup) {
     m_ui->signup_edit_confirm ->clear();
     m_ui->signup_edit_question->clear();
     m_ui->signup_edit_answer  ->clear();
+
+    // // "账号注册成功！"
+    // slot_page_signup_tips_show(TipsLevel::SUCCEEDED, tr("Account registered successfully!"));
+    // return true;
+
+    // 自动返回登陆窗口
+    m_ui->auth_stacked->setCurrentWidget(m_ui->page_signin);
+    m_ui->signin_combo_username->setEditText(params_signup->userId());
+    m_ui->signin_edit_password->setText(params_signup->password());
+    slot_page_signin_tips_show(TipsLevel::SUCCEEDED, tr("Account registered successfully!"));
+    return true;
+
+    // 自动登陆
 
     // 创建用于登陆的参数  // 注册返回的信息不包含 token，因此需要使用密码登录
     signin_params params_signin = std::make_shared<TaoTieChat::SignInRequest>();
@@ -268,23 +330,9 @@ bool AuthWindow::handle_signup_successd(const signup_params& params_signup) {
     }));
 }
 
-bool AuthWindow::handle_signin_successd(const signin_params& params_signin, const signin_reply& reply_signin, const std::shared_ptr<AuthOpt>& auth_opt) {
+bool AuthWindow::slot_signin_successd(signin_params params_signin, signin_reply reply_signin, std::shared_ptr<AuthOpt> auth_opt) {
     // 优先使用登录成功的数据覆盖 auth_opt
     if(auth_opt) {
-        // if (auth_opt->account_id.isEmpty() && reply_signin && !reply_signin->accountId().isEmpty()) {
-        //     auth_opt->account_id = reply_signin->accountId();
-        // }
-        // if (auth_opt->user_id.isEmpty() && params_signin && params_signin->hasRequestUserAuth() && !params_signin->requestUserAuth().userId().isEmpty()) {
-        //     auth_opt->user_id = params_signin->requestUserAuth().userId();
-        // }
-        // if (auth_opt->token.isEmpty() && reply_signin && !reply_signin->token().isEmpty()) {
-        //     auth_opt->token = auth_opt->rember_password ? reply_signin->token() : QString();
-        // }
-        // else {
-        //     auth_opt->token = auth_opt->rember_password ? reply_signin->token() : QString();
-        // }
-        // auth_opt->password   = auth_opt->rember_password ? params_signin->requestUserAuth().password() : QString();
-
         // 先复制原始的登录信息
         if (params_signin && params_signin->hasRequestUserAuth()) {
             auth_opt->account_id = params_signin->requestUserAuth().hasAccountId() ? params_signin->requestUserAuth().accountId() : "";
@@ -299,12 +347,6 @@ bool AuthWindow::handle_signin_successd(const signin_params& params_signin, cons
         if(reply_signin && !reply_signin->token().isEmpty()) {
             auth_opt->token = reply_signin->token();
         }
-        // 其他函数可能会用到该数据，不必清空
-        // // 再清除不必要的数据
-        // if (!auth_opt->rember_password) {
-        //     auth_opt->password = QString();
-        //     auth_opt->token    = QString();
-        // }
         // 保存登录记录
         AuthOptRW::save(auth_opt);
     }
@@ -315,17 +357,28 @@ bool AuthWindow::handle_signin_successd(const signin_params& params_signin, cons
     contact_data->user_id    = auth_opt->user_id;
     contact_data->password   = auth_opt->password;
     contact_data->token      = auth_opt->token;
-    Accounts::instance().set_current_account(contact_data);
-    Accounts::instance().set_account_auth_opt(auth_opt);
+    Accounts::instance()->set_current_account(contact_data);
+    Accounts::instance()->set_account_auth_opt(auth_opt);
 
     // 初始化配置目录
-    Database::instance().set_config_dir(Utils::user_home_path());
+    Database::instance()->set_config_dir(Utils::user_home_path());
 
     // 实际上登陆消息瞬间完成，延迟 1 秒再显示主界面，防止用户误以为登陆窗口闪烁的错误判断
     QTimer::singleShot(1000, this, [this]() {
         status_signin_unblock(true);
-        this->accepted();
+        // this->accepted();
+        this->accepted();  // 关闭窗口
+        emit SignalInner::instance()->accepted();  // 发送信号
+
+        // 清除登陆页面信息
+        // 需要在切换窗口显示后清除，而非收到消息时立即清除
+        slot_page_signin_tips_clean();
+        slot_page_signup_tips_clean();
+        if (!m_ui->signin_check_rember->isChecked()) {
+            m_ui->signin_edit_password->setText(QString{});
+        }
     });
+
     return true;
 }
 
@@ -336,10 +389,10 @@ void AuthWindow::status_signin_unblock(bool unblock) {
     m_ui->signin_check_auto    ->setEnabled(unblock);
     m_ui->signin_button_signin ->setEnabled(unblock);
     if(unblock) {
-        handle_page_signin_tips_clean();
+        slot_page_signin_tips_clean();
     }
     else {
-        handle_page_signin_tips_error(tr("logining..."));
+        slot_page_signin_tips_show(TipsLevel::INFORMATION, tr("logining..."));
     }
 }
 
@@ -351,9 +404,9 @@ void AuthWindow::status_signup_unblock(bool unblock) {
     m_ui->signup_edit_answer  ->setEnabled(unblock);
     m_ui->signup_button_signup->setEnabled(unblock);
     if(unblock) {
-        handle_page_signup_tips_clean();
+        slot_page_signup_tips_clean();
     }
     else {
-        handle_page_signup_tips_error(tr("signing up..."));
+        slot_page_signup_tips_show(TipsLevel::INFORMATION, tr("signing up..."));
     }
 }

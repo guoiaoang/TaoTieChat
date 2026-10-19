@@ -2,6 +2,7 @@
 #include "Utils.h"
 #include "AuthWindow.h"
 #include "ChatWindow.h"
+#include "SignalInner.h"
 
 int main(int argc, char *argv[]) {
     Q_INIT_RESOURCE_EXPAND(PROJECT_NAME);
@@ -15,12 +16,12 @@ int main(int argc, char *argv[]) {
 
     AuthWindow window_auth;
     ChatWindow window_chat;
-    QObject::connect(&window_auth, &AuthWindow::accepted, [&](){
+    QObject::connect(SignalInner::instance(), &SignalInner::accepted, [&](){
         window_auth.hide();
         window_chat.reinit();  // 重新初始化界面及数据
         window_chat.show();
     });
-    QObject::connect(&window_chat, &ChatWindow::signout, [&](){
+    QObject::connect(SignalInner::instance(), &SignalInner::signout, [&](){
         window_auth.view();
         window_chat.hide();
     });

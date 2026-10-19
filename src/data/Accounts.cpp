@@ -1,9 +1,10 @@
 #include "Accounts.h"
 #include "Database.h"
+#include "SignalInner.h"
 
-Accounts& Accounts::instance() {
+Accounts* Accounts::instance() {
     static Accounts s_accounts;
-    return s_accounts;
+    return &s_accounts;
 }
 
 Accounts::Accounts() {
@@ -13,7 +14,7 @@ Accounts::~Accounts() {
 }
 
 // 用户登录与用户信息更新都会触发该函数，更新用户信息时需要保留登录信息
-void Accounts::set_current_account(const std::shared_ptr<ContactData::ItemData>& contact_data) {
+void Accounts::set_current_account(std::shared_ptr<ContactData::ItemData> contact_data) {
     if (m_current_account == contact_data) {
         qWarning().noquote().nospace() << "Warnning : set_current_account is same.";
         return;
@@ -34,10 +35,10 @@ void Accounts::set_current_account(const std::shared_ptr<ContactData::ItemData>&
     //     }
     // }
 
-    emit signal_account_changing(m_current_account, contact_data);
+    emit SignalInner::instance()->SignalInner::instance()->signal_account_changing(m_current_account, contact_data);
     m_current_account.reset();
     m_current_account = contact_data;
-    emit signal_account_changed(contact_data);
+    emit SignalInner::instance()->SignalInner::instance()->signal_account_changed(contact_data);
 }
 
 void Accounts::set_contact_list(const QVector<std::shared_ptr<ContactData::ItemData>>& contact_datas) {
@@ -45,9 +46,9 @@ void Accounts::set_contact_list(const QVector<std::shared_ptr<ContactData::ItemD
         qWarning().noquote().nospace() << "Warnning : set_contact_list is same.";
         // return;
     }
-    emit signal_contact_list_changing(m_contact_datas, contact_datas);
+    emit SignalInner::instance()->signal_contact_list_changing(m_contact_datas, contact_datas);
     m_contact_datas = contact_datas;
-    emit signal_contact_list_changed(contact_datas);
+    emit SignalInner::instance()->signal_contact_list_changed(contact_datas);
 }
 
 std::shared_ptr<ContactData::ItemData> Accounts::get_current_account() const {
@@ -61,7 +62,7 @@ QVector<std::shared_ptr<ContactData::ItemData>> Accounts::get_contact_list() con
 std::shared_ptr<AuthRequest > Accounts::get_auth_request() const {
     std::shared_ptr<AuthRequest> auth_request = std::make_shared<AuthRequest>();
     do {
-        const auto& account_data = get_current_account();
+        auto account_data = get_current_account();
         if (!account_data) { break; }
         if ( account_data->account_id.isEmpty()) { break; }
 
@@ -109,7 +110,7 @@ bool Accounts::is_friend(const QString& account_id) const {
 }
 
 // 记住密码及自动登陆选项
-void Accounts::set_account_auth_opt(const std::shared_ptr<AuthOpt>& auth_opt) {
+void Accounts::set_account_auth_opt(std::shared_ptr<AuthOpt> auth_opt) {
     if (!auth_opt) { return; }
     const QString&account_id = auth_opt->account_id;
     m_map_account_id_auth_opt[account_id] = auth_opt;
@@ -121,13 +122,19 @@ std::shared_ptr<AuthOpt> Accounts::get_auth_opt(const QString&account_id) const 
     return m_map_account_id_auth_opt.at(account_id);
 }
 
-bool Accounts::set_contact(const std::shared_ptr<ContactData::ItemData>& contact_data) {
+bool Accounts::set_contact(std::shared_ptr<ContactData::ItemData> contact_data) {
     if (!contact_data) { return false; }
     const QString&account_id = contact_data->account_id;
-    const auto&from_contact_data = m_map_all_contacts[account_id];
-    emit signal_contact_info_changing(from_contact_data, contact_data);
+    auto from_contact_data = m_map_all_contacts[account_id];
+    emit SignalInner::instance()->signal_contact_info_changing(from_contact_data, contact_data);
     m_map_all_contacts[account_id] = contact_data;
-    emit signal_contact_info_changed(contact_data);
+    emit SignalInner::instance()->signal_contact_info_changed(contact_data);
+
+    // 如果是当前账号
+    auto current_account = get_current_account();
+    if (contact_data && current_account && contact_data->account_id == current_account->account_id) {
+        set_current_account(contact_data);
+    }
     return true;
 }
 
@@ -150,46 +157,3 @@ std::shared_ptr<ContactData::ItemData> Accounts::get_contact(const QString&accou
     }
     return nullptr;
 }
-
-// // 好友申请信息
-// void Accounts::set_request_messages(const QString&receiver_account_id, const QString&sender_account_id, const ContactRequestData::ItemData&messages) {
-//     m_map_contact_requests[receiver_account_id][sender_account_id] = messages;
-// }
-// 
-// ContactRequestData::ItemData Accounts::get_request_messages(const QString&receiver_account_id, const QString&sender_account_id) const {
-//     ContactRequestData::ItemData messages;
-//     do {
-//         if (!m_map_contact_requests.contains(receiver_account_id)) { break; }
-//         const auto&item_sender = m_map_contact_requests.at(receiver_account_id);
-//         if (!item_sender.contains(sender_account_id)) { break; }
-//         messages = item_sender.at(sender_account_id);
-//     } while (false);
-//     return messages;
-// }
-// 
-// void Accounts::set_request_messages(const QString&sender_account_id, const ContactRequestData::ItemData&messages) {
-//     // 获取 account_id
-//     const auto&current_account = get_current_account();
-//     if (!current_account) { return; }
-//     const QString&receiver_account_id = current_account->account_id;
-//     if ( receiver_account_id.isEmpty()) { return; }
-//     // 保存消息
-//     m_map_contact_requests[receiver_account_id][sender_account_id] = messages;
-// }
-// 
-// ContactRequestData::ItemData Accounts::get_request_messages(const QString&sender_account_id) const {
-//     ContactRequestData::ItemData messages;
-//     do {
-//         // 获取 account_id
-//         const auto&current_account = get_current_account();
-//         if (!current_account) { return; }
-//         const QString&receiver_account_id = current_account->account_id;
-//         if ( receiver_account_id.isEmpty()) { return; }
-//         // 获取消息
-//         if (!m_map_contact_requests.contains(receiver_account_id)) { break; }
-//         const auto&item_sender = m_map_contact_requests.at(receiver_account_id);
-//         if (!item_sender.contains(sender_account_id)) { break; }
-//         messages = item_sender.at(sender_account_id);
-//     } while (false);
-//     return messages;
-// }

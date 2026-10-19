@@ -164,6 +164,8 @@ if(ENABLE_CLIENT)
         ${PROJECT_DIR_SOURCE}/data/Accounts.cpp
         ${PROJECT_DIR_SOURCE}/data/Database.h
         ${PROJECT_DIR_SOURCE}/data/Database.cpp
+        ${PROJECT_DIR_SOURCE}/data/SignalInner.h
+        ${PROJECT_DIR_SOURCE}/data/SignalInner.cpp
         # 登录/认证窗口
         ${PROJECT_DIR_SOURCE}/ui/AuthWindow/AuthWindow.h
         ${PROJECT_DIR_SOURCE}/ui/AuthWindow/AuthWindow.cpp
@@ -233,8 +235,10 @@ elseif(ENABLE_SERVER)
         ${PROJECT_DIR_SOURCE}/utils/utils.cpp
         ${PROJECT_DIR_SOURCE}/utils/ThreadPool.h
         ${PROJECT_DIR_SOURCE}/utils/platform_path.h
+        ${PROJECT_DIR_SOURCE}/data/Data.h
         ${PROJECT_DIR_SOURCE}/data/DBSQLCipherCmds.h
         ${PROJECT_DIR_SOURCE}/data/DBSQLCipher.h
+        ${PROJECT_DIR_SOURCE}/data/DBSQLCipher.cpp
         ${PROJECT_DIR_SOURCE}/service/AsyncCall.h
         ${PROJECT_DIR_SOURCE}/service/AccountService.h
         ${PROJECT_DIR_SOURCE}/service/SearchService.h

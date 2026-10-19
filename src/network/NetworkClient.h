@@ -48,9 +48,9 @@ private:
     NetworkClient operator=(const NetworkClient&) = delete;
 public:
     ~NetworkClient() = default;
-    static NetworkClient& instance() {
+    static NetworkClient* instance() {
         static NetworkClient s_network_client;
-        return s_network_client;
+        return &s_network_client;
     }
 
     void set_server_url(const QUrl&url) { m_url_server = url; }
@@ -61,29 +61,29 @@ public:
 
 public:
     // 直接接口
-    bool signup         (const signup_params        & params, const signup_callback        & callback);  // 注册账号
-    bool signin         (const signin_params        & params, const signin_callback        & callback);  // 登录账号
-    bool search_user    (const search_user_params   & params, const search_user_callback   & callback);  // 搜索用户 ID // 精准匹配
-    bool update_profile (const update_profile_params& params, const update_profile_callback& callback);  // 更新个人资料
-    bool get_file_id    (const get_file_id_params   & params, const get_file_id_callback   & callback);  // 获取文件上传 ID
-    bool contact_request    (const contact_request_params    & params, const contact_request_callback    & callback);  // 好友申请
-    bool contact_reply      (const contact_reply_params      & params, const contact_reply_callback      & callback);  // 被好友申请的回复
-    bool get_contact_request(const get_contact_request_params& params, const get_contact_request_callback& callback);  // 获取被好友申请的列表
-    bool get_last_id        (const get_last_id_params        & params, const get_last_id_callback        & callback);  // pts
-    bool sync               (const sync_params               & params, const sync_callback               & callback);  // pts
-    bool send_message       (const send_message_params       & params, const send_message_callback       & callback);  // 发送消息
+    bool signup             (signup_params              params, signup_callback              callback);  // 注册账号
+    bool signin             (signin_params              params, signin_callback              callback);  // 登录账号
+    bool search_user        (search_user_params         params, search_user_callback         callback);  // 搜索用户 ID // 精准匹配
+    bool update_profile     (update_profile_params      params, update_profile_callback      callback);  // 更新个人资料
+    bool get_file_id        (get_file_id_params         params, get_file_id_callback         callback);  // 获取文件上传 ID
+    bool contact_request    (contact_request_params     params, contact_request_callback     callback);  // 好友申请
+    bool contact_reply      (contact_reply_params       params, contact_reply_callback       callback);  // 被好友申请的回复
+    bool get_contact_request(get_contact_request_params params, get_contact_request_callback callback);  // 获取被好友申请的列表
+    bool get_last_id        (get_last_id_params         params, get_last_id_callback         callback);  // pts
+    bool sync               (sync_params                params, sync_callback                callback);  // pts
+    bool send_message       (send_message_params        params, send_message_callback        callback);  // 发送消息
     // 接口封装
     bool search_group (const QString&group) { return false; } // 搜索群聊 ID
     // TODO:get_file_id 应该封装在子线程中
-    bool get_file_id  (const QString&file_path, network_file_io_notify_callback& callback_get_file_id_notiify );
+    bool get_file_id  (const QString&file_path, network_file_io_notify_callback callback_get_file_id_notiify );
     // TODO:upload_file 应该封装在子线程中
-    bool upload_file  (const QString&file_path, network_file_io_notify_callback& callback_upload_file_notify  );
+    bool upload_file  (const QString&file_path, network_file_io_notify_callback callback_upload_file_notify  );
     // TODO:download_file 应该封装在子线程中
-    bool download_file(const QString&file_id, const QString&notify_id, network_file_io_notify_callback& callback_download_file_notify);
+    bool download_file(const QString&file_id, const QString&notify_id, network_file_io_notify_callback callback_download_file_notify);
 
-signals:
-    // 文件下载成功通知
-    void signal_file_id_downloaded(const QString&file_id);
+// signals:
+//     // 文件下载成功通知
+//     void signal_file_id_downloaded(const QString&file_id);
 
 private:
     bool m_inited = false;

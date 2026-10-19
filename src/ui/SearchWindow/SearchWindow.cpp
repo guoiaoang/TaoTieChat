@@ -6,6 +6,7 @@
 #include "ItemDelegate.h"
 #include "ContactWindow.h"
 #include "Accounts.h"
+#include "SignalInner.h"
 
 SearchWindow::SearchWindow(QWidget *parent)
     : QScrollArea(parent) , m_ui(std::make_shared<Ui::SearchWindow>()) {
@@ -32,8 +33,10 @@ SearchWindow::SearchWindow(QWidget *parent)
         do_search(m_ui->searchpage_lineedit_key->text());
     });
     // 用于同步显示搜索词
-    connect(m_ui->searchpage_lineedit_key, &QLineEdit::textChanged, this, &SearchWindow::SearchEditTextChanged);
-    connect(&Accounts::instance(), &Accounts::signal_contact_info_changed, this, &SearchWindow::slot_update_search_list_info);
+    // connect(m_ui->searchpage_lineedit_key, &QLineEdit::textChanged, this, &SearchWindow::SearchEditTextChanged);
+    // connect(Accounts::instance(), &Accounts::signal_contact_info_changed, this, &SearchWindow::slot_update_search_list_info);
+    connect(m_ui->searchpage_lineedit_key, &QLineEdit::textChanged, SignalInner::instance(), &SignalInner::SearchEditTextChanged);
+    connect(SignalInner::instance(), &SignalInner::signal_contact_info_changed, this, &SearchWindow::slot_update_search_list_info);
 
     // set
     m_action_search->setText(m_ui->searchpage_toolbutton_search->text());
@@ -43,10 +46,10 @@ SearchWindow::SearchWindow(QWidget *parent)
     // this->setWindowIcon(QApplication::windowIcon());
 
     // contact view/model/delegate
-    m_ui->page_list_users->setModel(m_users_model.get());
+    m_ui->page_list_users->setModel       (m_users_model   .get());
     m_ui->page_list_users->setItemDelegate(m_users_delegate.get());
     // 使用 currentChanged 信号支持键盘上下键导航和鼠标点击
-    // connect(ui->page_list_users->selectionModel(), &QItemSelectionModel::currentChanged, this, &ChatWindow::handle_contact_selection_changed);
+    // connect(ui->page_list_users->selectionModel(), &QItemSelectionModel::currentChanged, this, &ChatWindow::slot_contact_selection_changed);
     // 响应双击事件
     connect(m_ui->page_list_users, &QListView::doubleClicked, this, [this](const QModelIndex &index) {
         do {
@@ -91,17 +94,19 @@ std::shared_ptr<ContactWindow> SearchWindow::get_user_window() const {
     return m_user_window;
 }
 
-void SearchWindow::slot_update_search_list_info(const std::shared_ptr<ContactData::ItemData>&to_contact_data) {
+void SearchWindow::slot_update_search_list_info(std::shared_ptr<ContactData::ItemData> to_contact_data) {
     do {
         if (!m_users_model) { break; }
         if (!to_contact_data) { break; }
         if ( to_contact_data->account_id.isEmpty()) { break; }
-        to_contact_data->is_me        = Accounts::instance().is_me    (to_contact_data->account_id);
-        to_contact_data->is_friend    = Accounts::instance().is_friend(to_contact_data->account_id);
-        to_contact_data->display_name = Utils::get_display_name(to_contact_data);
-        to_contact_data->info_time    = QString{};  // 搜索结果不需要时间显示
-        to_contact_data->info_text    = to_contact_data->signature;  // 搜索结果显示签名
-        m_users_model->update_contact(to_contact_data);  // 模型会自动找到对应的条目进行更新
+        // 需要复制，否则共用会导致其他地方修改时这里显示异常
+        auto update_contact_info          = std::make_shared<ContactData::ItemData>(*to_contact_data);
+        update_contact_info->is_me        = Accounts::instance()->is_me    (update_contact_info->account_id);
+        update_contact_info->is_friend    = Accounts::instance()->is_friend(update_contact_info->account_id);
+        update_contact_info->display_name = Utils::get_display_name(update_contact_info);
+        update_contact_info->info_time    = QString{};  // 搜索结果不需要时间显示
+        update_contact_info->info_text    = update_contact_info->signature;  // 搜索结果显示签名
+        m_users_model->update_contact(update_contact_info);  // 模型会自动找到对应的条目进行更新
     } while (false);
 }
 
@@ -127,9 +132,9 @@ bool SearchWindow::search_user(const QString&keyword) {
     // 本地搜索 + 网络搜索
     // local_search_user();
     search_user_params params_search_user = std::make_shared<TaoTieChat::SearchUserRequest>();
-    params_search_user->setRequestUserAuth(*Accounts::instance().get_auth_request().get());  // 有身份信息才能获取好友相关的资料
+    params_search_user->setRequestUserAuth(*Accounts::instance()->get_auth_request().get());  // 有身份信息才能获取好友相关的资料
     params_search_user->setUserId(str_search_keyword);
-    auto network_search_user_callback = [this](const search_user_params&param_search_user, const search_user_reply&reply_search_user) {
+    auto network_search_user_callback = [this](search_user_params param_search_user, search_user_reply reply_search_user) {
         ErrorCode error_code    = ErrorCode::ERROR_UNSET;
         QString   error_message = tr("network_search_user recv failed.");
         Result    result;
@@ -165,7 +170,7 @@ bool SearchWindow::search_user(const QString&keyword) {
             && !reply_search_user->contactInfo().baseInfo().avatarId().isEmpty()
         ) {
             auto file_id   = reply_search_user->contactInfo().baseInfo().avatarId();
-            auto file_path = Database::instance().get_local_file_id_path(file_id);
+            auto file_path = Database::instance()->get_local_file_id_path(file_id);
             auto file_size = QFileInfo(file_path).size();
             // 没有本地记录但有头像 ID 时则从服务器下载完成后再显示
             if (file_id.isEmpty() || file_path.isEmpty() || file_size <= 0) {
@@ -173,23 +178,20 @@ bool SearchWindow::search_user(const QString&keyword) {
                     // qDebug().nospace().noquote() << "notify:" << notify;
                     // 下载时不需要更新界面
                     if ((notify.ok == true && notify.status == FileStatusCode::FILE_STATUS_UPLOADED) || (notify.ok == false)) {
-                        // this->m_users_model->clean();
-                        // this->m_users_model->add_member(std::make_shared<ContactData::ItemData>(reply_search_user->contactInfo()));
-
-                        // TODO:由于资源释放问题，暂时采用销毁及重建 model 和 delegate 的方式
-                        this->m_users_model   .reset();
-                        this->m_users_delegate.reset();
-                        this->m_users_model    = std::make_shared<SearchModel >();
-                        this->m_users_delegate = std::make_shared<ItemDelegate>();
-                        this->m_users_model->clean();
-                        this->m_users_model->add_member(Utils::Transform::to_contact_data(std::make_shared<ContactInfo>(reply_search_user->contactInfo())));
-                        m_ui->page_list_users->setModel(m_users_model.get());
-                        m_ui->page_list_users->setItemDelegate(m_users_delegate.get());
+                        auto contact_info = Utils::Transform::to_contact_data(std::make_shared<ContactInfo>(reply_search_user->contactInfo()));
+                        if (contact_info && !contact_info->account_id.isEmpty()) {
+                            contact_info->is_me        = Accounts::instance()->is_me    (contact_info->account_id);
+                            contact_info->is_friend    = Accounts::instance()->is_friend(contact_info->account_id);
+                            contact_info->display_name = Utils::get_display_name(contact_info);
+                            contact_info->info_time    = QString{};  // 搜索结果不需要时间显示
+                            contact_info->info_text    = contact_info->signature;  // 搜索结果显示签名
+                            this->m_users_model->update_contact(contact_info);
+                        }
                     }
                 };
                 QString notify_id = QString("notify SearchWindow::search_user %1").arg(file_id);
-                NetworkClient::instance().download_file(file_id, notify_id, callback_download_avatar_notify);
-                return;
+                NetworkClient::instance()->download_file(file_id, notify_id, callback_download_avatar_notify);
+                // return;
             }
         }
 
@@ -199,29 +201,29 @@ bool SearchWindow::search_user(const QString&keyword) {
             &&  reply_search_user->contactInfo().hasBaseInfo()
             && !reply_search_user->contactInfo().baseInfo().accountId().isEmpty()
         ) {
-            // this->m_users_model->clean();
-            // this->m_users_model->add_member(std::make_shared<ContactData::ItemData>(reply_search_user->contactInfo()));
-
-            // TODO:由于资源释放问题，暂时采用销毁及重建 model 和 delegate 的方式
-            this->m_users_model   .reset();
-            this->m_users_delegate.reset();
-            this->m_users_model    = std::make_shared<SearchModel >();
-            this->m_users_delegate = std::make_shared<ItemDelegate>();
             this->m_users_model->clean();
             auto contact_info = Utils::Transform::to_contact_data(std::make_shared<ContactInfo>(reply_search_user->contactInfo()));
             if (contact_info && !contact_info->account_id.isEmpty()) {
-                contact_info->is_me        = Accounts::instance().is_me    (contact_info->account_id);
-                contact_info->is_friend    = Accounts::instance().is_friend(contact_info->account_id);
+                contact_info->is_me        = Accounts::instance()->is_me    (contact_info->account_id);
+                contact_info->is_friend    = Accounts::instance()->is_friend(contact_info->account_id);
                 contact_info->display_name = Utils::get_display_name(contact_info);
                 contact_info->info_time    = QString{};  // 搜索结果不需要时间显示
                 contact_info->info_text    = contact_info->signature;  // 搜索结果显示签名
                 this->m_users_model->add_member(contact_info);
-                m_ui->page_list_users->setModel(m_users_model.get());
-                m_ui->page_list_users->setItemDelegate(m_users_delegate.get());
             }
         }
+
+        // 没有有效结果时清空列表
+        if (   !reply_search_user->hasContactInfo()
+            || !reply_search_user->contactInfo().hasBaseInfo()
+            ||  reply_search_user->contactInfo().baseInfo().accountId().isEmpty()
+        ) {
+            this->m_users_model->clean();
+            // 清除列表后需要刷新
+            return;
+        }
     };
-    NetworkClient::instance().search_user(params_search_user, network_search_user_callback);
+    NetworkClient::instance()->search_user(params_search_user, network_search_user_callback);
     return false;
 }
 

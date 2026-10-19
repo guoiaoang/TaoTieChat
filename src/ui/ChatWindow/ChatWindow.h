@@ -4,13 +4,14 @@
 #include "Utils.h"
 #include "Defines.h"
 
-class ItemModel;
-class ContactModel;
-class ItemDelegate;
 class SearchWindow;
 class ContactWindow;
-class ChatroomModel;
 class MessageWindow;
+class ItemModel;
+class ItemDelegate;
+class ContactModel;
+class ContactProxy;
+class ChatroomModel;
 class ChatroomProxy;
 
 namespace Ui {
@@ -30,7 +31,6 @@ private:
     void init();
 
     // network
-    bool updata_current_account_data();
     bool network_status_sync();
 
     // 显示设置菜单
@@ -39,17 +39,17 @@ private:
     void slot_show_add_menu();
 
     // 需要创建副本，而不是使用指针共享同一份内存
-    void set_cache_contact_data(const std::shared_ptr<ContactData::ItemData>&contact_data);
+    void set_cache_contact_data(std::shared_ptr<ContactData::ItemData> contact_data);
     void update_contact_avatar (const QString&avatar_id, bool local_only = false);  // local_only 防止循环调用
     std::shared_ptr<ContactData::ItemData> get_cache_contact_data  () const;
     std::shared_ptr<QImage               > get_cache_contact_avatar() const;
 
-    void show_avatar(const std::shared_ptr<QImage>&avatar_image);
+    void show_avatar(std::shared_ptr<QImage> avatar_image);
 
     // 获取聊天记录窗口
     MessageWindow* get_message_window(const QString&account_id);
     // 更新列表中显示的最后一条消息
-    void update_last_message(const QString&chatroom_id, const std::shared_ptr<MessageData::ItemData>&last_message);
+    void update_last_message(std::shared_ptr<MessageData::ItemData> last_message);
 
     // 选中并高亮指定的聊天列表
     bool highlight_chatroom(const QString&chatroom_id);
@@ -59,27 +59,27 @@ public Q_SLOTS:
     // 添加到聊天室列表
     void add_chat_room(const QString&chatroom_id);
     // 显示指定聊天室的对话
-    void show_chat_room_messages(const std::shared_ptr<ContactData::ItemData>&contact_data);
+    void show_chat_room_messages(std::shared_ptr<ContactData::ItemData> contact_data);
 
     // // 联系人管理
     // 添加到联系人列表
-    void add_contact(const std::shared_ptr<ContactData::ItemData>&contact_data, const ENUMS::ItemGroupType&group_type = ENUMS::ItemGroupType::NONE);
+    void add_contact(std::shared_ptr<ContactData::ItemData> contact_data, const ENUMS::ItemGroupType&group_type = ENUMS::ItemGroupType::NONE);
     // model/view 模式下的选择  // 按键移动导致所选行变化时触发激活动作
-    void handle_contact_selection_changed(const QModelIndex &current, const QModelIndex &previous);
+    void slot_contact_selection_changed(const QModelIndex &current, const QModelIndex &previous);
     // 单击联系人/群组
-    void handle_contact_item_clicked(const QModelIndex &index);
+    void slot_contact_item_clicked(const QModelIndex &index);
 
     // model/view 模式下的选择  // 按键移动导致所选行变化时触发激活动作
-    void handle_chatroom_selection_changed(const QModelIndex &current, const QModelIndex &previous);
+    void slot_chatroom_selection_changed(const QModelIndex &current, const QModelIndex &previous);
     // 单击聊天室
-    void handle_chatroom_item_clicked(const QModelIndex &index);
+    void slot_chatroom_item_clicked(const QModelIndex &index);
 
     // 添加聊天内容到对话内
-    void add_message(const std::shared_ptr<SyncMessage>&sync_message);
+    void add_message(std::shared_ptr<SyncMessage> sync_message);
 
     // 更新联系人信息，可能是头像、昵称、状态等
-    void current_account_data_changed();
-    void update_contact_data(const std::shared_ptr<ContactData::ItemData>&contact_data);
+    void slot_update_current_account_data();
+    void slot_update_contact_data(std::shared_ptr<ContactData::ItemData> contact_data);
 
     // 导航按钮事件
     void slot_button_navigate_avatar ();
@@ -87,17 +87,16 @@ public Q_SLOTS:
     void slot_button_navigate_contact();
 
     // 发消息
-    void slot_message_to(const std::shared_ptr<ContactData::ItemData>&contact_data);
-    void slot_voice_to  (const std::shared_ptr<ContactData::ItemData>&contact_data);
-    void slot_video_to  (const std::shared_ptr<ContactData::ItemData>&contact_data);
+    void slot_message_to(std::shared_ptr<ContactData::ItemData> contact_data);
+    void slot_voice_to  (std::shared_ptr<ContactData::ItemData> contact_data);
+    void slot_video_to  (std::shared_ptr<ContactData::ItemData> contact_data);
 
     // 更新联系人信息
-    void slot_update_avatar_info       (const std::shared_ptr<ContactData::ItemData>&to_contact_data);  // 左上角头像与窗口图标
-    void slot_update_contact_list_info (const std::shared_ptr<ContactData::ItemData>&to_contact_data);  // 联系人列表与好友申请
-    void slot_update_chatroom_list_info(const std::shared_ptr<ContactData::ItemData>&to_contact_data);  // 对话列表
+    void slot_update_contact_list_info (std::shared_ptr<ContactData::ItemData> to_contact_data);  // 联系人列表与好友申请
+    void slot_update_chatroom_list_info(std::shared_ptr<ContactData::ItemData> to_contact_data);  // 对话列表
 
-signals:
-    void signout();
+// signals:
+//     void signout();
 
 public slots:
     void slot_file_id_downloaded(const QString&file_id);
@@ -122,10 +121,12 @@ private:
     std::shared_ptr<QAction> m_action_add      ;
     std::shared_ptr<QAction> m_action_create   ;
     // model/view/delegate/proxy
-    std::shared_ptr<ChatroomModel> m_chatroom_model  ;
-    std::shared_ptr<ChatroomProxy> m_chatroom_proxy  ;
     std::shared_ptr<ContactModel > m_contact_model   ;
     std::shared_ptr<ItemDelegate > m_contact_delegate;
+    std::shared_ptr<ContactProxy > m_contact_proxy   ;
+    std::shared_ptr<ChatroomModel> m_chatroom_model  ;
+    std::shared_ptr<ChatroomProxy> m_chatroom_proxy  ;
+    // window
     std::shared_ptr<SearchWindow > m_search_window   ;
     std::shared_ptr<ContactWindow> m_contact_window  ;  // 当前显示的联系人详情窗口
     // cache

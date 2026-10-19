@@ -103,10 +103,10 @@ public:
             //     << ", nicknam width : " << style_data->rect_message.width();
 
             // 获取数据内容
-            const auto& var_data     = index.data(ENUMS::role_item_data());
-            const auto& contact_data = var_data.value<std::shared_ptr<ContactData::ItemData>>();
+            auto var_data     = index.data(ENUMS::role_item_data());
+            auto contact_data = var_data.value<std::shared_ptr<ContactData::ItemData>>();
 
-            auto get_avatar_rounded = [](const std::shared_ptr<ContactData::ItemData>&contact_data, int radius) -> const QImage {
+            auto get_avatar_rounded = [](std::shared_ptr<ContactData::ItemData> contact_data, int radius) -> const QImage {
                 // 获取头像  // 圆角头像  // 头像更新后需要这里清除缓存
                 struct CacheContactData {
                     std::shared_ptr<ContactData::ItemData> data;
@@ -115,13 +115,13 @@ public:
                 };
                 static std::map<QString, CacheContactData> s_caches;
                 if (!contact_data) { return QImage(); }
-                const auto& account_id = contact_data->account_id;
+                auto account_id = contact_data->account_id;
                 // clean
                 do {
                     if (!s_caches.contains(account_id)) { break; }
                     auto&cache = s_caches[account_id];
                     if (!cache.data) { break; }
-                    const auto&data = cache.data;
+                    auto data = cache.data;
                     // 圆角、id、路径不同均需更新
                     if (cache.radius      != radius                    ||
                         data->avatar_id   != contact_data->avatar_id   ||
@@ -398,7 +398,7 @@ public:
             auto var_data   = index.data(ENUMS::role_item_data());
             auto chatroom_data = var_data.value<std::shared_ptr<ChatroomData::ItemData>>();
 
-            auto get_avatar_rounded = [](const std::shared_ptr<ChatroomData::ItemData>&chatroom_data, int radius) -> const QImage {
+            auto get_avatar_rounded = [](std::shared_ptr<ChatroomData::ItemData> chatroom_data, int radius) -> const QImage {
                 // 获取头像  // 圆角头像  // 头像更新后需要这里清除缓存
                 struct CacheChatroomData {
                     std::shared_ptr<ChatroomData::ItemData> data;
@@ -407,21 +407,29 @@ public:
                 };
                 static std::map<QString, CacheChatroomData> s_caches;
                 if (!chatroom_data) { return QImage(); }
-                const auto& chatroom_id = chatroom_data->chatroom_id;
+                auto chatroom_id = chatroom_data->chatroom_id;
                 // clean
                 do {
                     if (!s_caches.contains(chatroom_id)) { break; }
                     auto&cache = s_caches[chatroom_id];
-                    if (!cache.data) { break; }
-                    const auto&data = cache.data;
-                    // 圆角、id、路径不同均需更新
-                    if (cache.radius      != radius                     ||
-                        data->avatar_id   != chatroom_data->avatar_id   ||
-                        data->avatar_path != chatroom_data->avatar_path ||
-                        data->avatar_image.isNull() ||
-                        cache.image.isNull()
-                    ) {
-                        s_caches.erase(chatroom_id);
+                    if ( cache.data) {
+                        auto data = cache.data;
+                        // 圆角、id、路径不同均需更新
+                        if (cache.radius      != radius                     ||
+                            data->avatar_id   != chatroom_data->avatar_id   ||
+                            data->avatar_path != chatroom_data->avatar_path ||
+                            data->avatar_image.isNull() ||
+                            cache.image.isNull()
+                        ) {
+                            s_caches.erase(chatroom_id);
+                        }
+                        break;
+                    }
+                    // 存入的数据无效但新数据有效时需要刷新
+                    else if (!cache.data || cache.image.isNull()) {
+                        if(!chatroom_data->avatar_image.isNull()) {
+                            s_caches.erase(chatroom_id);
+                        }
                     }
                 } while (false);
                 // set
@@ -433,7 +441,13 @@ public:
                 }
                 return s_caches[chatroom_id].image;
             };
-            const auto& image_avatar = get_avatar_rounded(chatroom_data, style_data->rect_avatar.width() / 2);
+            auto image_avatar = get_avatar_rounded(chatroom_data, style_data->rect_avatar.width() / 2);
+            // auto image_avatar = Utils::to_round_image(chatroom_data->avatar_image, style_data->rect_avatar.width() / 2);
+
+            // qDebug().noquote().nospace() << "chatroom_data addr : " << (void*)&chatroom_data
+            //     << ", display_name : " << chatroom_data->display_name
+            //     << ", avatar_image : " << !chatroom_data->avatar_image.isNull()
+            //     << ", round_image : "  << !image_avatar.isNull();
 
             // 提示消息
             auto last_message_text = chatroom_data->last_message_text;
@@ -444,7 +458,7 @@ public:
             // datetime.setTimeZone(QTimeZone::utc());
             // // auto last_message_time = datetime.toLocalTime().toString("hh:mm");
             // auto last_message_time = Utils::format_smart_time(datetime);
-            const auto& last_message_time = chatroom_data->display_datetime;
+            auto last_message_time = chatroom_data->display_datetime;
             QFontMetrics metrics_time(style_data->font_time);
 
             // 调整宽度
@@ -458,7 +472,7 @@ public:
             rect_nickname_last.setRight(rect_time_last.left() - 5);
 
             // 昵称
-            const auto& display_name = chatroom_data->display_name;
+            auto display_name = chatroom_data->display_name;
             QFontMetrics metrics_display_name(style_data->font_nickname);
             QString elided_display_name = metrics_display_name.elidedText(display_name, Qt::ElideRight, rect_nickname_last.width());
 

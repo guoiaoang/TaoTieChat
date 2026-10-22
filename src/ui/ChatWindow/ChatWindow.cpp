@@ -918,16 +918,16 @@ void ChatWindow::add_message(std::shared_ptr<SyncMessage> sync_message) {
     do {
         // 无效数据
         if (!sync_message) { break; }
-        if ( sync_message->chatroomId       ().isEmpty()) { break; }
+        // if ( sync_message->chatroomId    ().isEmpty()) { break; }
         if ( sync_message->serverMessageId  ().isEmpty()) { break; }
         if ( sync_message->clientMessageId  ().isEmpty()) { break; }
         if ( sync_message->senderAccountId  ().isEmpty()) { break; }
-        // if ( sync_message->receiverAccountId().isEmpty()) { break; }
+        if ( sync_message->receiverAccountId().isEmpty()) { break; }
         if (!sync_message->hasTimestamp() && !sync_message->timestamp().hasTimestamp()) { break; }
 
         // 读取数据
         auto subtype             = sync_message->subType          ();
-        auto chatroom_id         = sync_message->chatroomId       ();
+        // auto chatroom_id      = sync_message->chatroomId       ();
         auto server_message_id   = sync_message->serverMessageId  ();
         auto client_message_id   = sync_message->clientMessageId  ();
         auto sender_account_id   = sync_message->senderAccountId  ();
@@ -951,9 +951,12 @@ void ChatWindow::add_message(std::shared_ptr<SyncMessage> sync_message) {
         auto sender_avatar_pixamp = QPixmap(Database::instance()->get_local_file_id_path(sender_avatar_id + ";size:128*128"));
 
         // =================================================================== //
+
         // 添加对话
-        // 一对一聊天中，消息发送者和接收者中必定有一个是当前账号，另外一个账号可作为聊天室 ID
-        // QString chatroom_id = sender_account_id == contact_account_id ? receiver_account_id : sender_account_id;
+        // 不可以将对方账号 ID 作为聊天室 ID，会导致接受者发现聊天室 ID 为自己
+        // 一对一聊天中，消息发送者和接收者中必定有一个是当前账号，另外一个账号可作为聊天室 ID。
+        // 如果自己是发送者，那么尝试将聊天室 ID 取为接收者的 ID。
+        QString chatroom_id = sender_account_id == contact_account_id ? receiver_account_id : sender_account_id;
         add_chat_room(chatroom_id);
 
         // UI 所需数据

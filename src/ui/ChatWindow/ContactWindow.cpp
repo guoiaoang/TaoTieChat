@@ -364,7 +364,9 @@ void ContactWindow::slot_button_save() {
     bool is_self     = ship_flags.testFlag(ShipFlag::Self    );
 
     // 既不是自己也不是好友时，不允许修改资料
-    if (!is_self && !is_contact) { return; }
+    // is_contact 代表查看的是好友的信息，实际无关。
+    // is_friend 才是判断是否是好友关系
+    if (!is_self && !is_friend) { return; }
 
     // 服务器端限制一次只允许修改自己或好友的资料
 

@@ -594,6 +594,7 @@ void MessageWindow::slot_button_send() {
 
     // UI 所需数据
     auto message_data  = std::make_shared<MessageData::ItemData>();
+    message_data->chatroom_id           = get_contact()->account_id;
     message_data->sender_type           = MessageData::SenderType::USER;
     message_data->media_type            = MessageData::MediaType::TEXT;
     message_data->is_me                 = true;

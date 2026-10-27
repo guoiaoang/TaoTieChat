@@ -19,30 +19,22 @@ class MessageWindow : public QWidget {
 
 public:
     explicit MessageWindow(QWidget *parent = nullptr);
-    // explicit MessageWindow(std::shared_ptr<ContactData::ItemData> contact_data, Messages messages, QWidget *parent = nullptr);
     ~MessageWindow();
 
     void set_contact(std::shared_ptr<ContactData::ItemData> contact_data);
     std::shared_ptr<ContactData::ItemData> get_contact() const;
 
-    // get_local_avatar_id_pixmap 根据文件 ID 在本地查找文件并加载为头像图片
-    std::shared_ptr<QPixmap> get_local_avatar_id_pixmap(const QString&avatar_id);
-
-    // show_avatar 当前窗口更新头像显示，无网络及校验功能
-    void show_avatar(std::shared_ptr<QPixmap> avatar_pixmap);
     // 传入头像 ID，自动从本地或网络加载头像
-    void show_avatar_id(const QString&avatar_id);
+    void show_avatar_id(const QString& avatar_id, bool online_download);
+    // show_avatar 当前窗口更新头像显示，无网络及校验功能
+    void show_avatar_image(std::shared_ptr<QImage> avatar_image);
+    // void update_self_avatar_messages(const QString& file_id);
 
     // 添加聊天内容到对话内
     bool add_message(std::shared_ptr<MessageData::ItemData> message_data);
+    std::shared_ptr<MessageData::ItemData> get_message(const QString& message_id) const;
     // 获取最后一条消息以便列表显示
     std::shared_ptr<MessageData::ItemData> get_last_message();
-    void update_message(std::shared_ptr<MessageData::ItemData> message_data);
-    std::shared_ptr<MessageData::ItemData> get_message(const QString&message_id) const;
-
-    // void update_messages(Messages messages);
-    // void append_message (Message  message );
-    // void update_ui();
 
 protected:
     bool eventFilter(QObject *watched, QEvent *event) override;
@@ -67,10 +59,12 @@ private slots:
     void slot_copy_path  (std::shared_ptr<MessageData::ItemData> message_data);
     void slot_save_to    (std::shared_ptr<MessageData::ItemData> message_data);
 private slots:
-    void slot_update_contact_info(std::shared_ptr<ContactData::ItemData> to_contact_data);
-
-// signals:
-//     void signal_new_message(std::shared_ptr<MessageData::ItemData> message);
+    // 修改个人资料或头像是需要同时修改消息中的个人信息及头像(好友或自己均可)
+    void slot_update_message_contact   (std::shared_ptr<ContactData::ItemData> contact_data);
+    // 更新好友信息
+    void slot_update_contact_info      (std::shared_ptr<ContactData::ItemData> to_contact_data);
+    void slot_update_button_avatar_file(const Network::FileDownloadNotify notify);  // 更新窗口中的头像按钮
+    void slot_update_message_file      (const Network::FileDownloadNotify notify);  // 更新文件消息/头像
 
 private:
     std::shared_ptr<Ui::MessageWindow    > m_ui;

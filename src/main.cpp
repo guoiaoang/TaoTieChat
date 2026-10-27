@@ -16,12 +16,12 @@ int main(int argc, char *argv[]) {
 
     AuthWindow window_auth;
     ChatWindow window_chat;
-    QObject::connect(SignalInner::instance(), &SignalInner::accepted, [&](){
+    QObject::connect(SignalInner::instance(), &SignalInner::signal_signin, [&](){
         window_auth.hide();
         window_chat.reinit();  // 重新初始化界面及数据
         window_chat.show();
     });
-    QObject::connect(SignalInner::instance(), &SignalInner::signout, [&](){
+    QObject::connect(SignalInner::instance(), &SignalInner::signal_signout, [&](){
         window_auth.view();
         window_chat.hide();
     });

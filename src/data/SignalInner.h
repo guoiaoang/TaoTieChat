@@ -18,7 +18,7 @@ public:
 
 // =============================== ChatWindow =============================== //
 signals:
-    void signout();
+    void signal_signout();
 
 // ============================== ContactWindow ============================== //
 Q_SIGNALS:
@@ -28,7 +28,7 @@ Q_SIGNALS:
     void sig_contact_voice  (std::shared_ptr<ContactData::ItemData> contact_data);
     void sig_contact_video  (std::shared_ptr<ContactData::ItemData> contact_data);
 
-// ================================= Accounts ================================= //
+// ================================ Accounts ================================ //
 signals:
     void signal_account_changing     (std::shared_ptr<ContactData::ItemData> from_contact_data, std::shared_ptr<ContactData::ItemData> to_contact_data);
     void signal_account_changed      (std::shared_ptr<ContactData::ItemData> to_contact_data);
@@ -40,11 +40,13 @@ signals:
 // ============================== NetworkClient ============================== //
 signals:
     // 文件下载成功通知
-    void signal_file_id_downloaded(const QString&file_id);
+    void signal_download_file      (const Network::FileDownloadNotify notify);
+    void signal_file_download_error(const Network::FileDownloadNotify notify);
+    void signal_file_downloaded    (const Network::FileDownloadNotify notify);
 
 // ============================= MessageDelegate ============================= //
 signals:
-    void signal_open_link  (const QString &href);
+    void signal_open_link  (const QString& href);
     void signal_open_file  (std::shared_ptr<MessageData::ItemData> message_data);
     void signal_open_folder(std::shared_ptr<MessageData::ItemData> message_data);
     void signal_open_data  (std::shared_ptr<MessageData::ItemData> message_data);
@@ -53,9 +55,9 @@ signals:
     void signal_copy_path  (std::shared_ptr<MessageData::ItemData> message_data);
     void signal_save_to    (std::shared_ptr<MessageData::ItemData> message_data);
 
-// ============================= MessageDelegate ============================= //
+// =============================== AuthWindow =============================== //
 signals:
-    void accepted();
+    void signal_signin();
 
 // ============================== MessageWindow ============================== //
 signals:
@@ -63,11 +65,11 @@ signals:
 
 // =============================== MediaWindow =============================== //
 signals:
-    void media_changed(const QPixmap&pixmap);
+    void signal_media_changed(const QPixmap& pixmap);
 
 // ============================== SearchWindow ============================== //
 Q_SIGNALS:
-    void SearchEditTextChanged(const QString &);
+    void signal_search_edit_text_changed(const QString& text);
 
 };
 

@@ -33,10 +33,11 @@ SearchWindow::SearchWindow(QWidget *parent)
         do_search(m_ui->searchpage_lineedit_key->text());
     });
     // 用于同步显示搜索词
-    // connect(m_ui->searchpage_lineedit_key, &QLineEdit::textChanged, this, &SearchWindow::SearchEditTextChanged);
+    // connect(m_ui->searchpage_lineedit_key, &QLineEdit::textChanged, this, &SearchWindow::signal_search_edit_text_changed);
     // connect(Accounts::instance(), &Accounts::signal_contact_info_changed, this, &SearchWindow::slot_update_search_list_info);
-    connect(m_ui->searchpage_lineedit_key, &QLineEdit::textChanged, SignalInner::instance(), &SignalInner::SearchEditTextChanged);
+    connect(m_ui->searchpage_lineedit_key, &QLineEdit::textChanged, SignalInner::instance(), &SignalInner::signal_search_edit_text_changed);
     connect(SignalInner::instance(), &SignalInner::signal_contact_info_changed, this, &SearchWindow::slot_update_search_list_info);
+    connect(SignalInner::instance(), &SignalInner::signal_file_downloaded     , this, &SearchWindow::slot_file_downloaded        );
 
     // set
     m_action_search->setText(m_ui->searchpage_toolbutton_search->text());
@@ -110,6 +111,18 @@ void SearchWindow::slot_update_search_list_info(std::shared_ptr<ContactData::Ite
     } while (false);
 }
 
+void SearchWindow::slot_file_downloaded(const Network::FileDownloadNotify notify) {
+    if ( notify.id.isEmpty()) { return; }
+    for(auto&contact_data : this->m_users_model->get_members()) {
+        if (contact_data->avatar_id == notify.id) {
+            // 文件下载仅修改相关参数即可
+            contact_data->avatar_path  = Database::instance()->get_local_file_id_path(contact_data->avatar_id);
+            contact_data->avatar_image = std::make_shared<QImage>(contact_data->avatar_path);
+            this->m_users_model->update_contact(contact_data);
+        }
+    }
+}
+
 bool SearchWindow::do_search(const QString&keyword) {
     // get_search_params(); //  应该封装为函数，当结果返回时对比搜索词一致时才显示
     QString str_search_keyword = keyword.trimmed();
@@ -174,24 +187,7 @@ bool SearchWindow::search_user(const QString&keyword) {
             auto file_size = QFileInfo(file_path).size();
             // 没有本地记录但有头像 ID 时则从服务器下载完成后再显示
             if (file_id.isEmpty() || file_path.isEmpty() || file_size <= 0) {
-                network_file_io_notify_callback callback_download_avatar_notify = [this, reply_search_user](const NetworkFileIONotify&notify) {
-                    // qDebug().nospace().noquote() << "notify:" << notify;
-                    // 下载时不需要更新界面
-                    if ((notify.ok == true && notify.status == FileStatusCode::FILE_STATUS_UPLOADED) || (notify.ok == false)) {
-                        auto contact_info = Utils::Transform::to_contact_data(std::make_shared<ContactInfo>(reply_search_user->contactInfo()));
-                        if (contact_info && !contact_info->account_id.isEmpty()) {
-                            contact_info->is_me        = Accounts::instance()->is_me    (contact_info->account_id);
-                            contact_info->is_friend    = Accounts::instance()->is_friend(contact_info->account_id);
-                            contact_info->display_name = Utils::get_display_name(contact_info);
-                            contact_info->info_time    = QString{};  // 搜索结果不需要时间显示
-                            contact_info->info_text    = contact_info->signature;  // 搜索结果显示签名
-                            this->m_users_model->update_contact(contact_info);
-                        }
-                    }
-                };
-                QString notify_id = QString("notify SearchWindow::search_user %1").arg(file_id);
-                NetworkClient::instance()->download_file(file_id, notify_id, callback_download_avatar_notify);
-                // return;
+                NetworkClient::instance()->download_file_notify_signal(file_id);
             }
         }
 

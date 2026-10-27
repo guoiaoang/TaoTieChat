@@ -13,6 +13,7 @@
 #include "MessageDelegate.h"
 #include "MediaWindow.h"
 #include "SignalInner.h"
+#include "ChatWindow.h"
 
 MessageWindow::MessageWindow(QWidget *parent)
     : QWidget(parent), m_ui(std::make_shared<Ui::MessageWindow>()) {
@@ -66,8 +67,10 @@ MessageWindow::MessageWindow(QWidget *parent)
         // 基于服务器对此的要求，超长文本不允许发送
         m_ui->button_send->setEnabled(current_text_length < avaliable_text_length);
     });
-    // connect(Accounts::instance(), &Accounts::signal_contact_info_changed, this, &MessageWindow::slot_update_contact_info);
-    connect(SignalInner::instance(), &SignalInner::signal_contact_info_changed, this, &MessageWindow::slot_update_contact_info);
+    connect(SignalInner::instance(), &SignalInner::signal_account_changed     , this, &MessageWindow::slot_update_message_contact   );  // 更新消息中自己的信息
+    connect(SignalInner::instance(), &SignalInner::signal_contact_info_changed, this, &MessageWindow::slot_update_contact_info      );  // 更新好友信息
+    connect(SignalInner::instance(), &SignalInner::signal_file_downloaded     , this, &MessageWindow::slot_update_button_avatar_file);  // 更新窗口中的头像按钮
+    connect(SignalInner::instance(), &SignalInner::signal_file_downloaded     , this, &MessageWindow::slot_update_message_file      );  // 更新文件消息/头像
 
     // set
     m_ui->list_messages->setSpacing(0);
@@ -144,59 +147,39 @@ MessageWindow::~MessageWindow() {
 }
 
 void MessageWindow::set_contact(std::shared_ptr<ContactData::ItemData> contact_data) {
-    m_contact_data = contact_data;
+    if (!contact_data) { return; }
+    // 传入副本，防止意外修改原先的内容
+    m_contact_data = std::make_shared<ContactData::ItemData>(*contact_data.get());
     m_ui->label_title->setText(contact_data->display_name);
-    show_avatar_id(contact_data->avatar_id);
-    // TODO:更新聊天记录中的账号信息
+    show_avatar_id(contact_data->avatar_id, true);
+    slot_update_message_contact(contact_data);
 }
 
 std::shared_ptr<ContactData::ItemData> MessageWindow::get_contact() const {
     return m_contact_data;
 }
 
-// 根据文件 ID 在本地查找文件并加载为头像图片
-std::shared_ptr<QPixmap> MessageWindow::get_local_avatar_id_pixmap(const QString&avatar_id) {
-    return std::make_shared<QPixmap>(Database::instance()->get_local_file_id_path(avatar_id));
-}
-
-// 更新当前页面上的头像显示，无网络及校验功能
-void MessageWindow::show_avatar(std::shared_ptr<QPixmap> avatar_pixmap) {
-    m_ui->button_title_avatar->resize(32, 32);
-    m_ui->button_title_avatar->setIcon(QIcon(avatar_pixmap->scaled(m_ui->button_title_avatar->size(), Qt::IgnoreAspectRatio, Qt::SmoothTransformation)));
-}
-
 // 传入头像 ID，自动从本地或网络加载头像
-void MessageWindow::show_avatar_id(const QString&avatar_id) {
+void MessageWindow::show_avatar_id(const QString& avatar_id, bool online_download) {
     // 先尝试从本地加载头像
-    std::shared_ptr<QPixmap> avatar_pixmap = get_local_avatar_id_pixmap(avatar_id + ";size:128*128");
-    if ((avatar_pixmap && !avatar_pixmap->isNull()) || avatar_id.isEmpty()) {
-        show_avatar(avatar_pixmap);
-        return;
-    }
-
-    if (avatar_pixmap && !avatar_pixmap->isNull()) {
+    auto avatar_path  = Database::instance()->get_local_file_id_path(avatar_id);
+    auto avatar_image = std::make_shared<QImage>(avatar_path);
+    if (!avatar_image->isNull()) {
+        show_avatar_image(avatar_image);
         return;
     }
 
     // 下载并显示头像
-    network_file_io_notify_callback callback_download_file_notify = [this](const NetworkFileIONotify&notify) {
-        // 忽略下载进度通知
-        if (notify.ok && notify.code == int64_t(SuccessCode::SUCCESS) && notify.uploading) {
-            return;
-        }
-        if (!notify.ok) {
-            // QString error_message = tr("Failed to download avatar.");
-            // error_message += tr("\n\ncode : 0x%1\nmessage : %2")
-            //     .arg(notify.code, 8, 16, QChar('0'))  // 16 进制显示，宽度 8 位，不足补 0
-            //     .arg(notify.message);
-            // QMessageBox::information(this, tr("Error"), error_message, QMessageBox::StandardButton::Ok);
-            return;
-        }
-        // 下载成功，文件已保存到本地，可以直接显示了
-        show_avatar(get_local_avatar_id_pixmap(notify.id + ";size:128*128"));
-    };
-    QString notify_id = QString("notify MessageWindow::show_avatar_id %1").arg(avatar_id);
-    NetworkClient::instance()->download_file(avatar_id, notify_id, callback_download_file_notify);
+    if (online_download && !avatar_id.isEmpty()) {
+        NetworkClient::instance()->download_file_notify_signal(avatar_id);
+    }
+}
+
+// 更新当前页面上的头像显示，无网络及校验功能
+void MessageWindow::show_avatar_image(std::shared_ptr<QImage> avatar_image) {
+    m_ui->button_title_avatar->resize(32, 32);
+    auto image_scaled = avatar_image->scaled(m_ui->button_title_avatar->size(), Qt::IgnoreAspectRatio, Qt::SmoothTransformation);
+    m_ui->button_title_avatar->setIcon(QIcon(QPixmap::fromImage(image_scaled)));
 }
 
 // 判断是否添加一条时间消息及滚动到底部
@@ -267,11 +250,6 @@ bool MessageWindow::add_message(std::shared_ptr<MessageData::ItemData> message_d
 std::shared_ptr<MessageData::ItemData> MessageWindow::get_last_message() {
     if (!m_message_model) { return nullptr; }
     return m_message_model->get_last_message();
-}
-
-// 通知视图更新
-void MessageWindow::update_message(std::shared_ptr<MessageData::ItemData> message_data) {
-    m_message_model->update_message(message_data);
 }
 
 std::shared_ptr<MessageData::ItemData> MessageWindow::get_message(const QString&message_id) const {
@@ -459,7 +437,7 @@ void MessageWindow::slot_button_file() {
             media_type = MessageData::MediaType::IMAGE;
             image_data = std::make_shared<MessageData::ImageData>();
             // TODO:这里仅需缓存预览图以便节省空间，需要按比例缩放。视图中会拉伸窗口，因此此图像不宜太小。
-            image_data->pixmap = QPixmap(path);;
+            image_data->image = std::make_shared<QImage>(path);;
             // QSize size_scaled  = QSize(512, 512);
             // image_data->pixmap = pixmap.scaled(size_scaled, Qt::KeepAspectRatio, Qt::SmoothTransformation);
         }
@@ -468,12 +446,12 @@ void MessageWindow::slot_button_file() {
         return;  // 不支持的消息类型
     }
 
-    auto sender_data   = Accounts::instance()->get_current_account();
-    auto account_id    = sender_data->account_id;
-    auto avatar_id     = sender_data->account_id;
-    auto message_id    = Utils::get_new_uuid_string();
-    auto message_time  = QDateTime::currentDateTimeUtc();
-    auto avatar_pixamp = QPixmap(Database::instance()->get_local_file_id_path(avatar_id + ";size:128*128"));
+    auto sender_data  = Accounts::instance()->get_current_account();
+    auto account_id   = sender_data->account_id;
+    auto avatar_id    = sender_data->account_id;
+    auto message_id   = Utils::get_new_uuid_string();
+    auto message_time = QDateTime::currentDateTimeUtc();
+    auto avatar_image = std::make_shared<QImage>(Database::instance()->get_local_file_id_path(avatar_id + ";size:128*128"));
 
     // UI 所需数据
     auto message_data  = std::make_shared<MessageData::ItemData>();
@@ -486,7 +464,7 @@ void MessageWindow::slot_button_file() {
     message_data->sender->account_id    = account_id;
     message_data->sender->display_name  = Utils::get_display_name(sender_data);
     message_data->sender->avatar_id     = sender_data->avatar_id;
-    message_data->sender->avatar_pixmap = avatar_pixamp;
+    message_data->sender->avatar_image  = avatar_image;
     ;    if (media_type == MessageData::MediaType::TEXT ) { message_data->text  = text_data ; }
     else if (media_type == MessageData::MediaType::IMAGE) { message_data->image = image_data; }
     else if (media_type == MessageData::MediaType::FILE ) { message_data->file  = file_data ; }
@@ -542,28 +520,28 @@ void MessageWindow::slot_button_file() {
     };
 
     // 2. 上传文件
-    network_file_io_notify_callback callback_upload_file_notify = [this, send_file_message](const NetworkFileIONotify&notify) {
-        if (!notify.ok || notify.status != FileStatusCode::FILE_STATUS_UPLOADED) {
+    network_file_io_notify_callback callback_upload_file_notify = [this, send_file_message](const Network::FileDownloadNotify notify) {
+        // if (avatar_id != notify.id) { return; }  // 不是当前关心的文件
+
+        // 忽略上传进度通知
+        if (!notify.finished) {
+            return;
+        }
+
+        // 上传错误消息
+        if (!notify.ok__ || notify.status != FileStatusCode::FILE_STATUS_UPLOADED) {
             // 16 进制显示，宽度 8 位，不足补 0
             QString error_message = tr("Failed to upload avatar.\n\ncode : 0x%1\nmessage : %2").arg(notify.code, 8, 16, QChar('0')).arg(notify.message);
             // QMessageBox::information(this, tr("Error"), error_message, QMessageBox::StandardButton::Ok);
             qDebug().noquote().nospace() << "network_file_io_notify_callback error_message : " << error_message;
             return;
         }
-        // 上传完成后再通知服务器写入消息
-        do {
-            // 验证有效
-            if (!notify.ok) { break; }
-            if ( notify.code   != int(SuccessCode::SUCCESS)            ) { break; }
-            if ( notify.status != FileStatusCode::FILE_STATUS_UPLOADED ) { break; }
-            if ( notify.id .isEmpty()) { break; }
-            if ( notify.md5.isEmpty()) { break; }
-            if ( notify.size < 0) { break; }
-            //
-            const QString&file_id = notify.id;
-            if (file_id.isEmpty()) { return; }
-            send_file_message(file_id);
-        } while (false);
+
+        // 验证有效
+        if (!notify.id.isEmpty() || !notify.md5.isEmpty() || notify.size >= 0) {
+            if (notify.id.isEmpty()) { return; }
+            send_file_message(notify.id);  // 文件上传完成后再通知服务器写入消息
+        }
     };
     NetworkClient::instance()->upload_file(path, callback_upload_file_notify);
 }
@@ -585,28 +563,28 @@ void MessageWindow::slot_button_send() {
 
     if (text_plain.isEmpty()) { return; }
 
-    auto sender_data   = Accounts::instance()->get_current_account();
-    auto account_id    = sender_data->account_id;
-    auto avatar_id     = sender_data->avatar_id;
-    auto message_id    = Utils::get_new_uuid_string();
-    auto message_time  = QDateTime::currentDateTimeUtc();
-    auto avatar_pixamp = QPixmap(Database::instance()->get_local_file_id_path(avatar_id + ";size:128*128"));
+    auto sender_data  = Accounts::instance()->get_current_account();
+    auto account_id   = sender_data->account_id;
+    auto avatar_id    = sender_data->avatar_id;
+    auto message_id   = Utils::get_new_uuid_string();
+    auto message_time = QDateTime::currentDateTimeUtc();
+    auto avatar_image = std::make_shared<QImage>(Database::instance()->get_local_file_id_path(avatar_id + ";size:128*128"));
 
     // UI 所需数据
     auto message_data  = std::make_shared<MessageData::ItemData>();
-    message_data->chatroom_id           = get_contact()->account_id;
-    message_data->sender_type           = MessageData::SenderType::USER;
-    message_data->media_type            = MessageData::MediaType::TEXT;
-    message_data->is_me                 = true;
-    message_data->message_id            = message_id;
-    message_data->message_time          = message_time;
-    message_data->sender                = std::make_shared<MessageData::SenderData>();
-    message_data->sender->account_id    = account_id;
-    message_data->sender->display_name  = Utils::get_display_name(sender_data);
-    message_data->sender->avatar_id     = sender_data->avatar_id;
-    message_data->sender->avatar_pixmap = avatar_pixamp;
-    message_data->text                  = std::make_shared<MessageData::TextData>();
-    message_data->text->text            = text_plain;
+    message_data->chatroom_id          = get_contact()->account_id;
+    message_data->sender_type          = MessageData::SenderType::USER;
+    message_data->media_type           = MessageData::MediaType::TEXT;
+    message_data->is_me                = true;
+    message_data->message_id           = message_id;
+    message_data->message_time         = message_time;
+    message_data->sender               = std::make_shared<MessageData::SenderData>();
+    message_data->sender->account_id   = account_id;
+    message_data->sender->display_name = Utils::get_display_name(sender_data);
+    message_data->sender->avatar_id    = sender_data->avatar_id;
+    message_data->sender->avatar_image = avatar_image;
+    message_data->text                 = std::make_shared<MessageData::TextData>();
+    message_data->text->text           = text_plain;
     if (!add_message(message_data)) { return; }
     m_ui->textEdit->clear();
     m_ui->list_messages->scrollToBottom();
@@ -676,7 +654,7 @@ void MessageWindow::slot_open_data(std::shared_ptr<MessageData::ItemData> messag
             std::shared_ptr<MediaInfo> media_info = std::make_shared<MediaInfo>();
             media_info->media_name  = file_info.fileName();
             media_info->media_path  = file_path;
-            media_info->media_image = QImage();
+            media_info->media_image = std::make_shared<QImage>();
             play_list.push_back(media_info);
             //
             MediaWindow*media_window = &MediaWindow::instance();
@@ -858,13 +836,111 @@ void MessageWindow::slot_update_contact_info(std::shared_ptr<ContactData::ItemDa
     } while (false);
 }
 
-// // 消息较多时应该差异化更新
-// void MessageWindow::update_messages(Messages messages) {
-//     m_messages = messages;
-// }
+// 更新窗口中的头像按钮
+void MessageWindow::slot_update_button_avatar_file(const Network::FileDownloadNotify notify) {
+    const QString& file_id = notify.id;
+    if (file_id.isEmpty()) { return; }
+    if (!notify.finished || !notify.ok__ || notify.status != FileStatusCode::FILE_STATUS_UPLOADED) { return; }
 
-// void MessageWindow::append_message (Message message ) {
-//     //
-//     ui->list_messages->scrollToBottom(); // 滚动到最后
-// }
+    const auto& contact_data = get_contact();
+    if (contact_data->avatar_id == file_id) {
+        // 下载成功，文件已保存到本地，可以直接显示了
+        show_avatar_id(notify.id, false);
+    }
+}
 
+// 更新文件消息/头像
+void MessageWindow::slot_update_message_file(const Network::FileDownloadNotify notify) {
+    const QString& file_id = notify.id;
+    if (file_id.isEmpty()) { return; }
+    if (!notify.finished || !notify.ok__ || notify.status != FileStatusCode::FILE_STATUS_UPLOADED) { return; }
+
+    std::shared_ptr<QImage> source_image;
+    std::shared_ptr<QImage> avatar_image;
+    const auto& message_datas = m_message_model->get_members();
+    for (auto& message_data : message_datas) {
+        if (!message_data) { continue; }
+
+        // 发送方(可能是对方或自己)
+        // 根据账号ID来修改头像(用户可能会修改头像)
+        if (   message_data
+            && message_data->sender
+            && message_data->sender->avatar_id == file_id
+            && message_data->sender->avatar_image->isNull()
+        ) {
+            if (!source_image || !avatar_image) {
+                source_image = std::make_shared<QImage>(notify.path);
+                avatar_image = std::make_shared<QImage>(source_image->scaled(32, 32, Qt::KeepAspectRatio, Qt::SmoothTransformation));
+            }
+            message_data->sender->avatar_image = avatar_image;
+        }
+
+        // 只更新文件信息，而不创造或新增
+        if (!message_data->file) { continue; }
+        auto file = message_data->file;
+        if ( file->file_id.isEmpty()) { continue; }
+        if ( file->file_id != file_id) { continue; }
+        file->file_id   = notify.id  ;
+        file->file_path = notify.path;
+        file->file_hash = notify.md5 ;
+        //
+        file->file_name = notify.name;
+        file->file_icon = qApp->style()->standardIcon(QStyle::SP_FileIcon);;
+        file->file_size  = notify.size;
+        file->human_size = Utils::Transform::human_size(message_data->file->file_size);
+        file->downloaded_file_size  = notify.uploaded_bytes;
+        file->downloaded_human_size = Utils::Transform::human_size(file->downloaded_file_size);
+        // 如果是其他格式则再补充内容
+        // if ( ChatWindow::is_supported_image_formats(file->file_name) && !QImageReader::imageFormat(file->file_path).isEmpty()) {
+        // QImageReader reader(file->file_path);
+        // QImage image = reader.read();
+        if (!source_image->isNull()) {
+            message_data->media_type = MessageData::MediaType::IMAGE;
+            if (!message_data->image) { message_data->image = std::make_shared<MessageData::ImageData>(); }
+            message_data->image->image = source_image;
+            // if (message_data->image->pixmap.isNull()) { message_data->image->pixmap = svg_to_image(file->file_path); }
+        }
+        m_message_model->update_message(message_data);
+    }
+}
+
+// 修改个人资料或头像是需要同时修改消息中的个人信息及头像
+void MessageWindow::slot_update_message_contact(std::shared_ptr<ContactData::ItemData> contact_data) {
+    if (!contact_data) { return; }
+    if ( contact_data->account_id.isEmpty()) { return; }
+    if ( contact_data->avatar_id .isEmpty()) { return; }
+
+    if (contact_data->avatar_path.isEmpty()) {
+        contact_data->avatar_path = Database::instance()->get_local_file_id_path(contact_data->avatar_id);
+    }
+    if (contact_data->avatar_image->isNull ()) {
+        std::shared_ptr<QImage> source_image = std::make_shared<QImage>(contact_data->avatar_path);
+        std::shared_ptr<QImage> avatar_image = std::make_shared<QImage>(source_image->scaled(32, 32, Qt::KeepAspectRatio, Qt::SmoothTransformation));
+        contact_data->avatar_image = avatar_image;
+    }
+
+    const auto& message_datas = m_message_model->get_members();
+    for (auto& message_data : message_datas) {
+        // 无数据或数据不符合条件
+        if (!message_data) { continue; }
+        if (!message_data->sender) { continue; }
+        auto sender = message_data->sender;
+        if ( sender->account_id != contact_data->account_id) { continue; }
+
+        // 内容相同无需更新
+        if (   sender->avatar_id    == contact_data->avatar_id
+            && sender->avatar_path  == contact_data->avatar_path
+            && sender->avatar_image == contact_data->avatar_image
+        ) {
+            continue;
+        }
+
+        // 需要修改的内容
+        sender->avatar_id    = contact_data->avatar_id   ;
+        sender->avatar_path  = contact_data->avatar_path ;
+        sender->avatar_image = contact_data->avatar_image;
+
+        // 发送消息触发更新
+        m_message_model->update_message(message_data);
+    }
+}

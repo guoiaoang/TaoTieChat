@@ -9,9 +9,9 @@ class MediaWindow;
 }
 
 struct MediaInfo {
-    QString media_path ;
-    QImage  media_image;
-    QString media_name ;
+    QString                 media_name ;
+    QString                 media_path ;
+    std::shared_ptr<QImage> media_image;
 };
 
 class MediaWindow : public QMainWindow {
@@ -32,9 +32,6 @@ public:
     const std::vector<std::shared_ptr<MediaInfo>> get_play_list() const;
     bool eventFilter(QObject *watched, QEvent *event) override;
     void show_media(std::shared_ptr<MediaInfo> media_info);
-
-// signals:
-//     void media_changed(const QPixmap&pixmap);
 
 public slots:
     void slot_media_open        (            );

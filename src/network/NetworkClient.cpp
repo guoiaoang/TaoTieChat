@@ -688,7 +688,7 @@ bool NetworkClient::send_message(send_message_params params, send_message_callba
 
 bool NetworkClient::get_file_id(const QString&file_path, network_file_io_notify_callback callback_get_file_id_notiify) {
     using Wrapper  = Utils::Wrapper::FileMetadataWrapper;
-    using Notify   = NetworkFileIONotify;
+    using Notify   = Network::FileDownloadNotify;
     using Callback = network_file_io_notify_callback;
     // 需要传出的函数
     struct GetFileIdArgs {
@@ -701,28 +701,35 @@ bool NetworkClient::get_file_id(const QString&file_path, network_file_io_notify_
         // QString real_md5;
     };
     std::shared_ptr<GetFileIdArgs> get_file_id_args = std::make_shared<GetFileIdArgs>();
+    auto& notify = get_file_id_args->notify;
+    notify.path  = file_path;
     if (file_path.isEmpty()) {
-        get_file_id_args->notify = Notify{ .ok = false, .code = int64_t(ErrorCode::FILE_NAME_EMPTY), .message = "file path empty.", .id = "", .path = file_path };
-        callback_get_file_id_notiify(get_file_id_args->notify);
+        notify.finished = true;
+        notify.ok__     = false;
+        notify.code     = int64_t(ErrorCode::FILE_NAME_EMPTY);
+        notify.message  = "file path empty.";
+        callback_get_file_id_notiify(notify);
         return true;
     }
     auto file_info = QFileInfo(file_path);
     auto file_name = file_info.fileName();
     auto file_size = file_info.size();
-    auto file_md5 = Utils::Algorithm::calculate_file_md5(file_path);
+    auto file_md5  = Utils::Algorithm::calculate_file_md5(file_path);
+    // 可能部分操作成功
     if (file_name.isEmpty() || file_size < 0 || file_md5.isEmpty()) {
-        get_file_id_args->notify = Notify{
-            .ok = false, .code = int64_t(ErrorCode::FILE_READ_ERROR), .message = "file not exists.", .id = "",
-            .path = file_path, .size = file_size, .md5 = file_md5
-        };
-        callback_get_file_id_notiify(get_file_id_args->notify);
+        notify.finished = true;
+        notify.ok__     = false;
+        notify.code     = int64_t(ErrorCode::FILE_READ_ERROR);
+        notify.message  = "file not exists.";
+        notify.size     = file_size;
+        notify.md5      = file_md5;
+        callback_get_file_id_notiify(notify);
         return true;
     }
     // 用于参数传递，可避免多次 md5 同一文件
-    get_file_id_args->notify = Notify{
-        .ok = true, .code = 0, .message = "", .id = "",
-        .path = file_path, .size = file_size, .md5 = file_md5
-    };
+    notify.name = file_name;
+    notify.size = file_size;
+    notify.md5  = file_md5;
     // 构造参数
     get_file_id_params params_get_file_id = std::make_shared<GetFileIDRequest>();
     params_get_file_id->setRequestUserAuth(*Accounts::instance()->get_auth_request().get());
@@ -730,22 +737,27 @@ bool NetworkClient::get_file_id(const QString&file_path, network_file_io_notify_
 
     // qDebug().noquote().nospace() << Utils::Transform::to_string(params_get_file_id->requestUserAuth());
 
+    notify.finished = false;  // 防止提前结束
+
     get_file_id_callback callback_get_file_id = [callback_get_file_id_notiify, get_file_id_args](get_file_id_params request, get_file_id_reply reply) {
+        auto& notify = get_file_id_args->notify;
         // 网络超时或其他错误导致没有收到回复
         if (reply == std::nullopt || !reply->hasResult()) {
-            get_file_id_args->notify.ok      = false;
-            get_file_id_args->notify.code    = int64_t(ErrorCode::ERROR_CONN);
-            get_file_id_args->notify.message = "No reply or no result.";
-            callback_get_file_id_notiify(get_file_id_args->notify);
+            notify.finished = true;
+            notify.ok__     = false;
+            notify.code     = int64_t(ErrorCode::ERROR_CONN);
+            notify.message  = "No reply or no result.";
+            callback_get_file_id_notiify(notify);
             return;
         }
         //
-        get_file_id_args->notify.ok      = reply->result().hasSuccessCode();
-        get_file_id_args->notify.code    = get_file_id_args->notify.ok ? int64_t(reply->result().successCode()) : int64_t(reply->result().errorCode());
-        get_file_id_args->notify.message = reply->result().message   ();
-        get_file_id_args->notify.id      = reply->fileId    ();
-        get_file_id_args->notify.status  = reply->fileStatus();
-        callback_get_file_id_notiify(get_file_id_args->notify);
+        notify.finished = true;
+        notify.ok__     = reply->result().hasSuccessCode();
+        notify.code     = notify.ok__ ? int64_t(reply->result().successCode()) : int64_t(reply->result().errorCode());
+        notify.message  = reply->result().message();
+        notify.id       = reply->fileId    ();
+        notify.status   = reply->fileStatus();
+        callback_get_file_id_notiify(notify);
     };
     get_file_id(params_get_file_id, callback_get_file_id);
     return true;
@@ -759,500 +771,512 @@ bool NetworkClient::upload_file(const QString&file_path, network_file_io_notify_
     using Params   = file_upload_params;
     //
     using Header   = FileUploadHeader;
-    using Notify   = NetworkFileIONotify;
+    using Notify   = Network::FileDownloadNotify;
     using Callback = network_file_io_notify_callback;
     using Stream   = QGrpcBidiStream;
 
-    Callback callback_get_file_id_notify = [this, callback_upload_file_notify](const Notify&notify_get_file_id) {
+    Callback callback_get_file_id_notify = [this, callback_upload_file_notify](const Notify notify_get_file_id) {
         // 需要传出的函数
         struct FileUploadArgs {
             Notify notify;
             std::shared_ptr<QFile> file_upload;  // 用于传递文件句柄
             // FileDownloadHeader header;
             bool initialized  = false;  // 已经完成初始化的标记  // 接收到的是文件上传信息还是结果
-            bool error_occued = false;  // 是否已经发生错误
+            // bool error_occued = false;  // 是否已经发生错误
             // QString download_path;
             // QString real_md5;
         };
         std::shared_ptr<FileUploadArgs> file_upload_args = std::make_shared<FileUploadArgs>();
-        file_upload_args->notify = notify_get_file_id;  // 复制，便于修改
+        auto& notify = file_upload_args->notify;
+        notify = notify_get_file_id;  // 复制，便于修改
 
         // 获取文件上传 ID 错误
-        if (!file_upload_args->notify.ok || file_upload_args->notify.id.isEmpty()) {
-            callback_upload_file_notify(file_upload_args->notify);
-            return;
-        }
-        if (file_upload_args->notify.status == FileStatusCode::FILE_STATUS_UPLOADED) {
-            file_upload_args->notify.ok      = true;
-            file_upload_args->notify.code    = int64_t(SuccessCode::SUCCESS);
-            file_upload_args->notify.message = "File already uploaded.";
-            callback_upload_file_notify(file_upload_args->notify);
+        if (!notify.finished || !notify.ok__ || notify.id.isEmpty()) {
+            callback_upload_file_notify(notify);
             return;
         }
 
+        // 极速上传/服务器上已经有相同的文件了
+        if ( notify.status == FileStatusCode::FILE_STATUS_UPLOADED) {
+            notify.finished = true;
+            notify.ok__     = true;
+            notify.code     = int64_t(SuccessCode::SUCCESS);
+            notify.message  = "File already uploaded.";
+            callback_upload_file_notify(notify);
+            return;
+        }
+
+        // =================================================================== //
         // 业务逻辑
-        do {
-            // ===============                                                    //
-            Request reuest;
-            Header  header;
-            header.setRequestUserAuth(*Accounts::instance()->get_auth_request().get());
-            header.setFileId(file_upload_args->notify.id);
-            // header.setReason("upload file");
-            reuest.setHeader(header);
-            std::unique_ptr<Stream> reply_conn = m_client_file->FileUpload(reuest, m_grpc_call_options);
-            //                                                    =============== //
-            const auto *rep_conn_ptr = reply_conn.get();  // 必须
-            if (!rep_conn_ptr) {
-                file_upload_args->notify.ok      = false;
-                file_upload_args->notify.code    = int64_t(ErrorCode::ERROR_CONN);
-                file_upload_args->notify.message = "Error in connect.";
-                callback_upload_file_notify(file_upload_args->notify);
-                return;
-            }
-            // 收到数据时触发的消息  // 服务器每次 while 写数据到客户端都会触发一次
-            connect(rep_conn_ptr, &Stream::messageReceived, this,
-                [reply_conn = std::move(reply_conn), file_upload_args, callback_upload_file_notify]() {
-                    // 读取失败
-                    auto reply = reply_conn->read<FileUploadReply>();
-                    if (!reply) {
-                        file_upload_args->error_occued   = true;
-                        file_upload_args->notify.ok      = false;
-                        file_upload_args->notify.code    = int64_t(ErrorCode::ERROR_RECV);
-                        file_upload_args->notify.message = "Error in received data.";
-                        callback_upload_file_notify(file_upload_args->notify);
-                        return;
-                    }
+        Request reuest;
+        Header  header;
+        header.setRequestUserAuth(*Accounts::instance()->get_auth_request().get());
+        header.setFileId(notify.id);
+        // header.setReason("upload file");
+        reuest.setHeader(header);
+        std::unique_ptr<Stream> reply_conn = m_client_file->FileUpload(reuest, m_grpc_call_options);
+        //                                                    =============== //
+        const auto *rep_conn_ptr = reply_conn.get();  // 必须
+        if (!rep_conn_ptr) {
+            notify.finished = true;
+            notify.code     = int64_t(ErrorCode::ERROR_CONN);
+            notify.message  = "Error in connect.";
+            callback_upload_file_notify(notify);
+            return;
+        }
 
-                    // 发生错误时已经通知，后续接收到数据时忽略即可，不必通知
-                    if (file_upload_args->error_occued) {
-                        return;
-                    }
+        notify.finished = false;  // 防止提前结束
 
-                    // 获取文件信息错误
-                    if (!reply->hasResult() || !reply->result().hasSuccessCode()) {
-                        file_upload_args->error_occued = true;
-                        file_upload_args->notify.ok      = false;
-                        file_upload_args->notify.code    = int64_t(ErrorCode::FILE_UPLOAD_ERROR);
-                        file_upload_args->notify.message = "Result return error.";
-                        callback_upload_file_notify(file_upload_args->notify);
-                        return;
-                    }
-
-                    // 文件已经上传完成则直接返回成功
-                    FileStatusCode file_status = reply->fileStatus();
-                    if (file_status == FileStatusCode::FILE_STATUS_UPLOADED) {
-                        file_upload_args->notify.ok      = true;
-                        file_upload_args->notify.code    = int64_t(SuccessCode::SUCCESS);
-                        file_upload_args->notify.message = "File already uploaded.";
-                        file_upload_args->notify.status  = file_status;
-                        callback_upload_file_notify(file_upload_args->notify);
-                        return;
-                    }
-                    // 如果不是获取文件信息时返回的文件上传失败消息，
-                    // 那么就是文件上传完成后服务器返回的上传结果，
-                    // 此时的文件上传失败就是最终结果
-                    else if (file_status != FileStatusCode::FILE_STATUS_UPLOADING && file_upload_args->initialized) {
-                        file_upload_args->notify.ok      = false;
-                        file_upload_args->notify.code    = int64_t(ErrorCode::FILE_UPLOAD_ERROR);
-                        file_upload_args->notify.message = "File upload failed.";
-                        file_upload_args->notify.status  = file_status;
-                        callback_upload_file_notify(file_upload_args->notify);
-                        return;
-                    }
-
-                    // 文件头  // 判断是否需要上传及是否进行文件位置调整
-                    // 校验已上传大小是否合法
-                    file_upload_args->notify.uploaded_bytes = reply->uploadedBytes();  // 已经上传的字节数，支持断点续传时有用
-                    file_upload_args->notify.uploaded_bytes = std::max<qint64>(0, file_upload_args->notify.uploaded_bytes);
-                    if (file_upload_args->notify.uploaded_bytes > file_upload_args->notify.size) {
-                        file_upload_args->error_occued   = true;
-                        file_upload_args->notify.ok      = false;
-                        file_upload_args->notify.code    = int64_t(ErrorCode::FILE_READ_ERROR);
-                        file_upload_args->notify.message = "Uploaded bytes invalid.";
-                        callback_upload_file_notify(file_upload_args->notify);
-                        return;
-                    }
-
-                    // 发送文件内容
-
-                    file_upload_args->file_upload = std::make_shared<QFile>(file_upload_args->notify.path);
-                    // 打开文件
-                    if (!file_upload_args->file_upload->open(QIODevice::ReadOnly)) {
-                        file_upload_args->error_occued   = true;
-                        file_upload_args->notify.ok      = false;
-                        file_upload_args->notify.code    = int64_t(ErrorCode::FILE_READ_ERROR);
-                        file_upload_args->notify.message = tr("open file error.");
-                        callback_upload_file_notify(file_upload_args->notify);
-                        return;
-                    }
-
-                    // 设置文件信息，进行断点续传
-                    int64_t upload_size = std::max<qint64>(0, file_upload_args->notify.uploaded_bytes);
-                    if (!file_upload_args->file_upload->seek(upload_size)) {
-                        file_upload_args->file_upload->close();
-                        file_upload_args->error_occued   = true;
-                        file_upload_args->notify.ok      = false;
-                        file_upload_args->notify.code    = int64_t(ErrorCode::FILE_READ_ERROR);
-                        file_upload_args->notify.message = tr("Failed to seek upload file");
-                        callback_upload_file_notify(file_upload_args->notify);
-                        return;
-                    }
-
-                    // 发送文件内容
-                    const size_t chunk_size = 128 * 1024;  // 128KB
-                    while (!file_upload_args->file_upload->atEnd()) {
-                        QByteArray chunk_data = file_upload_args->file_upload->read(chunk_size);
-                        qint64 bytes_read = chunk_data.size();
-                        if (bytes_read < 0) {
-                            file_upload_args->file_upload->close();
-                            file_upload_args->error_occued   = true;
-                            file_upload_args->notify.ok      = false;
-                            file_upload_args->notify.code    = int64_t(ErrorCode::FILE_READ_ERROR);
-                            file_upload_args->notify.message = tr("Failed to read upload file");
-                            callback_upload_file_notify(file_upload_args->notify);
-                            return;
-                        }
-                        if (bytes_read == 0) {
-                            break;  // 文件读取完成
-                        }
-                        Request request;
-                        FileChunkData file_chunk_data;
-                        file_chunk_data.setChunkOffset(upload_size);
-                        file_chunk_data.setChunkData(chunk_data);
-                        request.setChunk(file_chunk_data);
-                        reply_conn->writeMessage(request);
-                        upload_size += bytes_read;
-                    }
-
-                    file_upload_args->file_upload->close();
-                    reply_conn->writesDone();
+        // 收到数据时触发的消息  // 服务器每次 while 写数据到客户端都会触发一次
+        connect(rep_conn_ptr, &Stream::messageReceived, this,
+            [reply_conn = std::move(reply_conn), file_upload_args, callback_upload_file_notify]() {
+                auto& notify = file_upload_args->notify;
+                // 读取失败
+                auto reply = reply_conn->read<FileUploadReply>();
+                if (!reply) {
+                    notify.finished = true;
+                    notify.code     = int64_t(ErrorCode::ERROR_RECV);
+                    notify.message  = "Error in received data.";
+                    callback_upload_file_notify(notify);
+                    return;
                 }
-            );
-            break;
-        } while (false);
+
+                // 发生错误或上传完成时已经通知，后续接收到数据时忽略即可，不必通知
+                if (notify.finished) {
+                    return;
+                }
+
+                // 获取文件信息错误
+                if (!reply->hasResult() || !reply->result().hasSuccessCode()) {
+                    notify.finished = true;
+                    notify.code     = int64_t(ErrorCode::FILE_UPLOAD_ERROR);
+                    notify.message  = "Result return error.";
+                    callback_upload_file_notify(notify);
+                    return;
+                }
+
+                // 文件已经上传完成则直接返回成功
+                FileStatusCode file_status = reply->fileStatus();
+                if (file_status == FileStatusCode::FILE_STATUS_UPLOADED) {
+                    notify.finished = true;
+                    notify.message  = "File already uploaded.";
+                    notify.status   = file_status;
+                    callback_upload_file_notify(notify);
+                    return;
+                }
+
+                // 如果不是获取文件信息时返回的文件上传失败消息，
+                // 那么就是文件上传完成后服务器返回的上传结果，
+                // 此时的文件上传失败就是最终结果
+                else if (file_status != FileStatusCode::FILE_STATUS_UPLOADING && file_upload_args->initialized) {
+                    notify.finished = true;
+                    notify.code     = int64_t(ErrorCode::FILE_UPLOAD_ERROR);
+                    notify.message  = "File upload failed.";
+                    notify.status   = file_status;
+                    callback_upload_file_notify(notify);
+                    return;
+                }
+
+                // 文件头  // 判断是否需要上传及是否进行文件位置调整
+                // 校验已上传大小是否合法
+                notify.uploaded_bytes = reply->uploadedBytes();  // 已经上传的字节数，支持断点续传时有用
+                notify.uploaded_bytes = std::max<qint64>(0, notify.uploaded_bytes);
+                if (notify.uploaded_bytes > notify.size) {
+                    notify.finished = true;
+                    notify.code     = int64_t(ErrorCode::FILE_READ_ERROR);
+                    notify.message  = "Uploaded bytes invalid.";
+                    callback_upload_file_notify(notify);
+                    return;
+                }
+
+                // 发送文件内容
+
+                file_upload_args->file_upload = std::make_shared<QFile>(notify.path);
+                // 打开文件
+                if (!file_upload_args->file_upload->open(QIODevice::ReadOnly)) {
+                    notify.finished = true;
+                    notify.code     = int64_t(ErrorCode::FILE_READ_ERROR);
+                    notify.message  = tr("open file error.");
+                    callback_upload_file_notify(notify);
+                    return;
+                }
+
+                // 设置文件信息，进行断点续传
+                int64_t upload_size = std::max<qint64>(0, notify.uploaded_bytes);
+                if (!file_upload_args->file_upload->seek(upload_size)) {
+                    file_upload_args->file_upload->close();
+                    notify.finished = true;
+                    notify.code     = int64_t(ErrorCode::FILE_READ_ERROR);
+                    notify.message  = tr("Failed to seek upload file");
+                    callback_upload_file_notify(notify);
+                    return;
+                }
+
+                // 发送文件内容
+                const size_t chunk_size = 128 * 1024;  // 128KB
+                while (!file_upload_args->file_upload->atEnd()) {
+                    QByteArray chunk_data = file_upload_args->file_upload->read(chunk_size);
+                    qint64 bytes_read = chunk_data.size();
+
+                    // 读取数据失败时
+                    if (bytes_read < 0) {
+                        file_upload_args->file_upload->close();
+                        notify.finished = true;
+                        notify.code     = int64_t(ErrorCode::FILE_READ_ERROR);
+                        notify.message  = tr("Failed to read upload file");
+                        callback_upload_file_notify(notify);
+                        return;
+                    }
+
+                    // 文件读取完成
+                    if (bytes_read == 0) {
+                        break;
+                    }
+
+                    // 未上传完成时需要发送数据给服务器
+                    Request request;
+                    FileChunkData file_chunk_data;
+                    file_chunk_data.setChunkOffset(upload_size);
+                    file_chunk_data.setChunkData(chunk_data);
+                    request.setChunk(file_chunk_data);
+                    reply_conn->writeMessage(request);
+                    upload_size += bytes_read;
+
+                    // 文件上传进度通知
+                    notify.finished       = false;
+                    notify.ok__           = true;
+                    notify.code           = int64_t(SuccessCode::SUCCESS);
+                    notify.message        = tr("File uploading...");
+                    // notify.id          = notify.id  ;  // 获取 ID 时已经设置
+                    notify.status         = FileStatusCode::FILE_STATUS_UPLOADING;
+                    // notify.path        = notify.path;  // 获取 ID 时已经设置
+                    // notify.name        = notify.name;  // 获取 ID 时已经设置
+                    // notify.size        = notify.size;  // 获取 ID 时已经设置
+                    // notify.md5         = notify.md5 ;  // 获取 ID 时已经设置
+                    notify.uploaded_bytes = upload_size;
+                    callback_upload_file_notify(notify);
+                }
+
+                file_upload_args->file_upload->close();
+                reply_conn->writesDone();
+            }
+        );
     };
     get_file_id(file_path, callback_get_file_id_notify);
     return true;
 }
 
-class FileDownloadNotifys {
+class FileDownloadRecords {
 public:
-    // callback_id 相同则认为是同一个回调，不再重复通知
-    bool add_notify(const QString&file_id, const QString&notify_id, const network_file_io_notify_callback& callback_download_file_notify) {
+    bool add_record(const QString&file_id) {
         QMutexLocker locker(&m_mutex);
-        auto& map_notifys = m_notifys[file_id];  // 可以自动插入
-        if ( map_notifys.contains(notify_id)) { return false; }
-        map_notifys.insert(notify_id, callback_download_file_notify);
+        if ( m_records.contains(file_id)) { return false; }
+        m_records.insert(file_id);
         return true;
     };
-    // 移除指定 notify_id 的回调
-    bool remove_notify(const QString&file_id, const QString&notify_id) {
+    bool remove_reord(const QString&file_id) {
         QMutexLocker locker(&m_mutex);
-        auto ite_map_callbacks = m_notifys.find(file_id);
-        if (ite_map_callbacks == m_notifys.end()) { return false; }
-        auto& map_callbacks = ite_map_callbacks.value();
-        auto ite_pair_callback = map_callbacks.find(notify_id);
-        if (ite_pair_callback == map_callbacks.end()) { return false; }
-        map_callbacks.erase(ite_pair_callback);
-        if (map_callbacks.isEmpty()) { m_notifys.erase(ite_map_callbacks); }
-        return true;
+        return m_records.remove(file_id);
     };
-    bool remove_notifys(const QString&file_id) {
-        QMutexLocker locker(&m_mutex);
-        // QMap::remove(key) 如果没找到会返回 0，找到了会返回删除的数量（1）
-        return m_notifys.remove(file_id) > 0;
-    };
-    void notify_all(const QString&file_id, const NetworkFileIONotify&notify) {
-        auto& map_notifys = m_notifys[file_id];  // 可以自动插入
-        for (auto&func_notify : map_notifys) {
-            func_notify(notify);
-        }
-    }
 public:
-    // std::function 没有比较函数，需要使用 ID 进行比较
-    // QMap<QString file_id, QMap<QString notify_id, network_file_io_notify_callback>>
-    QMap<QString, QMap<QString, network_file_io_notify_callback>> m_notifys;
+    QSet<QString> m_records;
     QMutex m_mutex;
 };
 
-bool NetworkClient::download_file(const QString&file_id, const QString&notify_id, network_file_io_notify_callback callback_download_file_notify) {
+// 不要同时下载一个文件
+// true 代表调用成功，不代表下载结果
+bool NetworkClient::download_file(const QString&file_id, network_file_io_notify_callback callback_download_file_notify) {
     using namespace Utils::Wrapper;
     using Request  = FileDownloadRequest;
     using Reply    = FileDownloadReply;
     using ReplyOpt = std::optional<Reply>;
     using Params   = file_download_params;
-    // 不要同时下载一个文件
-    static FileDownloadNotifys s_notifys;
-    s_notifys.add_notify(file_id, notify_id, callback_download_file_notify);
-    //
-    using Notify   = NetworkFileIONotify;
+    using Notify   = Network::FileDownloadNotify;
     using Callback = network_file_io_notify_callback;
     using Stream   = QGrpcServerStream;
+
     // 需要传出的函数
     struct FileDownloadArgs {
         using BytesMd5 = Utils::Algorithm::BytesMd5;
-        Notify notify;
+        Notify                 notify;
         std::shared_ptr<QFile> file_download;  // 用于传递文件句柄
-        FileDownloadHeader header;
-        bool     initialized  = false;  // 已经完成初始化的标记
-        bool     error_occued = false;  // 是否已经发生错误
-        // QString  download_path;
-        qint64   downloaded_size = 0;      // 已经下载的大小，支持断点续传时有用
-        QString  real_md5      ;  // hash 下载文件得出的结果
-        BytesMd5 calculated_md5;  // hash 下载的文件的工具
+        FileDownloadHeader     header;
+        bool                   initialized = false;  // 已经完成初始化的标记
+        qint64                 downloaded_size = 0;  // 已经下载的大小，支持断点续传时有用
+        QString                real_md5;  // hash 下载文件得出的结果
+        BytesMd5               calculated_md5;  // hash 下载的文件的工具
     };
-    const auto file_path = Database::instance()->get_local_file_id_path(file_id);
-    QFileInfo file_info(file_path);
-    qint64 downloaded_size = qMax<qint64>(0, file_info.size());
     // 获取下载起始位置
     std::shared_ptr<FileDownloadArgs> file_download_args = std::make_shared<FileDownloadArgs>();
-    file_download_args->notify.id       = file_id;
-    file_download_args->notify.path     = file_path;
-    file_download_args->downloaded_size = downloaded_size;
-    // 路径不为空，代表有下载记录，此时可以打开文件
-    if (!file_download_args->notify.path.isEmpty()) {
-        Utils::create_dirs(Utils::get_dir(file_download_args->notify.path));  // 确保目录存在
-        file_download_args->file_download = std::make_shared<QFile>(file_download_args->notify.path);
+    auto& notify = file_download_args->notify;
+
+    // 只修改与默认值不同的变量
+    notify.id   = file_id;
+    notify.path = Database::instance()->get_local_file_id_path(file_id);
+
+    const auto& file_info = QFileInfo(notify.path);
+    file_download_args->downloaded_size = qMax<qint64>(0, file_info.size());
+
+    // 路径不为空，代表有下载记录，此时可以打开文件。打开文件失败直接返回，成功时在下载过程中在校验 md5。
+    if (!notify.path.isEmpty()) {
+        Utils::create_dirs(Utils::get_dir(notify.path));  // 确保目录存在
+        file_download_args->file_download = std::make_shared<QFile>(notify.path);
         if (!file_download_args->file_download->open(QIODevice::ReadWrite)) {
-            file_download_args->notify.ok      = false;
-            file_download_args->notify.code    = int64_t(ErrorCode::FILE_READ_ERROR);
-            file_download_args->notify.message = tr("Failed to open file for md5 calculation: %1").arg(file_download_args->file_download->errorString());
-            s_notifys.notify_all(file_id, file_download_args->notify);
+            // 只修改与默认/当前值不同的变量
+            notify.finished = true;
+            notify.ok__     = false;
+            notify.code     = int64_t(ErrorCode::FILE_READ_ERROR);
+            notify.message  = tr("Failed to open file for md5 calculation: %1").arg(file_download_args->file_download->errorString());
+            callback_download_file_notify(notify);
             return false;
         }
     }
     // 业务逻辑
-    do {
-        // ===============                                                    //
-        Request request_download_file_param;
-        request_download_file_param.setRequestUserAuth(*Accounts::instance()->get_auth_request().get());
-        request_download_file_param.setFileId(file_download_args->notify.id);
-        request_download_file_param.setDownloadedBytes(file_download_args->downloaded_size);  // 断点续传
-        std::unique_ptr<Stream> reply_conn = m_client_file->FileDownload(request_download_file_param, m_grpc_call_options);
-        //                                                    =============== //
-        // 将 unique_ptr 转为 shared_ptr 供多个 Lambda 安全共享生命周期
-        std::shared_ptr<Stream> stream_ptr = std::move(reply_conn);
-        Stream* raw_stream = stream_ptr.get();
+    // ===============                                                    //
+    Request request_download_file_param;
+    request_download_file_param.setRequestUserAuth(*Accounts::instance()->get_auth_request().get());
+    request_download_file_param.setFileId(notify.id);
+    request_download_file_param.setDownloadedBytes(file_download_args->downloaded_size);  // 断点续传
+    std::unique_ptr<Stream> reply_conn = m_client_file->FileDownload(request_download_file_param, m_grpc_call_options);
+    //                                                    =============== //
+    // 将 unique_ptr 转为 shared_ptr 供多个 Lambda 安全共享生命周期
+    std::shared_ptr<Stream> stream_ptr = std::move(reply_conn);
+    Stream* raw_stream = stream_ptr.get();
 
-        // const auto *rep_conn_ptr = reply_conn.get();  // 必须
-        if (!raw_stream) {
-            file_download_args->notify = Notify{ .ok = false, .code = int64_t(ErrorCode::ERROR_CONN), .message = "Error in connect.", .id = file_id};
-            // callback_download_file_notify(file_download_args->notify);
-            s_notifys.notify_all(file_id, file_download_args->notify);
-            // s_tasks.remove(file_download_args->notify.id);
-            s_notifys.remove_notifys(file_download_args->notify.id);
-            return false;
-        }
-        // 收到数据时触发的消息  // 服务器每次 while 写数据到客户端都会触发一次
-        connect(raw_stream, &Stream::messageReceived, this,
-            [file_id, stream_ptr, file_download_args]() {
-                // 发生错误时已经通知，后续接收到数据时忽略即可，不必通知
-                if (file_download_args->error_occued) {
-                    s_notifys.remove_notifys(file_download_args->notify.id);
-                    return;
-                }
+    // const auto *rep_conn_ptr = reply_conn.get();  // 必须
+    if (!raw_stream) {
+        notify.finished = true;
+        notify.ok__     = false;
+        notify.code     = int64_t(ErrorCode::ERROR_CONN);
+        notify.message  = "Error in connect.";
+        callback_download_file_notify(notify);
+        return true;
+    }
 
-                // 读取失败
-                auto reply = stream_ptr->read<FileDownloadReply>();
-                if (!reply) {
-                    file_download_args->error_occued   = true;
-                    file_download_args->notify.ok      = false;
-                    file_download_args->notify.code    = int64_t(ErrorCode::ERROR_RECV);
-                    file_download_args->notify.message = "Error in received data.";
-                    // callback_download_file_notify(file_download_args->notify);
-                    s_notifys.notify_all(file_id, file_download_args->notify);
-                    s_notifys.remove_notifys(file_download_args->notify.id);
-                    return;
-                }
+    notify.finished = false;  // 防止提前结束
 
-                // 文件头
-                if (!file_download_args->initialized) {
-                    if (!reply->hasHeader()) {
-                        file_download_args->error_occued   = true;
-                        file_download_args->notify.ok      = false;
-                        file_download_args->notify.code    = int64_t(ErrorCode::ERROR_RECV);
-                        file_download_args->notify.message = "Error in read reply : no header info found.";
-                        s_notifys.notify_all(file_id, file_download_args->notify);
-                        s_notifys.remove_notifys(file_download_args->notify.id);
-                        return;
-                    }
-
-                    file_download_args->header = reply->header();  // 导出
-                    if (!file_download_args->header.result().hasSuccessCode()) {
-                        file_download_args->error_occued   = true;
-                        file_download_args->notify.ok      = false;
-                        file_download_args->notify.code    = int64_t(ErrorCode::FILE_DOWNLOAD_ERROR);
-                        file_download_args->notify.message = "Header return error.";
-                        s_notifys.notify_all(file_id, file_download_args->notify);
-                        s_notifys.remove_notifys(file_download_args->notify.id);
-                        return;
-                    }
-
-                    // 如果是有效的文件头信息，将有效信息保存到用于通知的结构体中
-                    auto file_metadata = file_download_args->header.fileMetadata();
-                    file_download_args->notify.name = file_download_args->header.fileMetadata().fileName();
-                    file_download_args->notify.size = file_download_args->header.fileMetadata().fileSize();
-                    file_download_args->notify.md5  = file_download_args->header.fileMetadata().fileMd5();
-
-                    // 校验参数是否有效
-                    if (file_download_args->notify.name.isEmpty() || file_download_args->notify.size < 0 || file_download_args->notify.md5.isEmpty()) {
-                        file_download_args->error_occued   = true;
-                        file_download_args->notify.ok      = false;
-                        file_download_args->notify.code    = int64_t(ErrorCode::FILE_DOWNLOAD_ERROR);
-                        file_download_args->notify.message = "Header's filemeta info not valid.";
-                        s_notifys.notify_all(file_id, file_download_args->notify);
-                        s_notifys.remove_notifys(file_download_args->notify.id);
-                        return;
-                    }
-
-                    // 存储路径为空且文件未打开时，进行初始化
-                    if ( file_download_args->notify.path.isEmpty() && !file_download_args->file_download) {
-                        file_download_args->notify.path = QString("%1/%2.part").arg(Utils::user_cache_path()).arg(file_download_args->notify.name);  //  未下载完成时添加标记
-                        // 保存 file_id 和 本地路径的映射关系，以便后续根据 file_id 获取本地文件路径进行删除等操作
-                        Database::instance()->save_local_file_id_path(file_download_args->notify.id, file_download_args->notify.path); // 未下载完成时也进行存储，下载完成后再重命名及更新记录
-                        Utils::create_dirs(Utils::get_dir(file_download_args->notify.path));  // 确保目录存在
-                        file_download_args->file_download = std::make_shared<QFile>(file_download_args->notify.path);
-                        if (!file_download_args->file_download || !file_download_args->file_download->open(QIODevice::ReadWrite)) {
-                            file_download_args->error_occued   = true;
-                            file_download_args->notify.ok      = false;
-                            file_download_args->notify.code    = int64_t(ErrorCode::FILE_WRITE_ERROR);
-                            file_download_args->notify.message = "Open file error.";
-                            s_notifys.notify_all(file_id, file_download_args->notify);
-                            s_notifys.remove_notifys(file_download_args->notify.id);
-                            return;
-                        }
-                    }
-
-                    // 文件大小异常时可以跳转到截断位置
-                    int64_t file_offset = file_download_args->header.offset();
-                    // 计算已有文件的 md5  // 只读取到下载起始位置与实际文件大小中的下限位置处即可
-                    int64_t unread_bytes = file_offset;
-                    file_download_args->calculated_md5.reset();
-                    while (file_download_args->file_download && unread_bytes > 0 && !file_download_args->file_download->atEnd()) {
-                        const size_t chunk_size = 128 * 1024;  // 128KB
-                        QByteArray chunk_data = file_download_args->file_download->read(chunk_size);
-                        file_download_args->calculated_md5.update(chunk_data);
-                        unread_bytes -= chunk_data.size();
-                    }
-                    // 截断之后的数据
-                    file_download_args->file_download->resize(file_download_args->file_download->pos());
-
-                    file_download_args->initialized  = true ;  // 已经成功初始化
-                    file_download_args->error_occued = false;
-
-                    // 第一个包是文件信息时，走到这里就已经处理完成
-                    return;
-                }
-
-                // 写入数据
-                if (!reply->hasChunk()) {
-                    // 服务器最后一次发送消息？？
-                    if (reply->hasHeader()) {
-                        // 服务器返回的第一个包就是文件信息时，走到这里说明文件信息有问题
-                        file_download_args->error_occued   = true;
-                        file_download_args->notify.ok      = true;
-                        file_download_args->notify.code    = int64_t(SuccessCode::SUCCESS);
-                        file_download_args->notify.message = QString("Recv header info, downloaded size: %1, file size : %2")
-                            .arg(file_download_args->notify.uploaded_bytes).arg(file_download_args->notify.size);
-                        s_notifys.notify_all(file_id, file_download_args->notify);
-                        return;
-                    }
-                    file_download_args->error_occued   = true;
-                    file_download_args->notify.ok      = false;
-                    file_download_args->notify.code    = int64_t(ErrorCode::FILE_DOWNLOAD_ERROR);
-                    file_download_args->notify.message = "Error in read reply : no chunk data found.";
-                    s_notifys.notify_all(file_id, file_download_args->notify);
-                    s_notifys.remove_notifys(file_download_args->notify.id);
-                    return;
-                }
-                auto chunk_data = reply->chunk().chunkData();
-                qint64 chunk_size = chunk_data.size();
-                // 有数据时进行写入
-                if (!chunk_data.isEmpty()) {
-                    qint64 bytes_written = file_download_args->file_download->write(chunk_data);
-                    if (bytes_written != chunk_size) {
-                        file_download_args->error_occued   = true;
-                        file_download_args->notify.ok      = false;
-                        file_download_args->notify.code    = int64_t(ErrorCode::FILE_WRITE_ERROR);
-                        file_download_args->notify.message = QString("Write file chunk error.\n\npath: %1.\nerror message: %2")
-                            .arg(file_download_args->notify.path).arg(file_download_args->file_download->errorString());
-                        s_notifys.notify_all(file_id, file_download_args->notify);
-                        s_notifys.remove_notifys(file_download_args->notify.id);
-                        return;
-                    }
-
-                    // md5 校验
-                    file_download_args->calculated_md5.update(chunk_data);
-                    // 防止 uploaded_bytes 为默认的无效值 -1
-                    file_download_args->notify.uploaded_bytes = qMax(0, file_download_args->notify.uploaded_bytes);
-                    file_download_args->notify.uploaded_bytes += bytes_written;
-
-                    // 写入成功时的进度通知
-                    // file_download_args->error_occued  = false;
-                    file_download_args->notify.ok        = true;
-                    file_download_args->notify.code      = int64_t(SuccessCode::SUCCESS);
-                    file_download_args->notify.status    = FileStatusCode::FILE_STATUS_UPLOADING;
-                    file_download_args->notify.message   = "Write chunk data success.";
-                    file_download_args->notify.uploading = true;
-                    s_notifys.notify_all(file_id, file_download_args->notify);
-                }
+    // 收到数据时触发的消息  // 服务器每次 while 写数据到客户端都会触发一次
+    connect(raw_stream, &Stream::messageReceived, this,
+        [stream_ptr, file_download_args, callback_download_file_notify]() {
+            auto& notify = file_download_args->notify;
+            // 发生错误时已经通知，后续接收到数据时忽略即可，不必通知
+            // if (file_download_args->error_occued) {
+            if (notify.finished) {
+                callback_download_file_notify(notify);  // 可能不需要再次广播
+                return;
             }
-        );
-        // 捕获输出返回信息  // 单次模型需要使用 `Qt::SingleShotConnection` 以便结束后销毁
-        // lamda 表达式不可使用引用，会造成生命周期问题
-        connect(raw_stream, &QGrpcCallReply::finished, this,
-            [this, file_id, stream_ptr, file_download_args](const QGrpcStatus &status) mutable {
-                do {
-                    // 关闭文件句柄
-                    if (file_download_args->file_download && file_download_args->file_download->isOpen()) {
-                        file_download_args->file_download->close();
+
+            // 读取失败
+            auto reply = stream_ptr->read<FileDownloadReply>();
+            if (!reply) {
+                notify.finished = true;
+                notify.ok__     = false;
+                notify.code     = int64_t(ErrorCode::ERROR_RECV);
+                notify.message  = "Error in received data.";
+                callback_download_file_notify(notify);
+                return;
+            }
+
+            // 文件头
+            if (!file_download_args->initialized) {
+                if (!reply->hasHeader()) {
+                    notify.finished = true;
+                    notify.ok__     = false;
+                    notify.code     = int64_t(ErrorCode::ERROR_RECV);
+                    notify.message  = "Error in read reply : no header info found.";
+                    callback_download_file_notify(notify);
+                    return;
+                }
+
+                file_download_args->header = reply->header();  // 导出
+                if (!file_download_args->header.result().hasSuccessCode()) {
+                    notify.finished = true;
+                    notify.ok__     = false;
+                    notify.code     = int64_t(ErrorCode::FILE_DOWNLOAD_ERROR);
+                    notify.message  = "Header return error.";
+                    callback_download_file_notify(notify);
+                    return;
+                }
+
+                // 如果是有效的文件头信息，将有效信息保存到用于通知的结构体中
+                const auto& file_metadata = file_download_args->header.fileMetadata();
+                notify.name = file_metadata.fileName();
+                notify.size = file_metadata.fileSize();
+                notify.md5  = file_metadata.fileMd5 ();
+
+                // 校验参数是否有效
+                if (notify.name.isEmpty() || notify.size < 0 || notify.md5.isEmpty()) {
+                    notify.finished = true;
+                    notify.ok__     = false;
+                    notify.code     = int64_t(ErrorCode::FILE_DOWNLOAD_ERROR);
+                    notify.message  = "Header's filemeta info not valid.";
+                    callback_download_file_notify(notify);
+                    return;
+                }
+
+                // TODO:先检查最终目标，然后再检查临时文件
+                // 存储路径为空且文件未打开时，进行初始化
+                if ( notify.path.isEmpty() && !file_download_args->file_download) {
+                    notify.path = QString("%1/%2.part").arg(Utils::user_cache_path()).arg(notify.name);  //  未下载完成时添加标记
+                    // 保存 file_id 和 本地路径的映射关系，以便后续根据 file_id 获取本地文件路径进行删除等操作
+                    Database::instance()->save_local_file_id_path(notify.id, notify.path); // 未下载完成时也进行存储，下载完成后再重命名及更新记录
+                    Utils::create_dirs(Utils::get_dir(notify.path));  // 确保目录存在
+                    file_download_args->file_download = std::make_shared<QFile>(notify.path);
+                    if (!file_download_args->file_download || !file_download_args->file_download->open(QIODevice::ReadWrite)) {
+                        notify.finished = true;
+                        notify.ok__     = false;
+                        notify.code     = int64_t(ErrorCode::FILE_WRITE_ERROR);
+                        notify.message  = "Open file error.";
+                        callback_download_file_notify(notify);
+                        return;
                     }
+                }
 
-                    if (!QFile(file_download_args->notify.path).open(QIODevice::ReadWrite)) {
-                        qDebug().noquote().nospace() << QString("failed to open file %1").arg(file_download_args->notify.path);
-                    }
+                // 文件大小异常时可以跳转到截断位置
+                int64_t file_offset = file_download_args->header.offset();
+                // 计算已有文件的 md5  // 只读取到下载起始位置与实际文件大小中的下限位置处即可
+                int64_t unread_bytes = file_offset;
+                file_download_args->calculated_md5.reset();
+                while (file_download_args->file_download && unread_bytes > 0 && !file_download_args->file_download->atEnd()) {
+                    const size_t chunk_size = 128 * 1024;  // 128KB
+                    QByteArray chunk_data = file_download_args->file_download->read(chunk_size);
+                    file_download_args->calculated_md5.update(chunk_data);
+                    unread_bytes -= chunk_data.size();
+                }
+                // 截断之后的数据
+                file_download_args->file_download->resize(file_download_args->file_download->pos());
+                file_download_args->initialized = true ;  // 已经成功初始化
 
-                    // 服务器返回错误
-                    if (!status.isOk()) {
-                        file_download_args->error_occued   = true;
-                        file_download_args->notify.ok      = false;
-                        file_download_args->notify.code    = int64_t(ErrorCode::ERROR_CONN);
-                        file_download_args->notify.message = "Error in received data.";
-                        s_notifys.notify_all(file_id, file_download_args->notify);
-                        break;
-                    }
+                notify.finished = false;  // 没有发生错误或下载完成，后面还需要继续操作
+                notify.ok__     = true;  // 未发生错误
 
-                    // 文件校验失败  // 先注释掉通知，下载出错时已经发送过通知了
-                    // file_download_params->real_md5 = Utils::Algorithm::calculate_file_md5(file_download_params->notify.path);
-                    if (file_download_args->notify.md5 != file_download_args->calculated_md5.get_hex_string()) {
-                        // file_download_args->error_occued   = true;
-                        // file_download_args->notify.ok      = false;
-                        // file_download_args->notify.code    = int64_t(ErrorCode::FILE_DOWNLOAD_ERROR);
-                        // file_download_args->notify.message = "Error in received data.";
-                        // callback_download_file_notify(file_download_args->notify);
-                        break;
-                    }
+                // 第一个包是文件信息时，走到这里就已经处理完成
+                return;
+            }
 
-                    // 移动文件及更新记录
-                    QString new_file_path = QString("%1/%2").arg(Utils::user_download_path()).arg(file_download_args->notify.name);  //  下载完成后的保存位置
-                    // 会自动创建父目录
-                    Utils::rename(file_download_args->notify.path, new_file_path);
-                    Database::instance()->save_local_file_id_path(file_download_args->notify.id, new_file_path); // 下载完成后需要更新记录
+            // 写入数据
+            // 文件上传完成后最后一条消息也会触发该判断，但实际并不是错误，不需要报错
+            if (!reply->hasChunk()) {
+                // notify.finished = true;
+                // notify.ok__     = false;
+                // notify.code     = int64_t(ErrorCode::FILE_DOWNLOAD_ERROR);
+                // notify.message  = "Error in read reply : no chunk data found.";
+                // callback_download_file_notify(notify);
+                return;
+            }
 
-                    // 文件下载完成时的结果通知
-                    emit SignalInner::instance()->signal_file_id_downloaded(file_download_args->notify.id);
-                    file_download_args->error_occued   = false;
-                    file_download_args->notify.ok      = true;
-                    file_download_args->notify.code    = int64_t(SuccessCode::SUCCESS);
-                    file_download_args->notify.status  = FileStatusCode::FILE_STATUS_UPLOADED;
-                    file_download_args->notify.message = tr("Download completed: %1").arg(file_download_args->notify.path);
-                    file_download_args->notify.uploading = false;
-                    s_notifys.notify_all(file_id, file_download_args->notify);
-                } while (false);
-                s_notifys.remove_notifys(file_download_args->notify.id);
-            }, Qt::SingleShotConnection
-        );
-        break;
-    } while (false);
-    return false;
+            auto& chunk_data = reply->chunk().chunkData();
+            qint64 chunk_size = chunk_data.size();
+            // 有数据时进行写入
+            if (!chunk_data.isEmpty()) {
+                qint64 bytes_written = file_download_args->file_download->write(chunk_data);
+
+                // 写入失败
+                if (bytes_written != chunk_size) {
+                    notify.finished = true;
+                    notify.ok__     = false;
+                    notify.code     = int64_t(ErrorCode::FILE_WRITE_ERROR);
+                    notify.message  = QString("Write file chunk error.\n\npath: %1.\nerror message: %2")
+                        .arg(notify.path).arg(file_download_args->file_download->errorString());
+                    callback_download_file_notify(notify);
+                    return;
+                }
+
+                // md5 校验
+                file_download_args->calculated_md5.update(chunk_data);
+                // 防止 uploaded_bytes 为默认的无效值 -1
+                notify.uploaded_bytes = qMax(0, notify.uploaded_bytes);
+                notify.uploaded_bytes += bytes_written;
+
+                // 写入成功时的进度通知
+                notify.finished = false;
+                notify.ok__     = true;
+                notify.code     = int64_t(SuccessCode::SUCCESS);
+                notify.message  = "Write chunk data success.";
+                notify.status   = FileStatusCode::FILE_STATUS_UPLOADING;
+                callback_download_file_notify(notify);
+            }
+        }
+    );
+
+    // 捕获输出返回信息  // 单次模型需要使用 `Qt::SingleShotConnection` 以便结束后销毁
+    // lamda 表达式不可使用引用，会造成生命周期问题
+    // 流结束时发送的消息
+    connect(raw_stream, &QGrpcCallReply::finished, this,
+        [this, stream_ptr, file_download_args, callback_download_file_notify](const QGrpcStatus &status) mutable {
+            auto& notify = file_download_args->notify;
+            // 关闭文件句柄
+            if (file_download_args->file_download && file_download_args->file_download->isOpen()) {
+                file_download_args->file_download->close();
+            }
+
+            // 测试读取是否异常
+            if (!QFile(notify.path).open(QIODevice::ReadWrite)) {
+                qDebug().noquote().nospace() << QString("failed to open file %1").arg(notify.path);
+            }
+
+            // 服务器返回错误
+            if (!status.isOk()) {
+                notify.finished = true;
+                notify.ok__     = false;
+                notify.code     = int64_t(ErrorCode::ERROR_CONN);
+                notify.message  = "Error in received data.";
+                callback_download_file_notify(notify);
+                return;
+            }
+
+            // 文件校验失败  // 先注释掉通知，下载出错时已经发送过通知了
+            // file_download_params->real_md5 = Utils::Algorithm::calculate_file_md5(notify.path);
+            if ( notify.md5 != file_download_args->calculated_md5.get_hex_string()) {
+                // notify.finished = true;
+                // notify.ok__     = false;
+                // notify.code     = int64_t(ErrorCode::FILE_DOWNLOAD_ERROR);
+                // notify.message  = "Error in received data.";
+                // callback_download_file_notify(notify);
+                return;
+            }
+
+            // 移动文件及更新记录
+            QString new_file_path = QString("%1/%2").arg(Utils::user_download_path()).arg(notify.name);  //  下载完成后的保存位置
+            // 会自动创建父目录
+            Utils::rename(notify.path, new_file_path);
+            Database::instance()->save_local_file_id_path(notify.id, new_file_path); // 下载完成后需要更新记录
+
+            // 文件下载完成时的结果通知
+            // emit SignalInner::instance()->signal_file_downloaded(notify.id);
+            notify.finished  = true;  // 任务结束(下载完成)
+            notify.ok__      = true;  // 没有发生错误
+            notify.code      = int64_t(SuccessCode::SUCCESS);  // 成功代码
+            notify.message   = tr("Download completed: %1").arg(notify.path);
+            notify.status    = FileStatusCode::FILE_STATUS_UPLOADED;  // 文件下载完成
+            callback_download_file_notify(notify);
+        }, Qt::SingleShotConnection
+    );
+    return true;
+}
+
+bool NetworkClient::download_file_notify_signal(const QString& file_id) {
+    static FileDownloadRecords s_records;
+    // 文件ID加入队列
+    if(!s_records.add_record(file_id)) {
+        return false;
+    }
+    network_file_io_notify_callback callback_download_file_notify = [this](const Network::FileDownloadNotify notify) {
+        if (!notify.finished) {
+            emit SignalInner::instance()->signal_download_file(notify);  // 广播下载通知
+        }
+        else if ( notify.finished) {
+            // 下载出错
+            if (!notify.ok__) {
+                emit SignalInner::instance()->signal_file_download_error(notify);
+            }
+            // 非下载过程中的通知
+            else if (notify.status == FileStatusCode::FILE_STATUS_UPLOADED) {
+                emit SignalInner::instance()->signal_file_downloaded(notify);
+            }
+            s_records.remove_reord(notify.id);
+        }
+    };
+    download_file(file_id, callback_download_file_notify);
+    return true;
 }

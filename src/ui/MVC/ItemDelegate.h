@@ -126,7 +126,7 @@ public:
                     if (cache.radius      != radius                    ||
                         data->avatar_id   != contact_data->avatar_id   ||
                         data->avatar_path != contact_data->avatar_path ||
-                        data->avatar_image.isNull() ||
+                        data->avatar_image->isNull() ||
                         cache.image.isNull()
                     ) {
                         s_caches.erase(account_id);
@@ -137,7 +137,7 @@ public:
                     auto&cache   = s_caches[account_id];
                     cache.data   = std::make_shared<ContactData::ItemData>(*contact_data);  // 拷贝复制
                     cache.radius = radius;
-                    cache.image  = Utils::to_round_image(cache.data->avatar_image, radius);
+                    cache.image  = Utils::to_round_image(*cache.data->avatar_image.get(), radius);
                 }
                 return s_caches[account_id].image;
             };
@@ -418,7 +418,7 @@ public:
                         if (cache.radius      != radius                     ||
                             data->avatar_id   != chatroom_data->avatar_id   ||
                             data->avatar_path != chatroom_data->avatar_path ||
-                            data->avatar_image.isNull() ||
+                            data->avatar_image->isNull() ||
                             cache.image.isNull()
                         ) {
                             s_caches.erase(chatroom_id);
@@ -427,7 +427,7 @@ public:
                     }
                     // 存入的数据无效但新数据有效时需要刷新
                     else if (!cache.data || cache.image.isNull()) {
-                        if(!chatroom_data->avatar_image.isNull()) {
+                        if(!chatroom_data->avatar_image->isNull()) {
                             s_caches.erase(chatroom_id);
                         }
                     }
@@ -437,7 +437,7 @@ public:
                     auto&cache   = s_caches[chatroom_id];
                     cache.data   = std::make_shared<ChatroomData::ItemData>(*chatroom_data);  // 拷贝复制
                     cache.radius = radius;
-                    cache.image  = Utils::to_round_image(cache.data->avatar_image, radius);
+                    cache.image  = Utils::to_round_image(*cache.data->avatar_image.get(), radius);
                 }
                 return s_caches[chatroom_id].image;
             };

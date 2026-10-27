@@ -26,11 +26,12 @@ public:
     std::shared_ptr<ContactWindow> get_user_window() const;
 
 // Q_SIGNALS:
-//     void SearchEditTextChanged(const QString &);
+//     void signal_search_edit_text_changed(const QString &);
 
 public slots:
     // 更新搜索结果中显示的数据
     void slot_update_search_list_info(std::shared_ptr<ContactData::ItemData> to_contact_data);
+    void slot_file_downloaded        (const Network::FileDownloadNotify notify);
 
 private:
     bool do_search   (const QString&keyword);

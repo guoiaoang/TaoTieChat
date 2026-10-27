@@ -105,7 +105,7 @@ void AuthWindow::clear_login_info() {
 }
 
 void AuthWindow::reload_login_config(bool auto_login) {
-    // 1. 清除页面数据
+    // 清除页面数据
     clear_login_info();
     // 加载登录记录
     m_auth_opts = AuthOptRW::load();
@@ -366,9 +366,8 @@ bool AuthWindow::slot_signin_successd(signin_params params_signin, signin_reply 
     // 实际上登陆消息瞬间完成，延迟 1 秒再显示主界面，防止用户误以为登陆窗口闪烁的错误判断
     QTimer::singleShot(1000, this, [this]() {
         status_signin_unblock(true);
-        // this->accepted();
         this->accepted();  // 关闭窗口
-        emit SignalInner::instance()->accepted();  // 发送信号
+        emit SignalInner::instance()->signal_signin();  // 发送信号
 
         // 清除登陆页面信息
         // 需要在切换窗口显示后清除，而非收到消息时立即清除

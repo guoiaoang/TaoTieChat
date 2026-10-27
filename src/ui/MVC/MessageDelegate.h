@@ -71,9 +71,9 @@ public:
 
     /// 缓存运行统计（窗口顶部的状态栏显示，用于验证缓存是否生效）
     struct CacheStats {
-        int cachedDocs = 0;    ///< 当前缓存的 QTextDocument 数量
-        qint64 docCreated = 0; ///< 历史创建（含 HTML 解析）次数，越小越好
-        qint64 relayouts = 0;  ///< 历史重排版次数（仅由宽度变化触发）
+        int    cachedDocs = 0;  // 当前缓存的 QTextDocument 数量
+        qint64 docCreated = 0;  // 历史创建（含 HTML 解析）次数，越小越好
+        qint64 relayouts  = 0;  // 历史重排版次数（仅由宽度变化触发）
     };
     CacheStats cacheStats() const {
         return CacheStats{ int(m_cache.size()), m_createCount, m_layoutCount };
@@ -82,16 +82,6 @@ public:
 public slots:
     /// 清空全部缓存（模型行删除 / 重置 / 数据变化 / 字体变化时调用）
     void clearCache();
-
-// signals:
-//     void signal_open_link  (const QString &href);
-//     void signal_open_file  (std::shared_ptr<MessageData::ItemData> message_data);
-//     void signal_open_folder(std::shared_ptr<MessageData::ItemData> message_data);
-//     void signal_open_data  (std::shared_ptr<MessageData::ItemData> message_data);
-//     void signal_copy_data  (std::shared_ptr<MessageData::ItemData> message_data);
-//     void signal_copy_file  (std::shared_ptr<MessageData::ItemData> message_data);
-//     void signal_copy_path  (std::shared_ptr<MessageData::ItemData> message_data);
-//     void signal_save_to    (std::shared_ptr<MessageData::ItemData> message_data);
 
 private:
     std::shared_ptr<ItemGeometry> itemGeometry(const QStyleOptionViewItem &option, const QModelIndex &index) const;
@@ -104,7 +94,7 @@ private:
 
     /// 取（或按需缩放）某行图片，返回适配 (maxW, maxH) 且考虑设备像素比的
     /// 位图（同样走 LRU 缓存：宽度变化只重缩放、不重新解码原图）。
-    const QPixmap *acquireImage(const QModelIndex &index, qreal maxW, qreal maxH) const;
+    const QImage *acquireImage(const QModelIndex &index, qreal maxW, qreal maxH) const;
 
     /// 超出上限时按 lastUsed 淘汰最久未用的文档
     void trimCache() const;
@@ -124,43 +114,43 @@ private:
     void syncSelectedText(QTextDocument *doc);
 
 private:
-    int m_selRow = -1;       ///< 选区所在行
-    int m_selAnchor = -1;    ///< 选区锚点（按下处）文档位置
-    int m_selCursor = -1;    ///< 选区光标（当前处）文档位置
-    bool m_selecting = false;///< 是否正处于拖动选择中
-    QString m_selectedText;  ///< 已选文字缓存（U+2029 已替换为 '\n'）
-    QString m_pendingLink;   ///< 按下时命中的链接（松开时若未拖动则触发）
-    QPoint m_pressViewportPos; ///< 按下位置（用于区分点击与拖动）
+    int     m_selRow    =    -1;  // 选区所在行
+    int     m_selAnchor =    -1;  // 选区锚点（按下处）文档位置
+    int     m_selCursor =    -1;  // 选区光标（当前处）文档位置
+    bool    m_selecting = false;  // 是否正处于拖动选择中
+    QString m_selectedText;       // 已选文字缓存（U+2029 已替换为 '\n'）
+    QString m_pendingLink;        // 按下时命中的链接（松开时若未拖动则触发）
+    QPoint  m_pressViewportPos;   // 按下位置（用于区分点击与拖动）
 
-    /// 一个条目的完整绘制几何信息（paint / sizeHint / editorEvent 共用，
-    /// 保证三者对同一行的布局计算完全一致）
+    // 一个条目的完整绘制几何信息（paint / sizeHint / editorEvent 共用，
+    // 保证三者对同一行的布局计算完全一致）
     struct ItemGeometry {
-        QImage source_image;
-        QString fileName;            ///< 文件消息：已按宽度省略的显示名
-        qint64 fileSize = 0;         ///< 文件消息：字节数
+        QImage  source_image;
+        QString fileName    ;  // 文件消息：已按宽度省略的显示名
+        qint64  fileSize = 0;  // 文件消息：字节数
         //
-        int      viewport_width = 0;      ///< 视口宽度（决定气泡最大宽度）
-        QPointF  text_document_origin;          ///< 文档/图片内容在 viewport 坐标系中的原点
-        QRectF   rect_avatar;
-        QRectF   rect_bubble;
-        const QPixmap *scaled_pixmap = nullptr;  ///< 图片消息：缩放后的位图（缓存条目持有）
+        int            viewport_width = 0;    // 视口宽度（决定气泡最大宽度）
+        QPointF        text_document_origin;  // 文档/图片内容在 viewport 坐标系中的原点
+        QRectF         rect_avatar;
+        QRectF         rect_bubble;
+        const QImage  *scaled_image  = nullptr;  // 图片消息：缩放后的位图（缓存条目持有）
         QTextDocument *text_document = nullptr;
     };
 
     struct DocEntry {
-        QTextDocument *doc = nullptr; ///< Text/System：解析后的文档
-        QPixmap pixmap;               ///< Image：按当前宽度缩放后的位图
-        qreal naturalWidth = -1;      ///< 不换行时的自然宽度（创建时测得，用于气泡自适应收窄）
-        qreal textWidth = -1;         ///< 当前排版宽度；-1 表示尚未排版
-        qreal pixmapWidth = -1;       ///< 当前图片逻辑宽度；-1 表示尚未缩放
-        qint64 lastUsed = 0;          ///< LRU 代际号
+        QTextDocument *doc = nullptr;  // Text/System：解析后的文档
+        QImage image;              // Image：按当前宽度缩放后的位图
+        qreal  naturalWidth = -1;  // 不换行时的自然宽度（创建时测得，用于气泡自适应收窄）
+        qreal  textWidth    = -1;  // 当前排版宽度；-1 表示尚未排版
+        qreal  imageWidth   = -1;  // 当前图片逻辑宽度；-1 表示尚未缩放
+        qint64 lastUsed     =  0;  // LRU 代际号
     };
 
-    mutable QHash<int, DocEntry> m_cache; ///< key: row
-    mutable qint64 m_generation = 0;      ///< LRU 代际计数器
-    mutable qint64 m_createCount = 0;     ///< 统计：创建次数
-    mutable qint64 m_layoutCount = 0;     ///< 统计：重排版次数
+    mutable QHash<int, DocEntry> m_cache;  // key: row
+    mutable qint64 m_generation  = 0;      // LRU 代际计数器
+    mutable qint64 m_createCount = 0;      // 统计：创建次数
+    mutable qint64 m_layoutCount = 0;      // 统计：重排版次数
     MessageData::ChatTheme m_theme;
 
-    static constexpr int kMaxCachedDocs = 200;
+    static constexpr int kMaxCachedDocs = 200;  // 缓存限制
 };

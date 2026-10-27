@@ -68,6 +68,7 @@ private:
     // 新添加好友时刷新好友关系状态
     void slot_contact_status_changed(QVector<std::shared_ptr<ContactData::ItemData>> to_contact_datas);
     void slot_contact_info_changed  (        std::shared_ptr<ContactData::ItemData>  to_contact_data  );
+    void slot_file_downloaded       (const Network::FileDownloadNotify notify);
 
     // view_avatar 在媒体窗口查看当前头像
     void view_avatar();

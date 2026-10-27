@@ -704,7 +704,7 @@ std::shared_ptr<ContactData::ItemData> to_contact_data(std::shared_ptr<ContactIn
         contact_data->is_friend    = Accounts::instance()->is_friend(contact_data->account_id);
         contact_data->display_name = Utils::get_display_name(contact_info);
         contact_data->avatar_path  = Database::instance()->get_local_file_id_path(contact_data->avatar_id);
-        contact_data->avatar_image = QImage(contact_data->avatar_path);
+        contact_data->avatar_image = std::make_shared<QImage>(contact_data->avatar_path);
     } while(false);
     return contact_data;
 }

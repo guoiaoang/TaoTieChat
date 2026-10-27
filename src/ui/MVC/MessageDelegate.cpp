@@ -155,14 +155,14 @@ QTextDocument *MessageDelegate::acquireDocument(const QModelIndex &index, qreal 
 }
 
 // 生成图片消息
-const QPixmap *MessageDelegate::acquireImage(const QModelIndex &index, qreal maxW, qreal maxH) const {
+const QImage *MessageDelegate::acquireImage(const QModelIndex &index, qreal maxW, qreal maxH) const {
     const int row = index.row();
     if (!m_cache.contains(row)) {
         DocEntry entry;
         entry.lastUsed = ++m_generation;
         m_cache[row] = entry;
     }
-    auto&entry = m_cache[row];
+    auto& entry = m_cache[row];
     entry.lastUsed = ++m_generation;
 
     do {
@@ -177,26 +177,26 @@ const QPixmap *MessageDelegate::acquireImage(const QModelIndex &index, qreal max
         bool is_me     = message_data->is_me;
 
         if (!is_image) { break; }
-        auto pixmap = message_data->image->pixmap;
-        if (pixmap.isNull()) { return nullptr; }
+        const auto& image = message_data->image->image;
+        if (image->bytesPerLine()) { return nullptr; }
 
         // 等比缩放到 (maxW, maxH) 以内；小图不放大
-        const qreal scale   = qMin<qreal>(1.0, qMin(maxW / pixmap.width(), maxH / pixmap.height()));
-        const qreal targetW = qMax<qreal>(1.0, pixmap.width () * scale);
-        const qreal targetH = qMax<qreal>(1.0, pixmap.height() * scale);
+        const qreal scale   = qMin<qreal>(1.0, qMin(maxW / image->width(), maxH / image->height()));
+        const qreal targetW = qMax<qreal>(1.0, image->width () * scale);
+        const qreal targetH = qMax<qreal>(1.0, image->height() * scale);
 
-        if (entry.pixmap.isNull() || qAbs(entry.pixmapWidth - targetW) > 0.5) {
+        if (entry.image.isNull() || qAbs(entry.imageWidth - targetW) > 0.5) {
             // 宽度变化（窗口 resize / 首次布局）：按设备像素比重缩放，保证高 DPI 清晰
             const qreal dpr = qApp->devicePixelRatio();
-            entry.pixmap = pixmap.scaled(qRound(targetW * dpr), qRound(targetH * dpr), Qt::IgnoreAspectRatio, Qt::SmoothTransformation);
-            entry.pixmap.setDevicePixelRatio(dpr);
-            entry.pixmapWidth = targetW;
+            entry.image = image->scaled(qRound(targetW * dpr), qRound(targetH * dpr), Qt::IgnoreAspectRatio, Qt::SmoothTransformation);
+            entry.image.setDevicePixelRatio(dpr);
+            entry.imageWidth = targetW;
             ++m_layoutCount; // 与文档重排版同口径计入统计
         }
 
         trimCache();
     } while (false);
-    return &entry.pixmap;
+    return &entry.image;
 }
 
 void MessageDelegate::trimCache() const {
@@ -277,10 +277,10 @@ std::shared_ptr<MessageDelegate::ItemGeometry> MessageDelegate::itemGeometry(con
         // 图片消息
         else if (is_image) {
             // 图片消息：缩放位图 + 气泡内边距
-            item_geometry->scaled_pixmap = acquireImage(index, max_bubble_width, kMaxImageHeight);
-            const qreal dpr           = item_geometry->scaled_pixmap ? item_geometry->scaled_pixmap->devicePixelRatio() : 1.0;
-            const qreal image_width   = item_geometry->scaled_pixmap ? item_geometry->scaled_pixmap->width () / dpr     : kMinTextWidth;
-            const qreal image_height  = item_geometry->scaled_pixmap ? item_geometry->scaled_pixmap->height() / dpr     : 0;
+            item_geometry->scaled_image = acquireImage(index, max_bubble_width, kMaxImageHeight);
+            const qreal dpr           = item_geometry->scaled_image ? item_geometry->scaled_image->devicePixelRatio() : 1.0;
+            const qreal image_width   = item_geometry->scaled_image ? item_geometry->scaled_image->width () / dpr     : kMinTextWidth;
+            const qreal image_height  = item_geometry->scaled_image ? item_geometry->scaled_image->height() / dpr     : 0;
             const qreal bubble_width  = image_width  + 2 * kBubbleHPad;
             const qreal bubble_height = image_height + 2 * kBubbleVPad;
             int bubble_x = message_data->is_me
@@ -298,7 +298,7 @@ std::shared_ptr<MessageDelegate::ItemGeometry> MessageDelegate::itemGeometry(con
         else if (is_file) {
             // 文件消息：固定高度卡片，宽度随文件名自适应（超长省略号）
             const QFontMetrics fm(option.font);
-            const QString&name = message_data->file->file_name;
+            const QString& name = message_data->file->file_name;
             const int name_space = int(max_bubble_width) - 2 * kBubbleHPad - kFileIconSize - kFileIconGap;
             item_geometry->fileName = fm.elidedText(name, Qt::ElideMiddle, qMax(name_space, 24));
             const qreal name_width = fm.horizontalAdvance(item_geometry->fileName);
@@ -410,8 +410,8 @@ void MessageDelegate::paint(QPainter *painter, const QStyleOptionViewItem &optio
             return;
         }
 
-        auto display_name = message_data->sender->display_name;
-        QPixmap sender_avatar_pixamp = message_data->sender->avatar_pixmap;
+        auto display_name        = message_data->sender->display_name;
+        auto sender_avatar_image = message_data->sender->avatar_image;
 
         // 在群组中才需要绘制昵称，私聊中可以不显示
         bool per_message_display_nickname  = false;
@@ -451,7 +451,7 @@ void MessageDelegate::paint(QPainter *painter, const QStyleOptionViewItem &optio
             painter->drawText(metaRect, is_me ? Qt::AlignRight : Qt::AlignLeft, per_message_tips);
         }
         // 画头像
-        painter->drawPixmap(item_geometry->rect_avatar.toRect(), sender_avatar_pixamp);
+        painter->drawImage(item_geometry->rect_avatar.toRect(), *sender_avatar_image.get());
 
         // ---- 气泡背景（圆角矩形，主题色；文本/图片/文件共用） ----
         QPainterPath path;
@@ -465,16 +465,16 @@ void MessageDelegate::paint(QPainter *painter, const QStyleOptionViewItem &optio
             paintDocument(painter, index, message_data, item_geometry);
         }
 
-        else if (is_image && item_geometry->scaled_pixmap) {
+        else if (is_image && item_geometry->scaled_image) {
             // ---- 图片：圆角裁剪绘制（缩放位图来自缓存，矢量边框 + 位图内容） ----
-            const qreal dpr = item_geometry->scaled_pixmap->devicePixelRatio();
-            const QRectF imgRect(item_geometry->text_document_origin, QSizeF(item_geometry->scaled_pixmap->width() / dpr, item_geometry->scaled_pixmap->height() / dpr));
+            const qreal dpr = item_geometry->scaled_image->devicePixelRatio();
+            const QRectF imgRect(item_geometry->text_document_origin, QSizeF(item_geometry->scaled_image->width() / dpr, item_geometry->scaled_image->height() / dpr));
 
             painter->save();
             QPainterPath clip;
             clip.addRoundedRect(imgRect, kBubbleRadius - 3, kBubbleRadius - 3);
             painter->setClipPath(clip);
-            painter->drawPixmap(imgRect.topLeft(), *item_geometry->scaled_pixmap);
+            painter->drawImage(imgRect.topLeft(), *item_geometry->scaled_image);
             painter->restore();
 
             // painter->restore();

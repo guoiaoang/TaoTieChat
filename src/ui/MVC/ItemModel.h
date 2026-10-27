@@ -305,7 +305,11 @@ public:
         // 分组节点添加成员  // 未校验重复
         auto text_display = contact_data->account_id;  // for DEBUG
         // Qt::DecorationRole1The : data to be rendered as a decoration in the form of an icon. (QColor, QIcon or QPixmap)
-        QPixmap pixmap = contact_data->avatar_image.isNull() ? icon_init().pixmap(128) : QPixmap::fromImage(contact_data->avatar_image);
+
+        QSize icon_size = QSize(128, 128);
+        QPixmap pixmap = contact_data->avatar_image->isNull()
+            ? icon_init().pixmap(icon_size.width())
+            : QPixmap::fromImage(contact_data->avatar_image->scaled(icon_size, Qt::IgnoreAspectRatio, Qt::SmoothTransformation));
         std::map<int, QVariant> var_item;
         var_item[ENUMS::role_item_type()] = QVariant::fromValue<ENUMS::ItemDataType>(ENUMS::ItemDataType::CONTACT);
         var_item[ENUMS::role_item_data()] = QVariant::fromValue<std::shared_ptr<ContactData::ItemData>>(contact_data);
@@ -550,7 +554,10 @@ public:
         TreeItemData* item_data = static_cast<TreeItemData*>(contact_index.internalPointer());
         if (item_data) {
             QString text_display = contact_data->display_name; // Utils::get_display_name(contact_data);
-            QPixmap pixmap = contact_data->avatar_image.isNull() ? icon_init().pixmap(128) : QPixmap::fromImage(contact_data->avatar_image);
+            QSize icon_size = QSize(128, 128);
+            QPixmap pixmap = contact_data->avatar_image->isNull()
+                ? icon_init().pixmap(icon_size.width())
+                : QPixmap::fromImage(contact_data->avatar_image->scaled(icon_size, Qt::IgnoreAspectRatio, Qt::SmoothTransformation));
             std::map<int, QVariant> var_item;
             var_item[ENUMS::role_item_type()] = QVariant::fromValue<ENUMS::ItemDataType>(ENUMS::ItemDataType::CONTACT);
             var_item[ENUMS::role_item_data()] = QVariant::fromValue<std::shared_ptr<ContactData::ItemData>>(contact_data);
@@ -572,6 +579,53 @@ public:
     std::shared_ptr<ContactData::ItemData> get_contact_data(ENUMS::ItemGroupType group_type, const QString&account_id) {
         auto index_data = get_contact_index_data(group_type, account_id);
         return index_data->contact;
+    }
+
+    // 返回的是副本
+    QList<QPair<ENUMS::ItemGroupType, QList<std::shared_ptr<ContactData::ItemData>>>> get_members() {
+        QList<QPair<ENUMS::ItemGroupType, QList<std::shared_ptr<ContactData::ItemData>>>> group_members;
+        TreeItemData*item_root_data = data_root();
+        for (int row_group = 0; row_group < item_root_data->row_count(); ++row_group) {
+            TreeItemData* item_group = item_root_data->row_data(row_group);
+            if (!item_group) { continue; }
+            for (const auto& data_column_group : item_group->get_data_columns()) {
+                using G = ENUMS::ItemGroupType;
+                // 不是目标数据
+                if (!data_column_group.contains(ENUMS::role_item_data())) { continue; }
+                // 获取目标数据容器
+                const QVariant& var_column_group = data_column_group.at(ENUMS::role_item_data());
+                if (!var_column_group.isValid()) { continue; }
+                if (!var_column_group.canConvert<G>()) { continue; }
+                // 对比目标数据容器内数据
+                auto var_group = var_column_group.value<G>();
+                // if (!val) { continue; }
+                // members.append(std::make_shared<ContactData::ItemData>(*val.get()));  // 使用副本
+
+                QList<std::shared_ptr<ContactData::ItemData>> contact_members;
+                for (int row_contact = 0; row_contact < item_group->row_count(); ++row_contact) {
+                    TreeItemData* item_contact = item_group->row_data(row_contact);
+                    if (!item_contact) { continue; }
+                    for (const auto& data_column_contact : item_contact->get_data_columns()) {
+                        using T = std::shared_ptr<ContactData::ItemData>;
+                        // 不是目标数据
+                        if (!data_column_contact.contains(ENUMS::role_item_data())) { continue; }
+                        // 获取目标数据容器
+                        const QVariant& var_column_contact = data_column_contact.at(ENUMS::role_item_data());
+                        if (!var_column_contact.isValid()) { continue; }
+                        if (!var_column_contact.canConvert<T>()) { continue; }
+                        // 对比目标数据容器内数据
+                        auto val = var_column_contact.value<T>();
+                        if (!val) { continue; }
+                        contact_members.append(std::make_shared<ContactData::ItemData>(*val.get()));  // 使用副本
+                        break;
+                    }
+                }
+
+                group_members.append(QPair<ENUMS::ItemGroupType, QList<std::shared_ptr<ContactData::ItemData>>>(var_group, contact_members));
+                break;
+            }
+        }
+        return group_members;
     }
 
     // 生成一个占位图标，否则获取图标大小会异常
@@ -699,7 +753,10 @@ public:
         TreeItemData* item_data = static_cast<TreeItemData*>(contact_index.internalPointer());
         if (item_data) {
             QString text_display = contact_data->display_name; // Utils::get_display_name(contact_data);
-            QPixmap pixmap = contact_data->avatar_image.isNull() ? icon_init().pixmap(128) : QPixmap::fromImage(contact_data->avatar_image);
+            QSize icon_size = QSize(128, 128);
+            QPixmap pixmap = contact_data->avatar_image->isNull()
+                ? icon_init().pixmap(icon_size.width())
+                : QPixmap::fromImage(contact_data->avatar_image->scaled(icon_size, Qt::IgnoreAspectRatio, Qt::SmoothTransformation));
             std::map<int, QVariant> var_item;
             var_item[ENUMS::role_item_type()] = QVariant::fromValue<ENUMS::ItemDataType>(ENUMS::ItemDataType::CONTACT);
             var_item[ENUMS::role_item_data()] = QVariant::fromValue<std::shared_ptr<ContactData::ItemData>>(contact_data);
@@ -715,6 +772,31 @@ public:
         }
         emit dataChanged(contact_index, contact_index);
         return true;
+    }
+
+    // 返回的是副本
+    QList<std::shared_ptr<ContactData::ItemData>> get_members() {
+        QList<std::shared_ptr<ContactData::ItemData>> members;
+        TreeItemData*item_root_data = data_root();
+        for (int row = 0; row < item_root_data->row_count(); ++row) {
+            TreeItemData* item_child = item_root_data->row_data(row);
+            if (!item_child) { continue; }
+            for (const auto& data_column : item_child->get_data_columns()) {
+                using T = std::shared_ptr<ContactData::ItemData>;
+                // 不是目标数据
+                if (!data_column.contains(ENUMS::role_item_data())) { continue; }
+                // 获取目标数据容器
+                const QVariant&var_column = data_column.at(ENUMS::role_item_data());
+                if (!var_column.isValid()) { continue; }
+                if (!var_column.canConvert<T>()) { continue; }
+                // 对比目标数据容器内数据
+                auto val = var_column.value<T>();
+                if (!val) { continue; }
+                members.append(std::make_shared<ContactData::ItemData>(*val.get()));  // 使用副本
+                break;
+            }
+        }
+        return members;
     }
 
     // 生成一个占位图标，否则获取图标大小会异常
@@ -743,7 +825,6 @@ private:
                     if (!var_column.canConvert<T>()) { continue; }
                     // 对比目标数据容器内数据
                     auto val = var_column.value<T>();
-                    // index_data->contact = var_column.value<T>();
                     if (!val) { continue; }
                     // 匹配账号 ID
                     if (account_id == val->account_id) {
@@ -792,7 +873,10 @@ public:
 
         // 分组节点添加成员  // 未校验重复
         QString text_display = chatroom_data->display_name;
-        QPixmap pixmap = chatroom_data->avatar_image.isNull() ? icon_init().pixmap(128) : QPixmap::fromImage(chatroom_data->avatar_image);
+        QSize icon_size = QSize(128, 128);
+        QPixmap pixmap = chatroom_data->avatar_image->isNull()
+            ? icon_init().pixmap(icon_size.width())
+            : QPixmap::fromImage(chatroom_data->avatar_image->scaled(icon_size, Qt::IgnoreAspectRatio, Qt::SmoothTransformation));
         std::map<int, QVariant> var_item;
         var_item[ENUMS::role_item_type()] = QVariant::fromValue<ENUMS::ItemDataType>(ENUMS::ItemDataType::CHATROOM);
         var_item[ENUMS::role_item_data()] = QVariant::fromValue<std::shared_ptr<ChatroomData::ItemData>>(chatroom_data);
@@ -832,7 +916,10 @@ public:
         TreeItemData* item_data = static_cast<TreeItemData*>(chatroom_index.internalPointer());
         if (item_data) {
             QString text_display = chatroom_data->display_name;
-            QPixmap pixmap = chatroom_data->avatar_image.isNull() ? icon_init().pixmap(128) : QPixmap::fromImage(chatroom_data->avatar_image);
+            QSize icon_size = QSize(128, 128);
+            QPixmap pixmap = chatroom_data->avatar_image->isNull()
+                ? icon_init().pixmap(icon_size.width())
+                : QPixmap::fromImage(chatroom_data->avatar_image->scaled(icon_size, Qt::IgnoreAspectRatio, Qt::SmoothTransformation));
             std::map<int, QVariant> var_item;
             var_item[ENUMS::role_item_type()] = QVariant::fromValue<ENUMS::ItemDataType>(ENUMS::ItemDataType::CHATROOM);
             var_item[ENUMS::role_item_data()] = QVariant::fromValue<std::shared_ptr<ChatroomData::ItemData>>(chatroom_data);
@@ -848,6 +935,31 @@ public:
         }
         emit dataChanged(chatroom_index, chatroom_index);
         return true;
+    }
+
+    // 返回的是副本
+    QList<std::shared_ptr<ChatroomData::ItemData>> get_members() {
+        QList<std::shared_ptr<ChatroomData::ItemData>> members;
+        TreeItemData*item_root_data = data_root();
+        for (int row = 0; row < item_root_data->row_count(); ++row) {
+            TreeItemData* item_child = item_root_data->row_data(row);
+            if (!item_child) { continue; }
+            for (const auto& data_column : item_child->get_data_columns()) {
+                using T = std::shared_ptr<ChatroomData::ItemData>;
+                // 不是目标数据
+                if (!data_column.contains(ENUMS::role_item_data())) { continue; }
+                // 获取目标数据容器
+                const QVariant&var_column = data_column.at(ENUMS::role_item_data());
+                if (!var_column.isValid()) { continue; }
+                if (!var_column.canConvert<T>()) { continue; }
+                // 对比目标数据容器内数据
+                auto val = var_column.value<T>();
+                if (!val) { continue; }
+                members.append(std::make_shared<ChatroomData::ItemData>(*val.get()));  // 使用副本
+                break;
+            }
+        }
+        return members;
     }
 
     // 生成一个占位图标，否则获取图标大小会异常
@@ -991,7 +1103,7 @@ public:
         do {
             if (!item_data) { break; }
             auto message_id = item_data->message_id;
-            if (!message_id.isEmpty()) { break; }
+            if ( message_id.isEmpty()) { break; }
             if (!m_cache_message_id_index.contains(message_id)) { break; }
             auto index = m_cache_message_id_index.value(message_id);
             return index;
@@ -1023,6 +1135,32 @@ public:
         } while (false);
         return nullptr;
     }
+
+    // 返回的是副本
+    QList<std::shared_ptr<MessageData::ItemData>> get_members() {
+        QList<std::shared_ptr<MessageData::ItemData>> members;
+        TreeItemData*item_root_data = data_root();
+        for (int row = 0; row < item_root_data->row_count(); ++row) {
+            TreeItemData* item_child = item_root_data->row_data(row);
+            if (!item_child) { continue; }
+            for (const auto& data_column : item_child->get_data_columns()) {
+                using T = std::shared_ptr<MessageData::ItemData>;
+                // 不是目标数据
+                if (!data_column.contains(ENUMS::role_item_data())) { continue; }
+                // 获取目标数据容器
+                const QVariant&var_column = data_column.at(ENUMS::role_item_data());
+                if (!var_column.isValid()) { continue; }
+                if (!var_column.canConvert<T>()) { continue; }
+                // 对比目标数据容器内数据
+                auto val = var_column.value<T>();
+                if (!val) { continue; }
+                members.append(std::make_shared<MessageData::ItemData>(*val.get()));  // 使用副本
+                break;
+            }
+        }
+        return members;
+    }
+
 private:
     // 生成一个占位图标，否则获取图标大小会异常
     QIcon icon_init() const {

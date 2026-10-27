@@ -128,7 +128,7 @@ struct ItemData {
     bool is_friend = false;
     QString display_name;  // 联系人列表排序、显示名称时需要
     QString avatar_path;
-    QImage  avatar_image;  // Image 与 UI 无关，可以在子线程中操作
+    std::shared_ptr<QImage> avatar_image;  // Image 与 UI 无关，可以在子线程中操作
     QString info_text;     // 联系人信息中昵称下面显示的内容(签名或消息)
     QString info_time;     // 消息时间(聊天或好友申请的时间)
 };
@@ -146,7 +146,7 @@ struct ItemData {
     QString display_name;
     QString avatar_id;
     QString avatar_path;
-    QImage  avatar_image;  // Image 与 UI 无关，可以在子线程中操作
+    std::shared_ptr<QImage> avatar_image;  // Image 与 UI 无关，可以在子线程中操作
 };
 };
 
@@ -171,7 +171,7 @@ struct SenderData {
     QString display_name;
     QString avatar_id;
     QString avatar_path;
-    QPixmap avatar_pixmap;
+    std::shared_ptr<QImage> avatar_image;
 };
 
 struct TextData {
@@ -181,7 +181,8 @@ struct TextData {
 struct ImageData {
     // QString image_id;
     // QString image_path;
-    QPixmap pixmap;
+    // QPixmap pixmap;
+    std::shared_ptr<QImage> image;
 };
 
 struct AudioData {};
@@ -286,6 +287,48 @@ struct ChatMessage {
         File,    ///< 文件消息（文件卡片，点击打开所在位置）
     };
 };
+
+}
+
+namespace Network {
+// Network::FileDownloadNotify
+struct FileDownloadNotify {
+    using Status = FileStatusCode;
+    // 上传/下载结束后 ok 才应该设置为true，收发包正确时只应设置code
+    bool    finished =      true;  // 所有操作完成，任务退出时设置为 true
+    bool    ok__     =     false;  // 是否发生错误
+    int64_t code     =        -1;  // 成功或失败的代码
+    QString message  = QString();  // 成功或失败的消息
+    //
+    // FileStatusCode::FILE_STATUS_UPLOADING 也可能是其他客户端正在上传
+    QString id       = QString();  // 文件 ID
+    Status  status   = FileStatusCode::FILE_STATUS_NONE;  // 文件状态
+    //
+    QString path           = QString();  // 文件路径 // 上传及下载
+    QString name           = QString();  // 文件名称 // 用于下载完成时重命名
+    int64_t size           =        -1;  // 文件大小
+    QString md5            = QString();  // 文件 md5
+    int64_t uploaded_bytes =         -1;  // 文件已经上传/下载完成的大小
+};
+
+
+inline QDebug operator<<(QDebug debug, const FileDownloadNotify &notify) {
+    QDebugStateSaver saver(debug); // 保持输出格式一致性
+    debug.nospace() << "NetworkFileIONotify{"
+        << "finished:"        << notify.finished
+        << ",ok:"             << notify.ok__
+        << ",code:"           << (notify.ok__ ? Utils::Transform::to_string(SuccessCode(notify.code)) : Utils::Transform::to_string(ErrorCode(notify.code)))
+        << ",message:"        << notify.message
+        << ",id:"             << notify.id
+        << ",status:"         << Utils::Transform::to_string(notify.status)
+        << ",path:"           << notify.path
+        << ",name:"           << notify.name
+        << ",size:"           << notify.size
+        << ",md5:"            << notify.md5
+        << ",uploaded_bytes:" << notify.uploaded_bytes
+        << "}";
+    return debug;
+}
 
 }
 

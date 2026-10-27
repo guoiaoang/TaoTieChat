@@ -26,6 +26,9 @@ public:
     ~ChatWindow();
     void reinit();  // 重新初始化界面及数据
 
+public:
+    static bool is_supported_image_formats(const QString& file_name);
+
 private:
     void release_resources();
     void init();
@@ -40,24 +43,24 @@ private:
 
     // 需要创建副本，而不是使用指针共享同一份内存
     void set_cache_contact_data(std::shared_ptr<ContactData::ItemData> contact_data);
-    void update_contact_avatar (const QString&avatar_id, bool local_only = false);  // local_only 防止循环调用
     std::shared_ptr<ContactData::ItemData> get_cache_contact_data  () const;
-    std::shared_ptr<QImage               > get_cache_contact_avatar() const;
 
+    // online_download:是否在线下载，防止循环调用
+    void update_contact_avatar(const QString& avatar_id, bool online_download);
     void show_avatar(std::shared_ptr<QImage> avatar_image);
 
     // 获取聊天记录窗口
-    MessageWindow* get_message_window(const QString&account_id);
+    MessageWindow* get_message_window(const QString& account_id);
     // 更新列表中显示的最后一条消息
     void update_last_message(std::shared_ptr<MessageData::ItemData> last_message);
 
     // 选中并高亮指定的聊天列表
-    bool highlight_chatroom(const QString&chatroom_id);
+    bool highlight_chatroom(const QString& chatroom_id);
 
 public Q_SLOTS:
     // 聊天室管理
     // 添加到聊天室列表
-    void add_chat_room(const QString&chatroom_id);
+    void add_chat_room(const QString& chatroom_id);
     // 显示指定聊天室的对话
     void show_chat_room_messages(std::shared_ptr<ContactData::ItemData> contact_data);
 
@@ -78,7 +81,7 @@ public Q_SLOTS:
     void add_message(std::shared_ptr<SyncMessage> sync_message);
 
     // 更新联系人信息，可能是头像、昵称、状态等
-    void slot_update_current_account_data();
+    // void slot_update_current_account_data();
     void slot_update_contact_data(std::shared_ptr<ContactData::ItemData> contact_data);
 
     // 导航按钮事件
@@ -95,11 +98,10 @@ public Q_SLOTS:
     void slot_update_contact_list_info (std::shared_ptr<ContactData::ItemData> to_contact_data);  // 联系人列表与好友申请
     void slot_update_chatroom_list_info(std::shared_ptr<ContactData::ItemData> to_contact_data);  // 对话列表
 
-// signals:
-//     void signout();
-
 public slots:
-    void slot_file_id_downloaded(const QString&file_id);
+    void slot_update_avatar_file  (const Network::FileDownloadNotify notify);  // 左上角主界面的图标
+    void slot_update_chatroom_file(const Network::FileDownloadNotify notify);  // 聊天室列表中的头像
+    void slot_update_contact_file (const Network::FileDownloadNotify notify);  // 联系人列表中的头像
 
 protected:
     bool eventFilter(QObject *obj, QEvent *event) override;
@@ -130,6 +132,5 @@ private:
     std::shared_ptr<SearchWindow > m_search_window   ;
     std::shared_ptr<ContactWindow> m_contact_window  ;  // 当前显示的联系人详情窗口
     // cache
-    std::shared_ptr<ContactData::ItemData> m_cache_self_data  ;
-    std::shared_ptr<QImage               > m_cache_self_avatar;
+    std::shared_ptr<ContactData::ItemData> m_cache_self_data;
 };

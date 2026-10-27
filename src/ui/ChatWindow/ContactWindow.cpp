@@ -36,6 +36,7 @@ ContactWindow::ContactWindow(QWidget *parent) : QWidget(parent), m_ui(std::make_
     // connect(Accounts::instance(), &Accounts::signal_contact_info_changed, this, &ContactWindow::slot_contact_info_changed  );
     connect(SignalInner::instance(), &SignalInner::signal_contact_list_changed, this, &ContactWindow::slot_contact_status_changed);
     connect(SignalInner::instance(), &SignalInner::signal_contact_info_changed, this, &ContactWindow::slot_contact_info_changed  );
+    connect(SignalInner::instance(), &SignalInner::signal_file_downloaded     , this, &ContactWindow::slot_file_downloaded       );
 
     // set
     // 设置动态头像大小，与右侧内容高度一致
@@ -114,60 +115,24 @@ void ContactWindow::set_contact_data(std::shared_ptr<ContactData::ItemData> cont
 
     // 有头像就显示，无头像就恢复
     // 当点击头像按钮上传完成头像后会修改界面显示，这里需要重置回来
-    if ( contact_data->avatar_image.isNull()) {
+    if ( contact_data->avatar_image->isNull()) {
         m_ui->button_avatar->setIcon(QIcon());
     }
     else {
-        auto avatar_pixamp = QPixmap::fromImage(contact_data->avatar_image)
-            .scaled(m_ui->button_avatar->size(), Qt::IgnoreAspectRatio, Qt::SmoothTransformation);
+        auto avatar_pixamp = QPixmap::fromImage(contact_data->avatar_image->scaled(m_ui->button_avatar->size(), Qt::IgnoreAspectRatio, Qt::SmoothTransformation));
         m_ui->button_avatar->setIcon(QIcon(avatar_pixamp));
     }
 
     // 需要下载头像的情况
     // 头像为空但有头像 ID 时可进行头像的下载
-    if (contact_data->avatar_image.isNull() && !contact_data->avatar_id.isEmpty()) {
-        // 下载并显示头像
-        network_file_io_notify_callback callback_download_file_notify = [this](const NetworkFileIONotify&notify) {
-            // 忽略下载进度通知
-            if (notify.ok && notify.code == int64_t(SuccessCode::SUCCESS) && notify.uploading) {
-                return;
-            }
-            if (!notify.ok) {
-                // QString error_message = tr("Failed to download avatar.");
-                // error_message += tr("\n\ncode : 0x%1\nmessage : %2")
-                //     .arg(notify.code, 8, 16, QChar('0'))  // 16 进制显示，宽度 8 位，不足补 0
-                //     .arg(notify.message);
-                // QMessageBox::information(this, tr("Error"), error_message, QMessageBox::StandardButton::Ok);
-                return;
-            }
-            auto contact_data = get_contact_data();
-            // 下载成功
-            if (notify.ok &&
-                notify.code    == int64_t(SuccessCode::SUCCESS) &&
-                notify.status  == FileStatusCode::FILE_STATUS_UPLOADED &&
-                !notify.uploading &&
-                contact_data &&  // 与缓存比较 // 缓存不能为空
-                contact_data->avatar_id == notify.id
-            ) {
-                // 头像下载成功时仅需修改头像相关的信息
-                contact_data->avatar_path  = Database::instance()->get_local_file_id_path(contact_data->avatar_id);
-                contact_data->avatar_image = QImage(contact_data->avatar_path);
-                if (!contact_data->avatar_image.isNull()) {
-                    auto avatar_pixamp = QPixmap::fromImage(contact_data->avatar_image)
-                        .scaled(m_ui->button_avatar->size(), Qt::IgnoreAspectRatio, Qt::SmoothTransformation);
-                    m_ui->button_avatar->setIcon(QIcon(avatar_pixamp));
-                }
-            }
-        };
-        QString notify_id = QString("notify ContactWindow::set_contact_data, account_id:%1, avatar_id:%2")
-            .arg(contact_data->account_id).arg(contact_data->avatar_id);
-        NetworkClient::instance()->download_file(contact_data->avatar_id, notify_id, callback_download_file_notify);
+    if (contact_data->avatar_image->isNull() && !contact_data->avatar_id.isEmpty()) {
+        NetworkClient::instance()->download_file_notify_signal(contact_data->avatar_id);
     }
 
     ViewFlag  view_flag   = ViewFlag::View;
 
     // 未设置头像的提示
-    bool show_avatar_tips = contact_data->avatar_image.isNull() && contact_data->avatar_id.isEmpty();
+    bool show_avatar_tips = contact_data->avatar_image->isNull() && contact_data->avatar_id.isEmpty();
     m_ui->button_avatar->setToolTip(show_avatar_tips ? tr("No avatar set") : QString{});
     // m_ui->button_avatar->setEnabled(!show_avatar_tips);
 
@@ -315,15 +280,17 @@ void ContactWindow::slot_button_avatar() {
     auto contact_data = get_contact_data();
     if (!contact_data) { return; }
 
-    auto is_edit = get_view_flag() == ViewFlag::Edit;
+    auto is_edit    = get_view_flag() == ViewFlag::Edit;
+    bool is_profile = m_source_flag   == SourceFlag::Profile;
 
     // 非设置头像模式，未设置头像时不响应点击
-    if (!is_edit && contact_data->avatar_image.isNull() && contact_data->avatar_id.isEmpty()) {
+    if (!is_edit && contact_data->avatar_image->isNull() && contact_data->avatar_id.isEmpty()) {
         return;
     }
 
-    // 编辑模式且为自己时，编辑头像
-    if (is_edit && contact_data->is_me) {
+    // 编辑模式、编辑对象是自己、编辑来源为个人资料页面，才允许编辑头像
+    // 自己为自己的好友时，从好友页面不允许编辑自己的头像
+    if (is_edit && contact_data->is_me && is_profile) {
         // 个人资料页面的编辑模式允许点击头像进行个人资料中头像的修改
         QString avatar_file_path = dialog_select_avatar_file();
         if (avatar_file_path.isEmpty()) { return; }
@@ -335,6 +302,7 @@ void ContactWindow::slot_button_avatar() {
     }
 }
 
+// TODO:服务器添加资料更新版本，编辑模式其他位置已修改资料时提示用户是否继续修改
 void ContactWindow::slot_button_save() {
     using namespace Utils::Wrapper;
 
@@ -419,6 +387,7 @@ void ContactWindow::slot_button_save() {
     update_profile_text(copy_contact_data, callback_update_profile);
 }
 
+// TODO:编辑模式，其他位置触发个人信息更新时，在取消编辑模式时应该刷新为最新状态
 void ContactWindow::slot_button_cancel() {
     set_view_flag(ViewFlag::View);
     set_contact_data(get_contact_data(), get_source_flag()); // 重置显示的内容，防止页面对内容进行了修改
@@ -550,7 +519,10 @@ void ContactWindow::slot_contact_status_changed(QVector<std::shared_ptr<ContactD
     }
 }
 
+// TODO:编辑模式不要修改显示的内容
 void ContactWindow::slot_contact_info_changed(std::shared_ptr<ContactData::ItemData> to_contact_data) {
+    // if  (m_view_flag == ViewFlag::Edit) { return; }
+
     do {
         if (!to_contact_data) { break; }
         if ( to_contact_data->account_id.isEmpty()) { continue; }
@@ -567,17 +539,56 @@ void ContactWindow::slot_contact_info_changed(std::shared_ptr<ContactData::ItemD
     } while (false);
 }
 
+// 当前窗口也就用户头像会加载文件
+void ContactWindow::slot_file_downloaded(const Network::FileDownloadNotify notify) {
+    const QString& file_id = notify.id;
+    if (file_id.isEmpty()) { return; }
+    if (!notify.finished || !notify.ok__ || notify.status != FileStatusCode::FILE_STATUS_UPLOADED) { return; }
+
+    auto contact_data = get_contact_data();
+    const auto& avatar_id = contact_data->avatar_id;
+    if (avatar_id != file_id) { return; }  // 不是当前关心的文件
+
+    // 忽略下载进度通知
+    if (!notify.finished) {
+        return;
+    }
+
+    // 忽略下载错误通知
+    if (!notify.ok__) {
+        // QString error_message = tr("Failed to download avatar.");
+        // error_message += tr("\n\ncode : 0x%1\nmessage : %2")
+        //     .arg(notify.code, 8, 16, QChar('0'))  // 16 进制显示，宽度 8 位，不足补 0
+        //     .arg(notify.message);
+        // QMessageBox::information(this, tr("Error"), error_message, QMessageBox::StandardButton::Ok);
+        return;
+    }
+
+    // 下载成功
+    if (notify.status  == FileStatusCode::FILE_STATUS_UPLOADED &&
+        // 与缓存比较 // 缓存不能为空
+        contact_data &&
+        contact_data->avatar_id == notify.id
+    ) {
+        // 头像下载成功时仅需修改头像相关的信息
+        contact_data->avatar_path  = Database::instance()->get_local_file_id_path(contact_data->avatar_id);
+        contact_data->avatar_image = std::make_shared<QImage>(contact_data->avatar_path);
+        if (!contact_data->avatar_image->isNull()) {
+            auto avatar_pixamp = QPixmap::fromImage(contact_data->avatar_image->scaled(m_ui->button_avatar->size(), Qt::IgnoreAspectRatio, Qt::SmoothTransformation));
+            m_ui->button_avatar->setIcon(QIcon(avatar_pixamp));
+        }
+    }
+}
+
 // 在弹窗中查看头像
 void ContactWindow::view_avatar() {
     auto contact_data = get_contact_data();
+    auto media_info = std::make_shared<MediaInfo>();
+    media_info->media_name  = contact_data->nickname;
+    media_info->media_path  = contact_data->avatar_path;
+    media_info->media_image = contact_data->avatar_image;  // 使用原始的图片
     // 获取显示内容
-    std::vector<std::shared_ptr<MediaInfo>> play_list = {
-        std::make_shared<MediaInfo>(MediaInfo{
-            .media_path  = contact_data->avatar_path,
-            .media_image = contact_data->avatar_image,  // 使用原始的图片
-            .media_name  = contact_data->nickname
-        })
-    };
+    std::vector<std::shared_ptr<MediaInfo>> play_list = { media_info };
     MediaWindow*media_window = &MediaWindow::instance();
     media_window->set_play_list(play_list);
     Utils::widget_raise(media_window);
@@ -620,24 +631,23 @@ void ContactWindow::update_profile_text(std::shared_ptr<ContactData::ItemData> c
 // 更新个人资料中的头像，仅上传头像文件并本地显示，点击保存才进行修改
 void ContactWindow::update_profile_avatar(const QString&avatar_path) {
     // 上传头像
-    network_file_io_notify_callback callback_upload_file_notify = [this, avatar_path](const NetworkFileIONotify&notify) {
+    network_file_io_notify_callback callback_upload_file_notify = [this, avatar_path](const Network::FileDownloadNotify notify) {
         // 忽略上传进度通知
-        if (notify.ok && notify.code == int64_t(SuccessCode::SUCCESS) && notify.uploading) {
+        if (!notify.finished) {
             return;
         }
-        if (!notify.ok || notify.status != FileStatusCode::FILE_STATUS_UPLOADED) {
+        // 忽略上传错误通知
+        if (!notify.ok__) {
             // 16 进制显示，宽度 8 位，不足补 0
             QString error_message = tr("Failed to upload avatar.\n\ncode : 0x%1\nmessage : %2").arg(notify.code, 8, 16, QChar('0')).arg(notify.message);
             QMessageBox::information(this, tr("Error"), error_message, QMessageBox::StandardButton::Ok);
             return;
         }
-        auto contact_data = get_contact_data();
+        // TODO:立即修改头像或上传成功时再修改头像或上传失败时恢复头像??
+        // auto contact_data = get_contact_data();
         // 上传成功
-        if (notify.ok &&
-            notify.code    == int64_t(SuccessCode::SUCCESS) &&
-            notify.status  == FileStatusCode::FILE_STATUS_UPLOADED &&
-            !notify.uploading &&
-            contact_data  // 与缓存比较 // 缓存不能为空
+        if (notify.status  == FileStatusCode::FILE_STATUS_UPLOADED
+            // && contact_data  // 与缓存比较 // 缓存不能为空
             // 更换头像时不应该比较 ID
             // contact_data->avatar_id == notify.id
         ) {

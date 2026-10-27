@@ -4,41 +4,39 @@
 #include "Utils.h"
 #include "Defines.h"
 
-struct NetworkFileIONotify{
-    using Status = FileStatusCode;
-    bool    ok      = false    ;  // 是否上传成功
-    int64_t code    = -1       ;  // 成功或失败的代码
-    QString message = QString();  // 成功或失败的消息
-    QString id      = QString();  // 文件 ID
-    Status  status  = FileStatusCode::FILE_STATUS_NONE;  // 文件状态
-    //
-    QString path     = QString();  // 文件路径 // 上传及下载
-    QString name     = QString();  // 文件名称 // 用于下载完成时重命名
-    int64_t size     = -1       ;  // 文件大小
-    QString md5      = QString();  // 文件 md5
-    int64_t uploaded_bytes = -1 ;  // 文件已经上传/下载完成的大小
-    bool    uploading = false   ;  // 是否是正在上传/下载时的通知消息
-};
+// struct NetworkFileIONotify{
+//     using Status = FileStatusCode;
+//     bool    ok      = false    ;  // 是否上传成功
+//     int64_t code    = -1       ;  // 成功或失败的代码
+//     QString message = QString();  // 成功或失败的消息
+//     QString id      = QString();  // 文件 ID
+//     Status  status  = FileStatusCode::FILE_STATUS_NONE;  // 文件状态
+//     //
+//     QString path     = QString();  // 文件路径 // 上传及下载
+//     QString name     = QString();  // 文件名称 // 用于下载完成时重命名
+//     int64_t size     = -1       ;  // 文件大小
+//     QString md5      = QString();  // 文件 md5
+//     int64_t uploaded_bytes = -1 ;  // 文件已经上传/下载完成的大小
+// };
+//
+// inline QDebug operator<<(QDebug debug, const  Network::FileDownloadNotify &notify) {
+//     QDebugStateSaver saver(debug); // 保持输出格式一致性
+//     debug.nospace() << "NetworkFileIONotify{"
+//         << "ok:"              << notify.ok
+//         << ",code:"           << (notify.ok ? Utils::Transform::to_string(SuccessCode(notify.code)) : Utils::Transform::to_string(ErrorCode(notify.code)))
+//         << ",message:"        << notify.message
+//         << ",id:"             << notify.id
+//         << ",status:"         << Utils::Transform::to_string(notify.status)
+//         << ",path:"           << notify.path
+//         << ",name:"           << notify.name
+//         << ",size:"           << notify.size
+//         << ",md5:"            << notify.md5
+//         << ",uploaded_bytes:" << notify.uploaded_bytes
+//         << "}";
+//     return debug;
+// }
 
-inline QDebug operator<<(QDebug debug, const NetworkFileIONotify &notify) {
-    QDebugStateSaver saver(debug); // 保持输出格式一致性
-    debug.nospace() << "NetworkFileIONotify{"
-        << "ok:"              << notify.ok
-        << ",code:"           << (notify.ok ? Utils::Transform::to_string(SuccessCode(notify.code)) : Utils::Transform::to_string(ErrorCode(notify.code)))
-        << ",message:"        << notify.message
-        << ",id:"             << notify.id
-        << ",status:"         << Utils::Transform::to_string(notify.status)
-        << ",path:"           << notify.path
-        << ",name:"           << notify.name
-        << ",size:"           << notify.size
-        << ",md5:"            << notify.md5
-        << ",uploaded_bytes:" << notify.uploaded_bytes
-        << ",uploading:"      << notify.uploading
-        << "}";
-    return debug;
-}
-
-using network_file_io_notify_callback = std::function<void(const NetworkFileIONotify&)>;
+using network_file_io_notify_callback = std::function<void(const Network::FileDownloadNotify)>;
 
 class NetworkClient : public QObject{
     Q_OBJECT
@@ -78,12 +76,15 @@ public:
     bool get_file_id  (const QString&file_path, network_file_io_notify_callback callback_get_file_id_notiify );
     // TODO:upload_file 应该封装在子线程中
     bool upload_file  (const QString&file_path, network_file_io_notify_callback callback_upload_file_notify  );
+    bool download_file_notify_signal(const QString&file_id);
+
+private:
     // TODO:download_file 应该封装在子线程中
-    bool download_file(const QString&file_id, const QString&notify_id, network_file_io_notify_callback callback_download_file_notify);
+    bool download_file(const QString&file_id, network_file_io_notify_callback callback_download_file_notify);
 
 // signals:
 //     // 文件下载成功通知
-//     void signal_file_id_downloaded(const QString&file_id);
+//     void signal_file_downloaded(const QString&file_id);
 
 private:
     bool m_inited = false;

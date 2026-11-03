@@ -178,7 +178,7 @@ const QImage *MessageDelegate::acquireImage(const QModelIndex &index, qreal maxW
 
         if (!is_image) { break; }
         const auto& image = message_data->image->image;
-        if (image->bytesPerLine()) { return nullptr; }
+        if (image->isNull()) { return nullptr; }
 
         // 等比缩放到 (maxW, maxH) 以内；小图不放大
         const qreal scale   = qMin<qreal>(1.0, qMin(maxW / image->width(), maxH / image->height()));
@@ -450,6 +450,8 @@ void MessageDelegate::paint(QPainter *painter, const QStyleOptionViewItem &optio
             const QRectF metaRect(x, y, w, h);
             painter->drawText(metaRect, is_me ? Qt::AlignRight : Qt::AlignLeft, per_message_tips);
         }
+
+        // qDebug().noquote().nospace() << "message_data addr " << (void*)message_data.get() << ", avatar_id : " << message_data->sender->avatar_id << ", avatar_path : " << message_data->sender->avatar_path;
         // 画头像
         painter->drawImage(item_geometry->rect_avatar.toRect(), *sender_avatar_image.get());
 
@@ -465,20 +467,23 @@ void MessageDelegate::paint(QPainter *painter, const QStyleOptionViewItem &optio
             paintDocument(painter, index, message_data, item_geometry);
         }
 
-        else if (is_image && item_geometry->scaled_image) {
-            // ---- 图片：圆角裁剪绘制（缩放位图来自缓存，矢量边框 + 位图内容） ----
-            const qreal dpr = item_geometry->scaled_image->devicePixelRatio();
-            const QRectF imgRect(item_geometry->text_document_origin, QSizeF(item_geometry->scaled_image->width() / dpr, item_geometry->scaled_image->height() / dpr));
+        // TODO:画占位图
+        else if (is_image) {
+            if (item_geometry->scaled_image) {
+                // ---- 图片：圆角裁剪绘制（缩放位图来自缓存，矢量边框 + 位图内容） ----
+                const qreal dpr = item_geometry->scaled_image->devicePixelRatio();
+                const QRectF imgRect(item_geometry->text_document_origin, QSizeF(item_geometry->scaled_image->width() / dpr, item_geometry->scaled_image->height() / dpr));
 
-            painter->save();
-            QPainterPath clip;
-            clip.addRoundedRect(imgRect, kBubbleRadius - 3, kBubbleRadius - 3);
-            painter->setClipPath(clip);
-            painter->drawImage(imgRect.topLeft(), *item_geometry->scaled_image);
-            painter->restore();
+                painter->save();
+                QPainterPath clip;
+                clip.addRoundedRect(imgRect, kBubbleRadius - 3, kBubbleRadius - 3);
+                painter->setClipPath(clip);
+                painter->drawImage(imgRect.topLeft(), *item_geometry->scaled_image);
+                painter->restore();
 
-            // painter->restore();
-            // return;
+                // painter->restore();
+                // return;
+            }
         }
 
         else if (is_file) {
@@ -675,18 +680,18 @@ bool MessageDelegate::editorEvent(QEvent *event, QAbstractItemModel *model, cons
                 }
                 if (item_geometry->rect_bubble.contains(pos_mouse)) {
                     if (!m_pendingLink.isEmpty()) {
-                        emit SignalInner::instance()->signal_open_link(m_pendingLink);
+                        emit SignalInner::instance()->signal_open_link(QPointer<MessageDelegate>(this), m_pendingLink);
                         m_pendingLink.clear();
                         return true;
                     }
                     // 图片默认为应用内插件查看
                     else if (is_image) {
-                        emit SignalInner::instance()->signal_open_data(message_data);
+                        emit SignalInner::instance()->signal_open_data(QPointer<MessageDelegate>(this), message_data);
                         return true;
                     }
                     // 其他文件默认为打开文件夹
                     else if (is_file) {
-                        emit SignalInner::instance()->signal_open_file(message_data);
+                        emit SignalInner::instance()->signal_open_folder(QPointer<MessageDelegate>(this), message_data);
                         return true;
                     }
                 }
@@ -777,7 +782,7 @@ void MessageDelegate::showContextMenu(QAbstractItemView *view, const QModelIndex
         if (!is_file && !is_image) { break; }
 
         // 图片 / 文件
-        const QString&file_path = message_data && message_data->file ? message_data->file->file_path : "";
+        const QString& file_path = message_data && message_data->file ? message_data->file->file_path : "";
         bool is_file_exists = QFileInfo::exists(file_path);
 
         QMenu menu(view);
@@ -815,12 +820,12 @@ void MessageDelegate::showContextMenu(QAbstractItemView *view, const QModelIndex
         const QAction *chosen = menu.exec(globalPos);
         if (!chosen) { break; }
 
-        ;    if (chosen == action_open_data  ) { emit SignalInner::instance()->signal_open_data  (message_data); }  // 使用内部插件打开
-        else if (chosen == action_copy_data  ) { emit SignalInner::instance()->signal_copy_data  (message_data); }  // 复制文件内容到剪切板，比如图像内容
-        else if (chosen == action_open_file  ) { emit SignalInner::instance()->signal_open_file  (message_data); }  // 使用系统默认的应用程序打开文件
-        else if (chosen == action_open_folder) { emit SignalInner::instance()->signal_open_folder(message_data); }  // 打开文件所在文件夹
-        else if (chosen == action_save_to    ) { emit SignalInner::instance()->signal_save_to    (message_data); }  // 文件复制到指定目录
-        else if (chosen == action_copy_file  ) { emit SignalInner::instance()->signal_copy_file  (message_data); }  // 复制文件到剪切板，可在资源管理器中粘贴
-        else if (chosen == action_copy_path  ) { emit SignalInner::instance()->signal_copy_path  (message_data); }  // 复制文件路径到剪切板
+        ;    if (chosen == action_open_data  ) { emit SignalInner::instance()->signal_open_data  (QPointer<MessageDelegate>(this), message_data); }  // 使用内部插件打开
+        else if (chosen == action_copy_data  ) { emit SignalInner::instance()->signal_copy_data  (QPointer<MessageDelegate>(this), message_data); }  // 复制文件内容到剪切板，比如图像内容
+        else if (chosen == action_open_file  ) { emit SignalInner::instance()->signal_open_file  (QPointer<MessageDelegate>(this), message_data); }  // 使用系统默认的应用程序打开文件
+        else if (chosen == action_open_folder) { emit SignalInner::instance()->signal_open_folder(QPointer<MessageDelegate>(this), message_data); }  // 打开文件所在文件夹
+        else if (chosen == action_save_to    ) { emit SignalInner::instance()->signal_save_to    (QPointer<MessageDelegate>(this), message_data); }  // 文件复制到指定目录
+        else if (chosen == action_copy_file  ) { emit SignalInner::instance()->signal_copy_file  (QPointer<MessageDelegate>(this), message_data); }  // 复制文件到剪切板，可在资源管理器中粘贴
+        else if (chosen == action_copy_path  ) { emit SignalInner::instance()->signal_copy_path  (QPointer<MessageDelegate>(this), message_data); }  // 复制文件路径到剪切板
     } while (false);
 }

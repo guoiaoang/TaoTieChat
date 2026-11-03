@@ -125,6 +125,8 @@ void ChatWindow::init() {
     connect(SignalInner::instance(), &SignalInner::signal_file_downloaded, this, &ChatWindow::slot_update_avatar_file  );
     connect(SignalInner::instance(), &SignalInner::signal_file_downloaded, this, &ChatWindow::slot_update_chatroom_file);
     connect(SignalInner::instance(), &SignalInner::signal_file_downloaded, this, &ChatWindow::slot_update_contact_file );
+    // chatroom 更新最后一条消息的提示
+    connect(SignalInner::instance(), &SignalInner::signal_new_message, this, &ChatWindow::update_last_message);
 
     connect(m_action_rember_password.get(), &QAction::triggered, this, [&](){
         auto current_account = Accounts::instance()->get_current_account();
@@ -531,7 +533,11 @@ bool ChatWindow::network_status_sync() {
                 }
                 // 服务端只区分了 SyncType::MESSAGES，文件也是 SyncType::MESSAGES 的一个子类型，需要客户端手动测试
                 else if (sync_tag.type() == SyncType::SYNC_MESSAGES && sync_reply_body.hasMessages()) {
-                    for (auto&message : sync_reply_body.messages().message()) {
+                    for (auto& message : sync_reply_body.messages().message()) {
+                        // qDebug().noquote().nospace() << "trace message file download."
+                        //     << " ChatWindow::add_message(...)."
+                        //     << "serverMessageId : " << message.serverMessageId()
+                        //     << ", senderAccountId : " << message.senderAccountId();
                         // 信息未必来自同一对话，暂不处理为批量添加
                         add_message(std::make_shared<SyncMessage>(message));
                     }
@@ -589,7 +595,7 @@ std::shared_ptr<QImage> svg_to_image(const QString &inputSvgPath, const QSize &n
 }
 
 // 聊天列表添加一条记录
-void ChatWindow::add_chat_room(const QString&chatroom_id) {
+void ChatWindow::add_chat_room(const QString &chatroom_id) {
     // qDebug() << "contact : " << ContactManager(contact).get_nick_name();
     do {
         if ( chatroom_id.isEmpty()) { break; }
@@ -847,7 +853,7 @@ void ChatWindow::slot_chatroom_item_clicked(const QModelIndex &index) {
 // 添加服务器聊天消息更新
 void ChatWindow::add_message(std::shared_ptr<SyncMessage> sync_message) {
 
-    auto is_file = [this](std::shared_ptr<SyncMessage> sync_message) {
+    auto is_file_message = [this](std::shared_ptr<SyncMessage> sync_message) {
         if (!sync_message || !sync_message->hasFile()) { return false; }
         auto file_info = sync_message->file();
         if (file_info.fileName().isEmpty()) { return false; }
@@ -876,29 +882,32 @@ void ChatWindow::add_message(std::shared_ptr<SyncMessage> sync_message) {
         auto receiver_account_id = sync_message->receiverAccountId();
         auto timestamp           = sync_message->timestamp        ();
         auto message_time        = sync_message->timestamp().timestamp().toDateTime();;
+        //
         auto sender_data         = Accounts::instance()->get_contact(sender_account_id);
+        auto receiver_data       = Accounts::instance()->get_contact(receiver_account_id);
+        auto current_data        = Accounts::instance()->get_current_account();
         auto sender_avatar_id    = sender_data->avatar_id;
-        auto contact_data        = Accounts::instance()->get_current_account();
-        auto contact_account_id  = contact_data->account_id;
-        bool is_me               = sender_account_id == contact_account_id;
+        auto receiver_avatar_id  = receiver_data->avatar_id;
+        auto current_account_id  = current_data->account_id;
+        bool is_me               = sender_account_id == current_account_id;
 
         // 验证是否是当前账号的消息
-        if (sender_account_id != contact_account_id && receiver_account_id != contact_account_id) {
+        if (sender_account_id != current_account_id && receiver_account_id != current_account_id) {
             qDebug().noquote().nospace() << "not current account message, server_message_id:" << server_message_id;
             break;
         }
 
+        // 聊天对象不是发送方就是接收方
+        auto contact_data = sender_data->account_id != current_account_id ? sender_data : receiver_data;
+
         // 可能耗时的操作验证后再执行
-        auto sender_avatar_path   = Database::instance()->get_local_file_id_path(sender_avatar_id);
+        auto sender_avatar_path  = Database::instance()->get_local_file_id_path(sender_avatar_id);
         auto sender_avatar_image = std::make_shared<QImage>(Database::instance()->get_local_file_id_path(sender_avatar_id + ";size:128*128"));
 
         // =================================================================== //
 
         // 添加对话
-        // 不可以将对方账号 ID 作为聊天室 ID，会导致接受者发现聊天室 ID 为自己
-        // 一对一聊天中，消息发送者和接收者中必定有一个是当前账号，另外一个账号可作为聊天室 ID。
-        // 如果自己是发送者，那么尝试将聊天室 ID 取为接收者的 ID。
-        QString chatroom_id = sender_account_id == contact_account_id ? receiver_account_id : sender_account_id;
+        QString chatroom_id = contact_data->account_id;
         add_chat_room(chatroom_id);
 
         // UI 所需数据
@@ -921,7 +930,7 @@ void ChatWindow::add_message(std::shared_ptr<SyncMessage> sync_message) {
             if (!message_data->text) { message_data->text = std::make_shared<MessageData::TextData>(); }
             message_data->text->text = sync_message->text().shortText();
         }
-        else if(is_file(sync_message)) {
+        else if(is_file_message(sync_message)) {
             // 必定为文件
             message_data->media_type = MessageData::MediaType::FILE;
             if (!message_data->file) { message_data->file = std::make_shared<MessageData::FileData>(); }
@@ -948,14 +957,35 @@ void ChatWindow::add_message(std::shared_ptr<SyncMessage> sync_message) {
         // =================================================================== //
         // 添加消息
         MessageWindow* target_message_window = get_message_window(chatroom_id);
+        if (!target_message_window->get_chatroom_info()) {
+            auto chatroom_data = m_chatroom_model->get_chatroom_data(chatroom_id);
+            target_message_window->set_chatroom_info(chatroom_data);
+        }
+        if (!target_message_window->get_contact_info()) {
+            target_message_window->set_contact_info(contact_data);
+        }
+
+        // qDebug().noquote().nospace() << "trace message file download."
+        //     << " target_message_window->add_message(...)."
+        //     << "chatroom_id : " << message_data->chatroom_id
+        //     << ", message_id : " << message_data->message_id
+        //     << ", sender->account_id : " << message_data->sender->account_id
+        //     << ", sender->avatar_id : " << message_data->sender->avatar_id
+        //     << ", file_id : " << ((message_data && message_data->file) ? message_data->file->file_id : "[no fileid]");
+
         target_message_window->add_message(message_data);
         // 不需要切换显示
         // m_ui->stacked_contact_detail->setCurrentWidget(target_message_window);
 
-        if (!message_data->sender->avatar_image->isNull()) { break; }
-
-        // 下载并显示头像
-        NetworkClient::instance()->download_file_notify_signal(message_data->sender->avatar_id);
+        // 添加新消息时会发送通知，从通知中触发
+        // // 下载头像
+        // if (message_data->sender->avatar_image->isNull()) {
+        //     NetworkClient::instance()->download_file_notify_signal(message_data->sender->avatar_id);
+        // }
+        // // 下载消息文件  // 下载时会校验  // 图片与普通文件都要下载
+        // if (is_file_message(sync_message)) {
+        //     NetworkClient::instance()->download_file_notify_signal(message_data->file->file_id);
+        // }
     } while (false);
 }
 
@@ -1085,7 +1115,14 @@ void ChatWindow::slot_message_to(std::shared_ptr<ContactData::ItemData> contact_
     // 2. 高亮当前对话
     highlight_chatroom(contact_data->account_id);
     // 3. 显示对话
-    MessageWindow* target_message_window = get_message_window(contact_data->account_id);
+    MessageWindow* target_message_window = get_message_window(new_chatroom_data->chatroom_id);
+    if (!target_message_window->get_chatroom_info()) {
+        auto chatroom_data = m_chatroom_model->get_chatroom_data(new_chatroom_data->chatroom_id);
+        target_message_window->set_chatroom_info(chatroom_data);
+    }
+    if (!target_message_window->get_contact_info()) {
+        target_message_window->set_contact_info(contact_data);
+    }
     m_ui->stacked_contact_detail->setCurrentWidget(target_message_window);
 }
 
@@ -1232,48 +1269,7 @@ void ChatWindow::show_avatar(std::shared_ptr<QImage> avatar_image) {
 }
 
 // 获取聊天记录窗口
-MessageWindow* ChatWindow::get_message_window(const QString&account_id) {
-    auto message_file_download = [this](QPointer<MessageWindow> safe_window, std::shared_ptr<MessageData::ItemData> message_data) {
-        do {
-            if (!safe_window) { break; }
-            if (!message_data) { break; }
-            if (!message_data->file) { break; }
-            if ( message_data->file->file_id.isEmpty()) { break; }
-            if (!message_data->sender) { break; }
-            // 自己发送的文件也要下载，防止文件不存在(有利于多设备登录时的消息同步)  // 发送时可直接复制到目标位置
-            // // 如果是自己发送的文件则不需要下载
-            // auto current_account_id = Accounts::instance()->get_current_account()->account_id;
-            // if ( message_data->sender->account_id == current_account_id) { break; }
-            // 获取本地文件信息
-            auto file_id = message_data->file->file_id;
-            // const auto file_path = Database::instance()->get_local_file_id_path(file_id);
-            // auto file_size = QFileInfo(file_path).size();
-            // // 目前仅校验文件大小
-            // if (file_size == message_data->file->file_size) { break; }
-            // // auto file_hash = Utils::Algorithm::calculate_file_md5(file_path);
-            // // if (file_hash != message_data->file->file_hash) { break; }
-
-            // 相关消息均需更新
-            using CacheIDMessages = QMap<QString, QMap<QPointer<MessageWindow>, QVector<std::shared_ptr<MessageData::ItemData>>>>;
-            auto get_id_messages = []() -> CacheIDMessages & {
-                static CacheIDMessages s_map_file_id_messages;
-                return s_map_file_id_messages;
-            };
-            auto&id_messages = get_id_messages();  // 必须为非 const 引用
-            // 添加文件 ID
-            if (!id_messages.contains(file_id)) { id_messages.insert(file_id, {}); }
-            auto&window_messages = id_messages[file_id];  // 必须为非 const 引用
-            // 添加窗口
-            if (!window_messages.contains(safe_window)) { window_messages.insert(safe_window, {}); }
-            auto&message_datas = window_messages[safe_window];  // 必须为非 const 引用
-            // 添加消息数据
-            if (!message_datas.contains(message_data)) { message_datas.append(message_data); }
-
-            // 下载文件
-            NetworkClient::instance()->download_file_notify_signal(file_id);
-        } while (false);
-    };
-
+MessageWindow* ChatWindow::get_message_window(const QString& chatroom_id) {
     // 查找窗口提取数据
     MessageWindow* target_message_window = nullptr;
     for (int idx = 0; idx < m_ui->stacked_contact_detail->count(); ++idx) {
@@ -1281,45 +1277,23 @@ MessageWindow* ChatWindow::get_message_window(const QString&account_id) {
         MessageWindow* message_window = dynamic_cast<MessageWindow*>(m_ui->stacked_contact_detail->widget(idx));
         if (!message_window) { continue; }
         // 获取信息
-        auto contact_widget = message_window->get_contact();
-        if (!contact_widget) { continue; }
-        auto account_id_widget = contact_widget->account_id;
+        auto chatroom_info = message_window->get_chatroom_info();
+        if (!chatroom_info) { continue; }
         // 比较存储
-        if (account_id != account_id_widget) { continue; }
+        if (chatroom_id != chatroom_info->chatroom_id) { continue; }
         target_message_window = message_window;
         break;
     }
     // 找不到窗口时进行添加
     if (!target_message_window) {
         target_message_window = new MessageWindow;
-        target_message_window->set_contact(Accounts::instance()->get_contact(account_id));
         m_ui->stacked_contact_detail->addWidget(target_message_window);
-        // 使用 QPointer 安全监控窗口生命周期，防止窗口被销毁后空指针调用的崩溃
-        QPointer<MessageWindow> safe_window = target_message_window;
-        // 连接更新信号
-        // chatroom 更新最后一条消息
-        connect(SignalInner::instance(), &SignalInner::signal_new_message, this,
-            [this](std::shared_ptr<MessageData::ItemData> last_message) {
-                update_last_message(last_message);
-            }
-        );
-        // 如果需要下载文件
-        connect(SignalInner::instance(), &SignalInner::signal_new_message, this,
-            [message_file_download, safe_window](std::shared_ptr<MessageData::ItemData> message_data) {
-                message_file_download(safe_window, message_data);  // TODO:move to thread
-                // auto thread = QThread::create(message_file_download, target_message_window, message_data);
-                // connect(thread, &QThread::finished, thread, &QThread::deleteLater);
-                // thread->start();
-                // // Use QThreadPool::start(Callable&&) if you don't need the returned QFuture
-                // // QtConcurrent::run([target_message_window, message_data, message_file_download](){ message_file_download(target_message_window, message_data); });
-            }
-        );
     }
     return target_message_window;
 }
 
 // 更新列表中显示的最后一条消息
-void ChatWindow::update_last_message(std::shared_ptr<MessageData::ItemData> last_message) {
+void ChatWindow::update_last_message(const QPointer<MessageModel> signal_sender, std::shared_ptr<MessageData::ItemData> last_message) {
     do {
         // 更新列表中显示的内容
         if (!last_message) { break; }
@@ -1387,7 +1361,7 @@ std::shared_ptr<ContactData::ItemData> ChatWindow::get_cache_contact_data() cons
 void ChatWindow::slot_update_avatar_file(const Network::FileDownloadNotify notify) {
     const QString& file_id = notify.id;
     if (file_id.isEmpty()) { return; }
-    if (!notify.finished || !notify.ok__ || notify.status != FileStatusCode::FILE_STATUS_UPLOADED) { return; }
+    if (!notify.finished || !notify.ok || notify.status != FileStatusCode::FILE_STATUS_UPLOADED) { return; }
     // 更新头像  // 有数据，id 相同，但实际未加载到图片
     auto cache_contact_data = get_cache_contact_data();
     if (cache_contact_data && cache_contact_data->avatar_id == file_id && cache_contact_data->avatar_image->isNull()) {
@@ -1399,7 +1373,7 @@ void ChatWindow::slot_update_avatar_file(const Network::FileDownloadNotify notif
 void ChatWindow::slot_update_chatroom_file(const Network::FileDownloadNotify notify) {
     const QString& file_id = notify.id;
     if (file_id.isEmpty()) { return; }
-    if (!notify.finished || !notify.ok__ || notify.status != FileStatusCode::FILE_STATUS_UPLOADED) { return; }
+    if (!notify.finished || !notify.ok || notify.status != FileStatusCode::FILE_STATUS_UPLOADED) { return; }
     for(auto& chatroom_data : m_chatroom_model->get_members()) {
         if (chatroom_data->avatar_id == notify.id) {
             // 文件下载仅修改相关参数即可
@@ -1418,7 +1392,7 @@ void ChatWindow::slot_update_chatroom_file(const Network::FileDownloadNotify not
 void ChatWindow::slot_update_contact_file(const Network::FileDownloadNotify notify) {
     const QString& file_id = notify.id;
     if (file_id.isEmpty()) { return; }
-    if (!notify.finished || !notify.ok__ || notify.status != FileStatusCode::FILE_STATUS_UPLOADED) { return; }
+    if (!notify.finished || !notify.ok || notify.status != FileStatusCode::FILE_STATUS_UPLOADED) { return; }
     const auto& group_datas = m_contact_model->get_members();  // 获取到的是副本
     for(auto& group_pair : group_datas) {
         auto& group_type    = group_pair.first;

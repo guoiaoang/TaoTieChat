@@ -4,6 +4,9 @@
 #include "Utils.h"
 #include "Defines.h"
 
+class MessageDelegate;
+class MessageModel;
+
 class SignalInner : public QObject {
     Q_OBJECT
 private:
@@ -46,22 +49,23 @@ signals:
 
 // ============================= MessageDelegate ============================= //
 signals:
-    void signal_open_link  (const QString& href);
-    void signal_open_file  (std::shared_ptr<MessageData::ItemData> message_data);
-    void signal_open_folder(std::shared_ptr<MessageData::ItemData> message_data);
-    void signal_open_data  (std::shared_ptr<MessageData::ItemData> message_data);
-    void signal_copy_data  (std::shared_ptr<MessageData::ItemData> message_data);
-    void signal_copy_file  (std::shared_ptr<MessageData::ItemData> message_data);
-    void signal_copy_path  (std::shared_ptr<MessageData::ItemData> message_data);
-    void signal_save_to    (std::shared_ptr<MessageData::ItemData> message_data);
+    // MessageWindow 会有多个副本，造成多次执行动作
+    void signal_open_link  (const QPointer<MessageDelegate> signal_sender, const QString& href);
+    void signal_open_file  (const QPointer<MessageDelegate> signal_sender, std::shared_ptr<MessageData::ItemData> message_data);
+    void signal_open_folder(const QPointer<MessageDelegate> signal_sender, std::shared_ptr<MessageData::ItemData> message_data);
+    void signal_open_data  (const QPointer<MessageDelegate> signal_sender, std::shared_ptr<MessageData::ItemData> message_data);
+    void signal_copy_data  (const QPointer<MessageDelegate> signal_sender, std::shared_ptr<MessageData::ItemData> message_data);
+    void signal_copy_file  (const QPointer<MessageDelegate> signal_sender, std::shared_ptr<MessageData::ItemData> message_data);
+    void signal_copy_path  (const QPointer<MessageDelegate> signal_sender, std::shared_ptr<MessageData::ItemData> message_data);
+    void signal_save_to    (const QPointer<MessageDelegate> signal_sender, std::shared_ptr<MessageData::ItemData> message_data);
 
 // =============================== AuthWindow =============================== //
 signals:
     void signal_signin();
 
-// ============================== MessageWindow ============================== //
+// ============================== MessageModel ============================== //
 signals:
-    void signal_new_message(std::shared_ptr<MessageData::ItemData> message);
+    void signal_new_message(const QPointer<MessageModel> sender, std::shared_ptr<MessageData::ItemData> message);
 
 // =============================== MediaWindow =============================== //
 signals:

@@ -21,8 +21,10 @@ public:
     explicit MessageWindow(QWidget *parent = nullptr);
     ~MessageWindow();
 
-    void set_contact(std::shared_ptr<ContactData::ItemData> contact_data);
-    std::shared_ptr<ContactData::ItemData> get_contact() const;
+    void set_chatroom_info(std::shared_ptr<ChatroomData::ItemData> chatroom_info);
+    std::shared_ptr<ChatroomData::ItemData> get_chatroom_info() const;
+    void set_contact_info(std::shared_ptr<ContactData::ItemData> contact_data);
+    std::shared_ptr<ContactData::ItemData> get_contact_info() const;
 
     // 传入头像 ID，自动从本地或网络加载头像
     void show_avatar_id(const QString& avatar_id, bool online_download);
@@ -50,15 +52,17 @@ public Q_SLOTS:
     void slot_button_send        ();
 private slots:
     void slot_show_context_menu(const QPoint &viewportPos);
-    void slot_open_link  (const QString &href);
-    void slot_open_file  (std::shared_ptr<MessageData::ItemData> message_data);
-    void slot_open_folder(std::shared_ptr<MessageData::ItemData> message_data);
-    void slot_open_data  (std::shared_ptr<MessageData::ItemData> message_data);
-    void slot_copy_data  (std::shared_ptr<MessageData::ItemData> message_data);
-    void slot_copy_file  (std::shared_ptr<MessageData::ItemData> message_data);
-    void slot_copy_path  (std::shared_ptr<MessageData::ItemData> message_data);
-    void slot_save_to    (std::shared_ptr<MessageData::ItemData> message_data);
+    // MessageWindow 会有多个副本，造成多次执行动作
+    void slot_open_link  (const QPointer<MessageDelegate> signal_sender, const QString &href);
+    void slot_open_file  (const QPointer<MessageDelegate> signal_sender, std::shared_ptr<MessageData::ItemData> message_data);
+    void slot_open_folder(const QPointer<MessageDelegate> signal_sender, std::shared_ptr<MessageData::ItemData> message_data);
+    void slot_open_data  (const QPointer<MessageDelegate> signal_sender, std::shared_ptr<MessageData::ItemData> message_data);
+    void slot_copy_data  (const QPointer<MessageDelegate> signal_sender, std::shared_ptr<MessageData::ItemData> message_data);
+    void slot_copy_file  (const QPointer<MessageDelegate> signal_sender, std::shared_ptr<MessageData::ItemData> message_data);
+    void slot_copy_path  (const QPointer<MessageDelegate> signal_sender, std::shared_ptr<MessageData::ItemData> message_data);
+    void slot_save_to    (const QPointer<MessageDelegate> signal_sender, std::shared_ptr<MessageData::ItemData> message_data);
 private slots:
+    void slot_message_file_download    (const QPointer<MessageModel> signal_sender, std::shared_ptr<MessageData::ItemData> message_data);  // 新消息来到时需要下载文件
     // 修改个人资料或头像是需要同时修改消息中的个人信息及头像(好友或自己均可)
     void slot_update_message_contact   (std::shared_ptr<ContactData::ItemData> contact_data);
     // 更新好友信息
@@ -67,10 +71,11 @@ private slots:
     void slot_update_message_file      (const Network::FileDownloadNotify notify);  // 更新文件消息/头像
 
 private:
-    std::shared_ptr<Ui::MessageWindow    > m_ui;
-    std::shared_ptr<ContactData::ItemData> m_contact_data;
-    std::shared_ptr<ContactWindow        > m_contact_window;  // 当前显示的联系人详情窗口
-    std::shared_ptr<MessageModel         > m_message_model;
-    std::shared_ptr<MessageDelegate      > m_message_delegate;
+    std::shared_ptr<Ui::MessageWindow     > m_ui;
+    std::shared_ptr<ChatroomData::ItemData> m_chatroom_data ;  // 聊天室信息，可用于确认是否是当前窗口需要处理的消息
+    std::shared_ptr<ContactData::ItemData > m_contact_data  ;  // 联系人信息
+    std::shared_ptr<ContactWindow         > m_contact_window;  // 当前显示的联系人详情窗口
+    std::shared_ptr<MessageModel          > m_message_model;
+    std::shared_ptr<MessageDelegate       > m_message_delegate;
     bool enable_return_send = true;  // 按回车键发送消息
 };

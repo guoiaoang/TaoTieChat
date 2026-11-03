@@ -543,7 +543,7 @@ void ContactWindow::slot_contact_info_changed(std::shared_ptr<ContactData::ItemD
 void ContactWindow::slot_file_downloaded(const Network::FileDownloadNotify notify) {
     const QString& file_id = notify.id;
     if (file_id.isEmpty()) { return; }
-    if (!notify.finished || !notify.ok__ || notify.status != FileStatusCode::FILE_STATUS_UPLOADED) { return; }
+    if (!notify.finished || !notify.ok || notify.status != FileStatusCode::FILE_STATUS_UPLOADED) { return; }
 
     auto contact_data = get_contact_data();
     const auto& avatar_id = contact_data->avatar_id;
@@ -555,7 +555,7 @@ void ContactWindow::slot_file_downloaded(const Network::FileDownloadNotify notif
     }
 
     // 忽略下载错误通知
-    if (!notify.ok__) {
+    if (!notify.ok) {
         // QString error_message = tr("Failed to download avatar.");
         // error_message += tr("\n\ncode : 0x%1\nmessage : %2")
         //     .arg(notify.code, 8, 16, QChar('0'))  // 16 进制显示，宽度 8 位，不足补 0
@@ -637,7 +637,7 @@ void ContactWindow::update_profile_avatar(const QString&avatar_path) {
             return;
         }
         // 忽略上传错误通知
-        if (!notify.ok__) {
+        if (!notify.ok) {
             // 16 进制显示，宽度 8 位，不足补 0
             QString error_message = tr("Failed to upload avatar.\n\ncode : 0x%1\nmessage : %2").arg(notify.code, 8, 16, QChar('0')).arg(notify.message);
             QMessageBox::information(this, tr("Error"), error_message, QMessageBox::StandardButton::Ok);

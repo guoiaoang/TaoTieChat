@@ -13,6 +13,7 @@ class ContactModel;
 class ContactProxy;
 class ChatroomModel;
 class ChatroomProxy;
+class MessageModel;
 
 namespace Ui {
 class ChatWindow;
@@ -50,17 +51,17 @@ private:
     void show_avatar(std::shared_ptr<QImage> avatar_image);
 
     // 获取聊天记录窗口
-    MessageWindow* get_message_window(const QString& account_id);
+    MessageWindow* get_message_window(const QString &chatroom_id);
     // 更新列表中显示的最后一条消息
-    void update_last_message(std::shared_ptr<MessageData::ItemData> last_message);
+    void update_last_message(const QPointer<MessageModel> signal_sender, std::shared_ptr<MessageData::ItemData> last_message);
 
     // 选中并高亮指定的聊天列表
-    bool highlight_chatroom(const QString& chatroom_id);
+    bool highlight_chatroom(const QString &chatroom_id);
 
 public Q_SLOTS:
     // 聊天室管理
     // 添加到聊天室列表
-    void add_chat_room(const QString& chatroom_id);
+    void add_chat_room(const QString &chatroom_id);
     // 显示指定聊天室的对话
     void show_chat_room_messages(std::shared_ptr<ContactData::ItemData> contact_data);
 

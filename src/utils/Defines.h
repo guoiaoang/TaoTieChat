@@ -296,7 +296,7 @@ struct FileDownloadNotify {
     using Status = FileStatusCode;
     // 上传/下载结束后 ok 才应该设置为true，收发包正确时只应设置code
     bool    finished =      true;  // 所有操作完成，任务退出时设置为 true
-    bool    ok__     =     false;  // 是否发生错误
+    bool    ok       =     false;  // 是否发生错误
     int64_t code     =        -1;  // 成功或失败的代码
     QString message  = QString();  // 成功或失败的消息
     //
@@ -316,8 +316,8 @@ inline QDebug operator<<(QDebug debug, const FileDownloadNotify &notify) {
     QDebugStateSaver saver(debug); // 保持输出格式一致性
     debug.nospace() << "NetworkFileIONotify{"
         << "finished:"        << notify.finished
-        << ",ok:"             << notify.ok__
-        << ",code:"           << (notify.ok__ ? Utils::Transform::to_string(SuccessCode(notify.code)) : Utils::Transform::to_string(ErrorCode(notify.code)))
+        << ",ok:"             << notify.ok
+        << ",code:"           << (notify.ok ? Utils::Transform::to_string(SuccessCode(notify.code)) : Utils::Transform::to_string(ErrorCode(notify.code)))
         << ",message:"        << notify.message
         << ",id:"             << notify.id
         << ",status:"         << Utils::Transform::to_string(notify.status)

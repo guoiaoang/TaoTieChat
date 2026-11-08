@@ -46,6 +46,7 @@ private:
 // 登陆附加选项  // 记住密码及自动登陆选项
 struct AuthOpt{
     QString account_id;
+    QString avatar_id ;
     QString user_id   ;
     QString password  ;
     QString token     ;
@@ -71,6 +72,7 @@ public:
         mINI::INIStructure ini_data;
         ini_file.read(ini_data);
         ini_data[section_name]["account_id"     ] = auth_opt->account_id.toStdString();
+        ini_data[section_name]["avatar_id"      ] = auth_opt->avatar_id .toStdString();
         ini_data[section_name]["user_id"        ] = auth_opt->user_id   .toStdString();
         ini_data[section_name]["token"          ] = auth_opt->rember_password ? auth_opt->token     .toStdString() : "";
         ini_data[section_name]["password"       ] = auth_opt->rember_password ? auth_opt->password  .toStdString() : "";
@@ -105,6 +107,7 @@ public:
                 auth_opt->account_id      = QString::fromStdString(section_title.substr(m_user_section_prefix().length()));  // 去掉 "user:" 前缀
                 auto const& collection    = ite_section.second;
                 auth_opt->account_id      = collection.has("account_id"     ) ? QString::fromStdString(collection.get("account_id")) : QString();
+                auth_opt->avatar_id       = collection.has("avatar_id"      ) ? QString::fromStdString(collection.get("avatar_id" )) : QString();
                 auth_opt->user_id         = collection.has("user_id"        ) ? QString::fromStdString(collection.get("user_id"   )) : QString();
                 auth_opt->token           = collection.has("token"          ) ? QString::fromStdString(collection.get("token"     )) : QString();
                 auth_opt->password        = collection.has("password"       ) ? QString::fromStdString(collection.get("password"  )) : QString();

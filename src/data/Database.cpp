@@ -120,7 +120,7 @@ QString Database::get_local_file_id_path(const QString&file_id) {
                     resizeSvgVector(file_path, size_path, QSize(size_width, size_height));
                 }
                 else {
-                    QPixmap(file_path).scaled(QSize(size_width, size_height), Qt::KeepAspectRatio, Qt::SmoothTransformation).save(size_path);
+                    QImage(file_path).scaled(QSize(size_width, size_height), Qt::KeepAspectRatio, Qt::SmoothTransformation).save(size_path);
                 }
             }
             m_file_id_path_map.save_local_file_id_path(file_id, size_path);

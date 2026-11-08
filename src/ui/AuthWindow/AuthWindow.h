@@ -39,6 +39,8 @@ private slots:
     bool slot_signin();
     bool slot_signup_successd(signup_params params_signup);
     bool slot_signin_successd(signin_params params_signin, signin_reply reply_signin, std::shared_ptr<AuthOpt> auth_opt);
+    // 账号信息修改时更新头像 ID
+    void slot_account_changed(std::shared_ptr<ContactData::ItemData> contact_data);
 
 private:
     bool signup(signup_params params_signup);

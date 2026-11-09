@@ -43,9 +43,10 @@ signals:
 // ============================== NetworkClient ============================== //
 signals:
     // 文件下载成功通知
-    void signal_download_file      (const Network::FileDownloadNotify notify);
-    void signal_file_download_error(const Network::FileDownloadNotify notify);
-    void signal_file_downloaded    (const Network::FileDownloadNotify notify);
+    void signal_file_download_notify(const Network::FileDownloadNotify notify); // 所有事件
+    void signal_file_downloading    (const Network::FileDownloadNotify notify);
+    void signal_file_download_error (const Network::FileDownloadNotify notify);
+    void signal_file_downloaded     (const Network::FileDownloadNotify notify);
 
 // ============================= MessageDelegate ============================= //
 signals:

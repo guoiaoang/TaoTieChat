@@ -985,278 +985,343 @@ public:
     QMutex m_mutex;
 };
 
-// 不要同时下载一个文件
-// true 代表调用成功，不代表下载结果
-bool NetworkClient::download_file(const QString &file_id, network_file_io_notify_callback callback_download_file_notify) {
-    using namespace Utils::Wrapper;
-    using Request  = FileDownloadRequest;
-    using Reply    = FileDownloadReply;
-    using ReplyOpt = std::optional<Reply>;
-    using Params   = file_download_params;
+// =========================================================================== //
+// 文件下载：整条链路放进专用子线程
+// --------------------------------------------------------------------------- //
+// 关键点：
+//   1. QGrpcHttp2Channel 底层是 QNetworkAccessManager(QObject)，QGrpcClientBase、
+//      QGrpcServerStream 也都是 QObject，线程亲和性绑定创建它们的线程。
+//      NetworkClient::m_channel / m_client_file 属于主线程，绝不能跨线程复用，
+//      因此子线程里必须新建一套独立的 channel + client。
+//   2. gRPC 的建连、写请求、readyRead，以及 messageReceived / finished 全部靠
+//      Qt 事件队列分发，所以线程必须有事件循环。默认 QThread::run() 会 exec()，
+//      而 QThread::create() 生成的线程不会 exec()，不能用。
+//   3. Accounts / Database / user_cache_path() 等单例只在主线程访问：
+//      下载前把参数准备好，下载中的写库与通知排队回主线程。
+//   4. 每个任务一个线程，任务结束 quit() + deleteLater 自动回收，互不阻塞。
+// =========================================================================== //
+namespace {
+
+// 程序退出时统一收尾，避免 "QThread: Destroyed while thread is still running"
+static QMutex                    g_download_threads_mutex;
+static QList<QPointer<QThread>>  g_download_threads;
+
+static void shutdown_download_threads() {
+    QList<QPointer<QThread>> snapshot;
+    {
+        QMutexLocker locker(&g_download_threads_mutex);
+        snapshot = g_download_threads;
+    }
+    for (const QPointer<QThread> &p : snapshot) {
+        if (!p) { continue; }
+        p->quit();
+        p->wait(5000);
+    }
+}
+
+static void register_download_thread(QThread *thread) {
+    static const bool s_registered = []() {
+        qAddPostRoutine(&shutdown_download_threads);
+        return true;
+    }();
+    (void)s_registered;
+    QMutexLocker locker(&g_download_threads_mutex);
+    for (qsizetype i = g_download_threads.size() - 1; i >= 0; --i) {
+        if (g_download_threads.at(i).isNull()) {
+            g_download_threads.removeAt(i);
+        }
+    }
+    g_download_threads.append(QPointer<QThread>(thread));
+}
+
+class DownloadWorker : public QObject {
+public:
     using Notify   = Network::FileDownloadNotify;
     using Callback = network_file_io_notify_callback;
     using Stream   = QGrpcServerStream;
+    using BytesMd5 = Utils::Algorithm::BytesMd5;
 
-    // 需要传出的函数
-    struct FileDownloadArgs {
-        using BytesMd5 = Utils::Algorithm::BytesMd5;
-        Notify                 notify;
-        std::shared_ptr<QFile> file_download;  // 用于传递文件句柄
-        FileDownloadHeader     header;
-        bool                   initialized = false;  // 已经完成初始化的标记
-        qint64                 downloaded_size = 0;  // 已经下载的大小，支持断点续传时有用
-        QString                real_md5;  // hash 下载文件得出的结果
-        BytesMd5               calculated_md5;  // hash 下载的文件的工具
+    // 全部是值类型 / 裸指针，可安全跨线程传递；不含任何 QObject 实例
+    struct Params {
+        QString             file_id;
+        QUrl                server_url;
+        QGrpcChannelOptions channel_options;
+        QGrpcCallOptions    call_options;
+        FileDownloadRequest request;        // 主线程已填好 auth / fileId / downloadedBytes
+        QString             cache_dir;      // Utils::user_cache_path()，主线程算好
+        QString             download_dir;   // Utils::user_download_path()，主线程算好
+        QString             saved_path;     // Database 中记录的本地路径
+        qint64              downloaded_size = 0;
+        QThread            *thread          = nullptr;
+        Callback            callback;
     };
-    // 获取下载起始位置
-    std::shared_ptr<FileDownloadArgs> file_download_args = std::make_shared<FileDownloadArgs>();
-    auto& notify = file_download_args->notify;
 
-    // 只修改与默认值不同的变量
-    notify.id   = file_id;
-    notify.path = Database::instance()->get_local_file_id_path(file_id);
+    // 只能通过 QMetaObject::invokeMethod(..., Qt::QueuedConnection) 调用，
+    // 保证 channel / client / stream 都在子线程内创建
+    void start(Params params) {
+        m_params = std::move(params);
+        m_thread = m_params.thread;
 
-    const auto& file_info = QFileInfo(notify.path);
-    file_download_args->downloaded_size = qMax<qint64>(0, file_info.size());
+        m_notify.id   = m_params.file_id;
+        m_notify.path = m_params.saved_path;
 
-    // 路径不为空，代表有下载记录，此时可以打开文件。打开文件失败直接返回，成功时在下载过程中再校验哈希。
-    if (!notify.path.isEmpty()) {
-        Utils::create_dirs(Utils::get_dir(notify.path));  // 确保目录存在
-        file_download_args->file_download = std::make_shared<QFile>(notify.path);
-        // 文件打开失败返回错误
-        if (!file_download_args->file_download->open(QIODevice::ReadWrite)) {
-            // 只修改与默认/当前值不同的变量
-            notify.finished = true;
-            notify.ok       = false;
-            notify.code     = int64_t(ErrorCode::FILE_READ_ERROR);
-            notify.message  = tr("Failed to open file for md5 calculation: %1").arg(file_download_args->file_download->errorString());
-            callback_download_file_notify(notify);
-            return false;
+        // 有下载记录时先打开已有文件（与原实现一致：打开失败直接结束）
+        if (!m_notify.path.isEmpty()) {
+            Utils::create_dirs(Utils::get_dir(m_notify.path));
+            m_file = std::make_shared<QFile>(m_notify.path);
+            if (!m_file->open(QIODevice::ReadWrite)) {
+                fail(ErrorCode::FILE_READ_ERROR, NetworkClient::tr("Failed to open file for md5 calculation: %1").arg(m_file->errorString()));
+                return;
+            }
+        }
+
+        // 【核心】channel 与 client 必须在本线程创建，不能复用主线程的共享实例
+        m_channel = std::make_shared<QGrpcHttp2Channel>(m_params.server_url, m_params.channel_options);
+        m_client  = std::make_unique<FileClient>();     // 不带 parent，亲和本线程
+        if (!m_client->attachChannel(m_channel)) {
+            fail(ErrorCode::ERROR_CONN, "Error in connect.");
+            return;
+        }
+
+        std::unique_ptr<Stream> reply = m_client->FileDownload(m_params.request, m_params.call_options);
+        m_stream = std::shared_ptr<Stream>(std::move(reply));
+        if (!m_stream) {
+            fail(ErrorCode::ERROR_CONN, "Error in connect.");
+            return;
+        }
+        m_notify.finished = false;  // 防止提前结束
+
+        // connect(m_stream.get(), &Stream::messageReceived, this, &DownloadWorker::on_message);
+        connect(m_stream.get(), &Stream::messageReceived, this, [this](){ on_message(); });
+        // finished 定义在基类 QGrpcOperation 上
+        // connect(m_stream.get(), &QGrpcOperation::finished, this, &DownloadWorker::on_finished, Qt::SingleShotConnection);
+        connect(m_stream.get(), &QGrpcOperation::finished, this, [this](const QGrpcStatus &status){ on_finished(status); }, Qt::SingleShotConnection);
+    }
+
+private:
+    // 所有主线程任务都投递到 NetworkClient 单例（亲和主线程）。
+    // 同一个 receiver 的 queued 调用是 FIFO，写库一定早于完成通知。
+    template <class Functor>
+    void on_main(Functor task) const {
+        QMetaObject::invokeMethod(NetworkClient::instance(), task, Qt::QueuedConnection);
+    }
+
+    void emit_notify(const Notify &value) const {
+        Callback cb = m_params.callback;
+        if (!cb) { return; }
+        on_main([cb, value]() { cb(value); });
+    }
+
+    void save_path_to_db(const QString &id, const QString &path) const {
+        on_main([id, path]() {
+            Database::instance()->save_local_file_id_path(id, path);
+        });
+    }
+
+    void fail(ErrorCode code, const QString &message) {
+        Notify n    = m_notify;
+        n.finished  = true;
+        n.ok        = false;
+        n.code      = int64_t(code);
+        n.message   = message;
+        emit_notify(n);
+        stop();
+    }
+
+    // 断开信号避免退出前再次触发，然后让主线程执行 quit()
+    void stop() {
+        if (m_stopped) { return; }
+        m_stopped = true;
+        if (m_stream) { m_stream->disconnect(this); }
+        QThread *thread = m_thread;
+        if (thread) {
+            QMetaObject::invokeMethod(thread, &QThread::quit, Qt::QueuedConnection);
         }
     }
-    // 业务逻辑
-    // ===============                                                    //
-    Request request_download_file_param;
-    request_download_file_param.setRequestUserAuth(*Accounts::instance()->get_auth_request().get());
-    request_download_file_param.setFileId(notify.id);
-    request_download_file_param.setDownloadedBytes(file_download_args->downloaded_size);  // 断点续传
-    std::unique_ptr<Stream> reply_conn = m_client_file->FileDownload(request_download_file_param, m_grpc_call_options);
-    //                                                    =============== //
-    // 将 unique_ptr 转为 shared_ptr 供多个 Lambda 安全共享生命周期
-    std::shared_ptr<Stream> stream_ptr = std::move(reply_conn);
-    Stream* raw_stream = stream_ptr.get();
 
-    // const auto *rep_conn_ptr = reply_conn.get();  // 必须
-    if (!raw_stream) {
+    void on_message() {
+        if (m_stopped) { return; }
+        auto &notify = m_notify;
+        // 发生错误时已经通知，后续数据忽略即可
+        if (notify.finished) { emit_notify(notify); return; }
+
+        auto reply = m_stream->read<FileDownloadReply>();
+        if (!reply) {
+            fail(ErrorCode::ERROR_RECV, "Error in received data.");
+            return;
+        }
+
+        // ---- 第一个包：文件头 ----
+        if (!m_initialized) {
+            if (!reply->hasHeader()) {
+                fail(ErrorCode::ERROR_RECV, "Error in read reply : no header info found.");
+                return;
+            }
+            m_header = reply->header();
+            if (!m_header.result().hasSuccessCode()) {
+                fail(ErrorCode::FILE_DOWNLOAD_ERROR, "Header return error.");
+                return;
+            }
+            const auto &meta = m_header.fileMetadata();
+            notify.name = meta.fileName();
+            notify.size = meta.fileSize();
+            notify.md5  = meta.fileMd5();
+            if (notify.name.isEmpty() || notify.size < 0 || notify.md5.isEmpty()) {
+                fail(ErrorCode::FILE_DOWNLOAD_ERROR, "Header's filemeta info not valid.");
+                return;
+            }
+
+            // 临时文件路径：目录用主线程算好的 cache_dir，写库排队回主线程
+            if (notify.path.isEmpty() && !m_file) {
+                notify.path = QString("%1/%2/%3.part").arg(m_params.cache_dir).arg(notify.md5).arg(notify.name);
+                save_path_to_db(notify.id, notify.path);
+                Utils::create_dirs(Utils::get_dir(notify.path));
+                m_file = std::make_shared<QFile>(notify.path);
+                if (!m_file || !m_file->open(QIODevice::ReadWrite)) {
+                    fail(ErrorCode::FILE_WRITE_ERROR, "Open file error.");
+                    return;
+                }
+            }
+
+            // 断点续传：把已有文件的前 offset 字节并入 md5，再截断到该位置
+            int64_t file_offset  = m_header.offset();
+            int64_t unread_bytes = file_offset;
+            m_md5.reset();
+            while (m_file && unread_bytes > 0 && !m_file->atEnd()) {
+                const size_t chunk_size = 128 * 1024;  // 128KB
+                QByteArray chunk_data = m_file->read(chunk_size);
+                m_md5.update(chunk_data);
+                unread_bytes -= chunk_data.size();
+            }
+            if (m_file) {
+                m_file->resize(m_file->pos());  // 截断，清空后面的内容
+            }
+            m_initialized = true;  // 初始化完成
+
+            notify.finished = false;
+            notify.ok       = true;
+            return;  // 第一个包是文件信息，处理完成
+        }
+
+        // ---- 数据块：落盘 + 进度通知 ----
+        if (!reply->hasChunk()) { return; }
+        const auto &chunk_data = reply->chunk().chunkData();
+        const qint64 chunk_size = chunk_data.size();
+        if (chunk_data.isEmpty()) { return; }
+
+        if (!m_file) { return; }
+        const qint64 bytes_written = m_file->write(chunk_data);
+        if (bytes_written != chunk_size) {
+            fail(ErrorCode::FILE_WRITE_ERROR, QString("Write file chunk error.\n\npath: %1.\nerror message: %2").arg(notify.path).arg(m_file->errorString()));
+            return;
+        }
+
+        m_md5.update(chunk_data);
+        notify.uploaded_bytes = qMax<qint64>(0, notify.uploaded_bytes) + bytes_written;
+        notify.finished = false;
+        notify.ok       = true;
+        notify.code     = int64_t(SuccessCode::SUCCESS);
+        notify.message  = "Write chunk data success.";
+        notify.status   = FileStatusCode::FILE_STATUS_UPLOADING;
+        emit_notify(notify);
+    }
+
+    void on_finished(const QGrpcStatus &status) {
+        if (m_stopped) { return; }
+        auto &notify = m_notify;
+        if (m_file && m_file->isOpen()) { m_file->close(); }
+
+        if (!QFile(notify.path).open(QIODevice::ReadWrite)) {
+            qDebug().noquote().nospace() << QString("failed to open file %1").arg(notify.path);
+        }
+
+        if (!status.isOk()) {
+            fail(ErrorCode::ERROR_CONN, "Error in received data.");
+            return;
+        }
+
+        // 与原实现一致：md5 不匹配时静默结束（注意：此时不会发完成通知）
+        if (notify.md5 != m_md5.get_hex_string()) {
+            stop();
+            return;
+        }
+
+        const QString new_file_path = QString("%1/%2/%3").arg(m_params.download_dir).arg(notify.md5).arg(notify.name);
+        if (Utils::rename(notify.path, new_file_path)) {
+            save_path_to_db(notify.id, new_file_path);
+            notify.path = new_file_path;
+        }
+
         notify.finished = true;
-        notify.ok       = false;
-        notify.code     = int64_t(ErrorCode::ERROR_CONN);
-        notify.message  = "Error in connect.";
-        callback_download_file_notify(notify);
-        return true;
+        notify.ok       = true;
+        notify.code     = int64_t(SuccessCode::SUCCESS);
+        notify.message  = NetworkClient::tr("Download completed: %1").arg(notify.path);
+        notify.status   = FileStatusCode::FILE_STATUS_UPLOADED;
+        emit_notify(notify);
+        stop();
     }
 
-    notify.finished = false;  // 防止提前结束
+private:
+    Params                            m_params;
+    QThread                          *m_thread = nullptr;
+    Notify                            m_notify;
+    FileDownloadHeader                m_header;
+    std::shared_ptr<QFile>            m_file;
+    BytesMd5                          m_md5;
+    bool                              m_initialized = false;
+    bool                              m_stopped     = false;
 
-    // 收到数据时触发的消息  // 服务器每次 while 写数据到客户端都会触发一次
-    connect(raw_stream, &Stream::messageReceived, this,
-        [stream_ptr, file_download_args, callback_download_file_notify]() {
-            auto& notify = file_download_args->notify;
-            // 发生错误时已经通知，后续接收到数据时忽略即可，不必通知
-            // if (file_download_args->error_occued) {
-            if (notify.finished) {
-                callback_download_file_notify(notify);  // 可能不需要再次广播
-                return;
-            }
+    // 声明顺序决定析构逆序：stream -> client -> channel，全部在子线程销毁
+    std::shared_ptr<QGrpcHttp2Channel> m_channel;
+    std::unique_ptr<FileClient>        m_client;
+    std::shared_ptr<Stream>            m_stream;
+};
 
-            // 读取失败
-            auto reply = stream_ptr->read<FileDownloadReply>();
-            if (!reply) {
-                notify.finished = true;
-                notify.ok       = false;
-                notify.code     = int64_t(ErrorCode::ERROR_RECV);
-                notify.message  = "Error in received data.";
-                callback_download_file_notify(notify);
-                return;
-            }
+}  // namespace
 
-            // 文件头
-            if (!file_download_args->initialized) {
-                if (!reply->hasHeader()) {
-                    notify.finished = true;
-                    notify.ok       = false;
-                    notify.code     = int64_t(ErrorCode::ERROR_RECV);
-                    notify.message  = "Error in read reply : no header info found.";
-                    callback_download_file_notify(notify);
-                    return;
-                }
+// 不要同时下载一个文件
+// true 代表调用成功，不代表下载结果
+bool NetworkClient::download_file(const QString &file_id, network_file_io_notify_callback callback_download_file_notify) {
+    // ---- 1. 主线程：准备参数（Accounts / Database / 用户路径只在主线程访问） ----
+    DownloadWorker::Params params;
+    params.file_id      = file_id;
+    params.server_url   = server_url();
+    if (!params.server_url.isValid()) {
+        params.server_url = QUrl("http://127.0.0.1:50051");
+    }
+    params.channel_options = QGrpcChannelOptions{};
+    params.call_options    = m_grpc_call_options;  // 值类型，按值带入子线程
+    params.saved_path      = Database::instance()->get_local_file_id_path(file_id);
+    params.downloaded_size = qMax<qint64>(0, QFileInfo(params.saved_path).size());
+    // user_cache_path() / user_download_path() 内部会访问 Accounts 单例
+    params.cache_dir    = Utils::user_cache_path();
+    params.download_dir = Utils::user_download_path();
+    params.callback     = callback_download_file_notify;
 
-                file_download_args->header = reply->header();  // 导出
-                if (!file_download_args->header.result().hasSuccessCode()) {
-                    notify.finished = true;
-                    notify.ok       = false;
-                    notify.code     = int64_t(ErrorCode::FILE_DOWNLOAD_ERROR);
-                    notify.message  = "Header return error.";
-                    callback_download_file_notify(notify);
-                    return;
-                }
+    // protobuf 消息是值类型，按值传入子线程即可
+    params.request.setRequestUserAuth(*Accounts::instance()->get_auth_request().get());
+    params.request.setFileId(file_id);
+    params.request.setDownloadedBytes(params.downloaded_size);  // 断点续传
 
-                // 如果是有效的文件头信息，将有效信息保存到用于通知的结构体中
-                const auto& file_metadata = file_download_args->header.fileMetadata();
-                notify.name = file_metadata.fileName();
-                notify.size = file_metadata.fileSize();
-                notify.md5  = file_metadata.fileMd5 ();
+    // ---- 2. 创建带事件循环的专用线程 ----
+    auto *thread = new QThread;              // 默认 run() 会 exec()，不要加 parent
+    thread->setObjectName(QStringLiteral("FileDownload-%1").arg(file_id));
+    auto *worker = new DownloadWorker;       // 不加 parent：QObject 不能跨线程设父子关系
+    worker->moveToThread(thread);
 
-                // 校验参数是否有效
-                if (notify.name.isEmpty() || notify.size < 0 || notify.md5.isEmpty()) {
-                    notify.finished = true;
-                    notify.ok       = false;
-                    notify.code     = int64_t(ErrorCode::FILE_DOWNLOAD_ERROR);
-                    notify.message  = "Header's filemeta info not valid.";
-                    callback_download_file_notify(notify);
-                    return;
-                }
+    // 线程结束后在各自所属线程里析构
+    QObject::connect(thread, &QThread::finished, worker, &QObject::deleteLater);
+    QObject::connect(thread, &QThread::finished, thread, &QObject::deleteLater);
+    register_download_thread(thread);        // 程序退出时统一收尾
 
-                // TODO:先检查最终目标，然后再检查临时文件
-                // 存储路径为空且文件未打开时，进行初始化
-                if ( notify.path.isEmpty() && !file_download_args->file_download) {
-                    notify.path = QString("%1/%2/%3.part").arg(Utils::user_cache_path()).arg(notify.md5).arg(notify.name);  //  未下载完成时添加标记
-                    // 保存 file_id 和 本地路径的映射关系，以便后续根据 file_id 获取本地文件路径进行删除等操作
-                    Database::instance()->save_local_file_id_path(notify.id, notify.path); // 未下载完成时也进行存储，下载完成后再重命名及更新记录
-                    Utils::create_dirs(Utils::get_dir(notify.path));  // 确保目录存在
-                    file_download_args->file_download = std::make_shared<QFile>(notify.path);
-                    if (!file_download_args->file_download || !file_download_args->file_download->open(QIODevice::ReadWrite)) {
-                        notify.finished = true;
-                        notify.ok       = false;
-                        notify.code     = int64_t(ErrorCode::FILE_WRITE_ERROR);
-                        notify.message  = "Open file error.";
-                        callback_download_file_notify(notify);
-                        return;
-                    }
-                }
+    params.thread = thread;
+    thread->start();
 
-                // 文件大小异常时可以跳转到截断位置
-                int64_t file_offset = file_download_args->header.offset();
-                // 计算已有文件的 md5  // 只读取到下载起始位置与实际文件大小中的下限位置处即可
-                int64_t unread_bytes = file_offset;
-                file_download_args->calculated_md5.reset();
-                while (file_download_args->file_download && unread_bytes > 0 && !file_download_args->file_download->atEnd()) {
-                    const size_t chunk_size = 128 * 1024;  // 128KB
-                    QByteArray chunk_data = file_download_args->file_download->read(chunk_size);
-                    file_download_args->calculated_md5.update(chunk_data);
-                    unread_bytes -= chunk_data.size();
-                }
-                // 截断之后的数据
-                file_download_args->file_download->resize(file_download_args->file_download->pos());
-                file_download_args->initialized = true ;  // 已经成功初始化
-
-                notify.finished = false;  // 没有发生错误或下载完成，后面还需要继续操作
-                notify.ok       = true;  // 未发生错误
-
-                // 第一个包是文件信息时，走到这里就已经处理完成
-                return;
-            }
-
-            // 写入数据
-            // 文件上传完成后最后一条消息也会触发该判断，但实际并不是错误，不需要报错
-            if (!reply->hasChunk()) {
-                // notify.finished = true;
-                // notify.ok       = false;
-                // notify.code     = int64_t(ErrorCode::FILE_DOWNLOAD_ERROR);
-                // notify.message  = "Error in read reply : no chunk data found.";
-                // callback_download_file_notify(notify);
-                return;
-            }
-
-            auto& chunk_data = reply->chunk().chunkData();
-            qint64 chunk_size = chunk_data.size();
-            // 有数据时进行写入
-            if (!chunk_data.isEmpty()) {
-                qint64 bytes_written = file_download_args->file_download->write(chunk_data);
-
-                // 写入失败
-                if (bytes_written != chunk_size) {
-                    notify.finished = true;
-                    notify.ok       = false;
-                    notify.code     = int64_t(ErrorCode::FILE_WRITE_ERROR);
-                    notify.message  = QString("Write file chunk error.\n\npath: %1.\nerror message: %2")
-                        .arg(notify.path).arg(file_download_args->file_download->errorString());
-                    callback_download_file_notify(notify);
-                    return;
-                }
-
-                // md5 校验
-                file_download_args->calculated_md5.update(chunk_data);
-                // 防止 uploaded_bytes 为默认的无效值 -1
-                notify.uploaded_bytes = qMax(0, notify.uploaded_bytes);
-                notify.uploaded_bytes += bytes_written;
-
-                // 写入成功时的进度通知
-                notify.finished = false;  // 不是下载结束的通知，不要设置为 true
-                notify.ok       = true;
-                notify.code     = int64_t(SuccessCode::SUCCESS);
-                notify.message  = "Write chunk data success.";
-                notify.status   = FileStatusCode::FILE_STATUS_UPLOADING;
-                callback_download_file_notify(notify);
-            }
-        }
-    );
-
-    // 捕获输出返回信息  // 单次模型需要使用 `Qt::SingleShotConnection` 以便结束后销毁
-    // lamda 表达式不可使用引用，会造成生命周期问题
-    // 流结束时发送的消息
-    connect(raw_stream, &QGrpcCallReply::finished, this,
-        [this, stream_ptr, file_download_args, callback_download_file_notify](const QGrpcStatus &status) mutable {
-            auto& notify = file_download_args->notify;
-            // 关闭文件句柄
-            if (file_download_args->file_download && file_download_args->file_download->isOpen()) {
-                file_download_args->file_download->close();
-            }
-
-            // 测试读取是否异常
-            if (!QFile(notify.path).open(QIODevice::ReadWrite)) {
-                qDebug().noquote().nospace() << QString("failed to open file %1").arg(notify.path);
-            }
-
-            // 服务器返回错误
-            if (!status.isOk()) {
-                notify.finished = true;
-                notify.ok       = false;
-                notify.code     = int64_t(ErrorCode::ERROR_CONN);
-                notify.message  = "Error in received data.";
-                callback_download_file_notify(notify);
-                return;
-            }
-
-            // 文件校验失败  // 先注释掉通知，下载出错时已经发送过通知了
-            // file_download_params->real_md5 = Utils::Algorithm::calculate_file_md5(notify.path);
-            if ( notify.md5 != file_download_args->calculated_md5.get_hex_string()) {
-                // notify.finished = true;
-                // notify.ok       = false;
-                // notify.code     = int64_t(ErrorCode::FILE_DOWNLOAD_ERROR);
-                // notify.message  = "Error in received data.";
-                // callback_download_file_notify(notify);
-                return;
-            }
-
-            // 移动文件及更新记录
-            // Utils::rename(...) 会自动创建父目录
-            QString new_file_path = QString("%1/%2/%3").arg(Utils::user_download_path()).arg(notify.md5).arg(notify.name);  //  下载完成后的保存位置
-            if (Utils::rename(notify.path, new_file_path)) {
-                Database::instance()->save_local_file_id_path(notify.id, new_file_path); // 下载完成后需要更新记录
-                notify.path = new_file_path;  // 改名后需要同步修改路径
-            }
-
-            // 文件下载完成时的结果通知
-            // emit SignalInner::instance()->signal_file_downloaded(notify.id);
-            notify.finished = true;  // 任务结束(下载完成)
-            notify.ok       = true;  // 没有发生错误
-            notify.code     = int64_t(SuccessCode::SUCCESS);  // 成功代码
-            notify.message  = tr("Download completed: %1").arg(notify.path);
-            notify.status   = FileStatusCode::FILE_STATUS_UPLOADED;  // 文件下载完成
-            callback_download_file_notify(notify);
-        }, Qt::SingleShotConnection
-    );
+    // ---- 3. 排队启动：确保 channel / client / stream 在子线程内创建 ----
+    QMetaObject::invokeMethod(worker,
+        [worker, params = std::move(params)]() mutable {
+            worker->start(std::move(params));
+        }, Qt::QueuedConnection);
     return true;
 }
 
@@ -1269,8 +1334,9 @@ bool NetworkClient::download_file_notify_signal(const QString &file_id) {
     }
     // qDebug().noquote().nospace() << "trace message file download." << "NetworkClient::download_file_notify_signal() add_record " << file_id << " ok";
     network_file_io_notify_callback callback_download_file_notify = [this](const Network::FileDownloadNotify notify) {
+        emit SignalInner::instance()->signal_file_download_notify(notify);  // 广播下载通知
         if (!notify.finished) {
-            emit SignalInner::instance()->signal_download_file(notify);  // 广播下载通知
+            emit SignalInner::instance()->signal_file_downloading(notify);  // 广播下载通知
         }
         else if ( notify.finished) {
             // qDebug().noquote().nospace() << "trace message file download." << "NetworkClient::download_file_notify_signal() finished " << notify.id << " pending.";
@@ -1279,7 +1345,7 @@ bool NetworkClient::download_file_notify_signal(const QString &file_id) {
                 // qDebug().noquote().nospace() << "trace message file download." << "NetworkClient::download_file_notify_signal() finished " << notify.id << " error.";
                 emit SignalInner::instance()->signal_file_download_error(notify);
             }
-            // 非下载过程中的通知
+            // 下载完成的通知 // 非下载过程中的通知
             else if (notify.status == FileStatusCode::FILE_STATUS_UPLOADED) {
                 // qDebug().noquote().nospace() << "trace message file download." << "NetworkClient::download_file_notify_signal() finished " << notify.id << " ok.";
                 emit SignalInner::instance()->signal_file_downloaded(notify);

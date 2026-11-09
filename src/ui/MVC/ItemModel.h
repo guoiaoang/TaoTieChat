@@ -933,7 +933,7 @@ public:
             if (m_cache_message_id_index.contains(message_data->message_id)) { break; }
 
             // 填充数据
-            QString display_text = message_data->sender->display_name;
+            QString display_text = (message_data && message_data->sender) ? message_data->sender->display_name : "";
             QIcon   display_icon = icon_init();
 
             // 显示文本

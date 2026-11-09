@@ -63,7 +63,10 @@ MessageWindow::MessageWindow(QWidget *parent)
     connect(SignalInner::instance(), &SignalInner::signal_account_changed     , this, &MessageWindow::slot_update_message_contact   );  // 更新消息中自己的信息
     connect(SignalInner::instance(), &SignalInner::signal_contact_info_changed, this, &MessageWindow::slot_update_contact_info      );  // 更新好友信息
     connect(SignalInner::instance(), &SignalInner::signal_file_downloaded     , this, &MessageWindow::slot_update_button_avatar_file);  // 更新窗口中的头像按钮
-    connect(SignalInner::instance(), &SignalInner::signal_file_downloaded     , this, &MessageWindow::slot_update_message_file      );  // 更新文件消息/头像
+    connect(SignalInner::instance(), &SignalInner::signal_file_download_notify, this, &MessageWindow::slot_update_message_file      );  // 更新文件消息/头像  // 所有下载事件
+    // connect(SignalInner::instance(), &SignalInner::signal_file_downloading    , this, &MessageWindow::slot_update_message_file   );  // 更新文件消息/头像  // 下载中通知
+    // connect(SignalInner::instance(), &SignalInner::signal_file_downloaded     , this, &MessageWindow::slot_update_message_file   );  // 更新文件消息/头像  // 下载成功
+    // connect(SignalInner::instance(), &SignalInner::signal_file_download_error , this, &MessageWindow::slot_update_message_file   );  // 更新文件消息/头像  // 下载失败
 
     // set
     m_ui->list_messages->setSpacing(0);
@@ -223,10 +226,14 @@ bool MessageWindow::add_message(std::shared_ptr<MessageData::ItemData> message_d
         if (need_timestamp) {
             // 基于副本进行修改
             // 系统消息也要生成消息 ID 以便过滤
-            auto message_timestamp = std::make_shared<MessageData::ItemData>(*message_data.get());
-            message_timestamp->sender_type = MessageData::SenderType::SYSTEM;
-            message_timestamp->media_type  = MessageData::MediaType::TIMESTAMP;
-            message_timestamp->message_id  = "system::timestamp:" + message_data->message_time.toLocalTime().toString(Qt::ISODate);
+            // auto message_timestamp = std::make_shared<MessageData::ItemData>(*message_data.get());
+            auto message_timestamp          = std::make_shared<MessageData::ItemData>();
+            message_timestamp->sender_type  = MessageData::SenderType::SYSTEM;
+            message_timestamp->media_type   = MessageData::MediaType::TIMESTAMP;
+            message_timestamp->message_id   = "system::timestamp:" + message_data->message_time.toLocalTime().toString(Qt::ISODate);
+            message_timestamp->message_time = message_data->message_time;  // 消息时间
+            message_timestamp->text         = message_data->text;  // 消息内容
+            // message_timestamp->file.reset();  // 目前系统消息不包含文件，重置文件信息可避免触发文件下载消息
             m_message_model->add_message(message_timestamp);
         }
 
@@ -905,10 +912,51 @@ void MessageWindow::slot_update_button_avatar_file(const Network::FileDownloadNo
 
 // 更新文件消息/头像
 void MessageWindow::slot_update_message_file(const Network::FileDownloadNotify notify) {
-    // qDebug().noquote().nospace() << "trace message file download." << "MessageWindow::slot_update_message_file() file id : " << notify.id;
+    // qDebug().noquote().nospace() << "trace message file download." << "file id : " << notify.id << ", start.";
     const QString& file_id = notify.id;
     if (file_id.isEmpty()) { return; }
-    if (!notify.finished || !notify.ok || notify.status != FileStatusCode::FILE_STATUS_UPLOADED) { return; }
+    // if (!notify.finished || !notify.ok || notify.status != FileStatusCode::FILE_STATUS_UPLOADED) { return; }
+
+    // 过滤掉的消息
+    auto func_filter_notify = [](const Network::FileDownloadNotify notify) -> bool {
+        // 下载进度不需要实时立即更新，可每秒间隔更新
+
+        // 仅处理关心的类型
+        if (notify.status != Network::FileDownloadNotify::Status::FILE_STATUS_UPLOADING) { return false; }
+
+        const QString& file_id = notify.id;
+        if (file_id.isEmpty()) { return true; }
+
+        using time_point = std::chrono::steady_clock::time_point;
+        using Notify = Network::FileDownloadNotify;
+
+        // msg id, last notify time, msg notify
+        static QMap<QString, QPair<time_point, Notify>> s_cache_last_notify;
+        auto tp_now = std::chrono::steady_clock::now();
+
+        // 没有记录那么不忽略更新
+        if (!s_cache_last_notify.contains(file_id)) {
+            s_cache_last_notify[file_id] = QPair<time_point, Notify>(tp_now, notify);
+            return false;
+        }
+
+        auto [cache_time, cache_notify] = s_cache_last_notify[file_id];
+
+        // 间隔在 1 秒内，忽略更新
+        if (tp_now - cache_time < std::chrono::seconds(1)) {
+            return true;
+        }
+
+        // 更新记录并允许通知
+        s_cache_last_notify[file_id] = QPair<time_point, Notify>(tp_now, notify);
+        return false;
+    };
+
+    // 过滤掉的消息
+    if (func_filter_notify(notify)) {
+        // qDebug().noquote().nospace() << "trace message file download." << "file id : " << notify.id << ", ignore.";
+        return;
+    }
 
     // 创建索引
     QMap<QString, QSet<std::shared_ptr<MessageData::ItemData>>> map_file_id_messages;
@@ -944,8 +992,13 @@ void MessageWindow::slot_update_message_file(const Network::FileDownloadNotify n
     auto downloaded_file_size  = notify.uploaded_bytes;
     auto downloaded_human_size = Utils::Transform::human_size(downloaded_file_size);
 
-    // 尝试加载为图片
-    std::shared_ptr<QImage> source_image = std::make_shared<QImage>(file_path);
+    // // 尝试加载为图片
+    // std::shared_ptr<QImage> source_image = std::make_shared<QImage>(file_path);
+    // 尝试加载为图片  // 下载成功才开始读取，减少无效磁盘读写
+    std::shared_ptr<QImage> source_image;
+    if (notify.status == FileStatusCode::FILE_STATUS_UPLOADED) {
+        source_image = std::make_shared<QImage>(file_path);
+    }
 
     // 更新消息内容
     for (auto message_data : msgs) {
@@ -985,6 +1038,13 @@ void MessageWindow::slot_update_message_file(const Network::FileDownloadNotify n
             // qDebug().noquote().nospace() << "message_data addr " << (void*)message_data.get() << ", avatar_id : " << file_id << ", avatar_path : " << file_path;
         }
 
+        // qDebug().noquote().nospace() << "trace message file download." << "file id : " << notify.id << ", update. " << " message id:" << message_data->message_id << "."
+        //     << ((message_data && message_data->file)
+        //         ? QString(" file name:%1,downloaded size:%2, status:%3.")
+        //             .arg(message_data->file->file_name)
+        //             .arg(message_data->file->downloaded_file_size)
+        //             .arg(QMetaEnum::fromType<FileStatusCode>().valueToKey(quint64(notify.status)))
+        //         : "");
         m_message_model->update_message(message_data);
     }
 }

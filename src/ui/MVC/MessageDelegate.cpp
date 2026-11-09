@@ -410,8 +410,8 @@ void MessageDelegate::paint(QPainter *painter, const QStyleOptionViewItem &optio
             return;
         }
 
-        auto display_name        = message_data->sender->display_name;
-        auto sender_avatar_image = message_data->sender->avatar_image;
+        auto display_name        = (message_data && message_data->sender ) ? message_data->sender->display_name : QString();
+        auto sender_avatar_image = (message_data && message_data->sender ) ? message_data->sender->avatar_image : std::make_shared<QImage>();
 
         // 在群组中才需要绘制昵称，私聊中可以不显示
         bool per_message_display_nickname  = false;
@@ -453,7 +453,10 @@ void MessageDelegate::paint(QPainter *painter, const QStyleOptionViewItem &optio
 
         // qDebug().noquote().nospace() << "message_data addr " << (void*)message_data.get() << ", avatar_id : " << message_data->sender->avatar_id << ", avatar_path : " << message_data->sender->avatar_path;
         // 画头像
-        painter->drawImage(item_geometry->rect_avatar.toRect(), *sender_avatar_image.get());
+        // painter->drawImage(item_geometry->rect_avatar.toRect(), *sender_avatar_image.get());
+        if (sender_avatar_image && !sender_avatar_image->isNull()) {
+            painter->drawImage(item_geometry->rect_avatar.toRect(), *sender_avatar_image.get());
+        }
 
         // ---- 气泡背景（圆角矩形，主题色；文本/图片/文件共用） ----
         QPainterPath path;
@@ -487,10 +490,24 @@ void MessageDelegate::paint(QPainter *painter, const QStyleOptionViewItem &optio
         }
 
         else if (is_file) {
-            auto human_size = message_data->file->human_size;
+            const auto &file = message_data->file;
+            const auto &human_size = file->human_size;
+            QString display_size = human_size;
+            // 获取文件百分百时，总大小大于 0 才有意义
+            if (file->file_size > 0 && file->downloaded_file_size != file->file_size) {
+                double percent = (static_cast<double>(file->downloaded_file_size) / file->file_size) * 100.0;
+                // 格式化输出：例如 "45.2% (4.30 MB / 10.00 MB)"
+                // QString percent_text = QString::asprintf("%.1f%% (%.2f MB / %.2f MB)", percent, 123, 234);
+                // 格式化为字符串（例如保留 2 位小数：“44.23%”）
+                // QString percent_text = QString::number(percent, 'f', 2);
+                QString percent_text = QString::number(percent, 'f', 0);
+                // TODO:可能会太长导致显示不全
+                display_size = QString("%1% (%2 / %3)").arg(percent_text).arg(file->downloaded_human_size).arg(file->human_size);
+                // display_size = QString("%2 / %3").arg(percent_text).arg(file->downloaded_human_size).arg(file->human_size);
+            }
             // ---- 文件卡片：图标 + 文件名 + 大小 ----
             const QRectF iconRect(item_geometry->rect_bubble.left() + kBubbleHPad, item_geometry->rect_bubble.top() + (item_geometry->rect_bubble.height() - kFileIconSize) / 2.0, kFileIconSize, kFileIconSize);
-            message_data->file->file_icon.paint(painter, iconRect.toRect());
+            file->file_icon.paint(painter, iconRect.toRect());
             // if (const auto *style = option.widget ? option.widget->style() : qApp->style()) {
             //     style->standardIcon(QStyle::SP_FileIcon).paint(painter, iconRect.toRect());
             // }
@@ -504,7 +521,7 @@ void MessageDelegate::paint(QPainter *painter, const QStyleOptionViewItem &optio
             sizeFont.setPointSizeF(sizeFont.pointSizeF() * 0.85);
             painter->setFont(sizeFont);
             painter->setPen(m_theme.metaText);
-            painter->drawText(QRectF(textLeft, item_geometry->rect_bubble.top() + kBubbleVPad + 20, textW, 14), Qt::AlignLeft | Qt::AlignVCenter, human_size);
+            painter->drawText(QRectF(textLeft, item_geometry->rect_bubble.top() + kBubbleVPad + 20, textW, 14), Qt::AlignLeft | Qt::AlignVCenter, display_size);
             // painter->restore();
             // return;
         }

@@ -70,7 +70,8 @@ signals:
 
 // =============================== MediaWindow =============================== //
 signals:
-    void signal_media_changed(const QPixmap& pixmap);
+    void signal_media_changed(const QPixmap &pixmap);
+    void signal_unread_count (const QString &chatroom_id, int unread_count);
 
 // ============================== SearchWindow ============================== //
 Q_SIGNALS:

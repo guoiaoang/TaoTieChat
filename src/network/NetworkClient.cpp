@@ -1107,6 +1107,9 @@ private:
     }
 
     void emit_notify(const Notify &value) const {
+        if (value.uploaded_bytes < 0) {
+            qDebug().noquote().nospace() << "uploaded_bytes : " << value.uploaded_bytes;
+        }
         Callback cb = m_params.callback;
         if (!cb) { return; }
         on_main([cb, value]() { cb(value); });
@@ -1257,6 +1260,7 @@ private:
         notify.code     = int64_t(SuccessCode::SUCCESS);
         notify.message  = NetworkClient::tr("Download completed: %1").arg(notify.path);
         notify.status   = FileStatusCode::FILE_STATUS_UPLOADED;
+        notify.uploaded_bytes = notify.size;  // 下载成功的通知中已下载大小要与文件大小一致
         emit_notify(notify);
         stop();
     }

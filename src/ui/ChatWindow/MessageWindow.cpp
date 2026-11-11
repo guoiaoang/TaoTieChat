@@ -103,6 +103,16 @@ MessageWindow::MessageWindow(QWidget *parent)
     // // 3. 将修改后的 Option 重新应用回 QTextDocument
     // m_ui->textEdit->document()->setDefaultTextOption(option);
 
+    m_ui->button_title_avatar->setText("");  // 清除文字
+    m_ui->button_title_avatar->setToolButtonStyle(Qt::ToolButtonIconOnly);  // 仅显示图像
+
+    // 工具栏图标
+    static Utils::FontIcons font_icon = Utils::FontIcons().update();
+    m_ui->button_file->setIcon(font_icon.icon.file);
+    m_ui->button_file->setToolButtonStyle(Qt::ToolButtonTextBesideIcon);
+    m_ui->button_send->setIcon(font_icon.icon.send);
+    m_ui->button_send->setToolButtonStyle(Qt::ToolButtonTextBesideIcon);
+
     // 输入框提示文字
     const auto placeholderText = m_ui->textEdit->placeholderText()
         .arg( enable_return_send ? "Enter" : "Ctrl + Enter")
@@ -239,6 +249,10 @@ bool MessageWindow::add_message(std::shared_ptr<MessageData::ItemData> message_d
 
         // 消息内容
         if (!m_message_model->add_message(message_data)) { break; }
+
+        // 发送未读提示
+        // m_unread_message_ids.append(message_data->message_id);  // TODO:功能未完善，暂不启用未读提醒功能
+        emit SignalInner::instance()->signal_unread_count(message_data->chatroom_id, m_unread_message_ids.size());
 
         // 6. 如果刚才最后一条消息在视口内，强制精准滚动到最新消息的【底部】
         if (should_auto_scroll) {
@@ -434,12 +448,16 @@ void MessageWindow::slot_button_file() {
     else if ( QFileInfo::exists(file_path)) {
         QFileInfo file_info(file_path);
         file_data = std::make_shared<MessageData::FileData>();
-        file_data->file_id    = "";
+        file_data->file_id    = "";  // 服务端 ID 要等上传完成才有
         file_data->file_path  = file_info.absoluteFilePath();
         file_data->file_name  = file_info.fileName();
         file_data->human_size = Utils::Transform::human_size(file_info.size());
         file_data->file_size  = file_info.size();
         file_data->file_icon  = qApp->style()->standardIcon(QStyle::SP_FileIcon);
+        // // 本地占位消息一出现就处于「传输中」，立刻显示 0%
+        // file_data->status                = FileStatusCode::FILE_STATUS_UPLOADING;
+        // file_data->downloaded_file_size  = 0;
+        // file_data->downloaded_human_size = Utils::Transform::human_size(0);
         if (!QImageReader::imageFormat(file_path).isEmpty()) {
             media_type = MessageData::MediaType::IMAGE;
             image_data = std::make_shared<MessageData::ImageData>();
@@ -461,9 +479,14 @@ void MessageWindow::slot_button_file() {
     // auto avatar_image = std::make_shared<QImage>(Database::instance()->get_local_file_id_path(avatar_id + ";size:128*128"));
     auto avatar_image = sender_data->avatar_image;
 
+    // // 图片消息最终仍显示为图片，但上传过程中要用文件卡片承载进度，
+    // // 否则委托会走 is_image 分支，文件名与百分比都无处绘制。
+    // const MessageData::MediaType final_media_type = media_type;
+
     // UI 所需数据
     auto message_data  = std::make_shared<MessageData::ItemData>();
     message_data->sender_type           = MessageData::SenderType::USER;
+    // message_data->media_type         = MessageData::MediaType::FILE;
     message_data->media_type            = media_type;
     message_data->is_me                 = true;
     message_data->message_id            = message_id;
@@ -619,9 +642,9 @@ void MessageWindow::slot_button_send() {
         if (!reply_send_message || !reply_send_message->hasResult() || !reply_send_message->result().hasSuccessCode()) {
             QString error_message = tr("Failed to send chat message.");
             if (reply_send_message && reply_send_message->hasResult()) {
-                error_message += tr("\n\ncode : 0x%1\nmessage : %2")
-                                     .arg(int64_t(reply_send_message->result().errorCode()), 8, 16, QChar('0'))  // 16 进制显示，宽度 8 位，不足补 0
-                                     .arg(reply_send_message->result().message());
+                int64_t code = int64_t(reply_send_message->result().errorCode());  // 16 进制显示，宽度 8 位，不足补 0
+                QString msg  = reply_send_message->result().message();
+                error_message += tr("\n\ncode : 0x%1\nmessage : %2").arg(code, 8, 16, QChar('0')).arg(msg);
             }
             qDebug().noquote().nospace() << "error message : " << error_message;
             // QMessageBox::information(this, tr("Error"), error_message, QMessageBox::StandardButton::Ok);
@@ -912,6 +935,9 @@ void MessageWindow::slot_update_button_avatar_file(const Network::FileDownloadNo
 
 // 更新文件消息/头像
 void MessageWindow::slot_update_message_file(const Network::FileDownloadNotify notify) {
+    if (notify.uploaded_bytes < 0) {
+        qDebug().noquote().nospace() << "uploaded_bytes : " << notify.uploaded_bytes << ", file path : " << notify.path;
+    }
     // qDebug().noquote().nospace() << "trace message file download." << "file id : " << notify.id << ", start.";
     const QString& file_id = notify.id;
     if (file_id.isEmpty()) { return; }

@@ -491,6 +491,53 @@ public:
             painter->drawText(style_data->rect_message, Qt::AlignLeft | Qt::AlignVCenter, elided_last_messsage);
             painter->drawText(rect_time_last, Qt::AlignRight | Qt::AlignVCenter, last_message_time);
 
+            // TODO:绘制未读消息提示
+            const auto &unread_count = chatroom_data->message_unread_count;
+            if (unread_count > 0) {
+                // 中心位置
+                QPointF unread_point = style_data->rect_avatar.topRight().toPointF();
+
+                painter->setBrush(QColor(Qt::red)); // 经典的红点颜色:"#FF4D4F"
+                painter->setPen(Qt::NoPen);
+
+                // 纯红点提示
+                if (0) {
+                    qreal dot_size = 8.0; // 红点直径
+                    painter->drawEllipse(unread_point, dot_size / 2, dot_size / 2);
+                }
+
+                // 数字未读提示（胶囊/圆角矩形）
+                if (1) {
+                    // 计算红点/徽章绘制的位置（通常靠右侧居中或右上角）
+                    // 这里以“靠右侧垂直居中”为例
+                    int badge_height = 18;       // 徽章高度
+                    int paddingRight = 12;      // 距离右边界的间距
+
+                    QString unread_text = (unread_count > 99) ? "99+" : QString::number(unread_count);
+
+                    // 计算文本宽度，使背景能够自适应文字长短
+                    QFont badge_font = option.font;
+                    badge_font.setPointSize(badge_font.pointSize() - 2); // 设置稍小的字号
+                    painter->setFont(badge_font);
+
+                    QFontMetrics badge_metrics(badge_font);
+                    int unread_width = badge_metrics.horizontalAdvance(unread_text);
+                    int badge_width = qMax(badge_height, unread_width + 10); // 保证最小是个圆，文字多时变成胶囊型
+
+                    // QRectF unread_rect;
+                    QRectF unread_rect = option.rect;   // 当前单元格的矩形区域
+                    QRectF badge_rect(unread_rect.right() - paddingRight - badge_width,
+                        unread_rect.center().y() - badge_height / 2, badge_width, badge_height);
+
+                    // 绘制红色圆角背景（胶囊形）
+                    painter->drawRoundedRect(badge_rect, badge_height / 2, badge_height / 2);
+
+                    // 绘制白色数字
+                    painter->setPen(Qt::white);
+                    painter->drawText(badge_rect, Qt::AlignCenter, unread_text);
+                }
+            }
+
 #ifdef _DEBUG
             if (0) {
                 // 画出昵称和时间所在矩形

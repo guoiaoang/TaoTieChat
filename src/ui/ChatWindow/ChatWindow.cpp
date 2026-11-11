@@ -126,7 +126,8 @@ void ChatWindow::init() {
     connect(SignalInner::instance(), &SignalInner::signal_file_downloaded, this, &ChatWindow::slot_update_chatroom_file);
     connect(SignalInner::instance(), &SignalInner::signal_file_downloaded, this, &ChatWindow::slot_update_contact_file );
     // chatroom 更新最后一条消息的提示
-    connect(SignalInner::instance(), &SignalInner::signal_new_message, this, &ChatWindow::update_last_message);
+    connect(SignalInner::instance(), &SignalInner::signal_new_message , this, &ChatWindow::slot_update_last_message  );
+    connect(SignalInner::instance(), &SignalInner::signal_unread_count, this, &ChatWindow::slot_update_message_unread);
 
     connect(m_action_rember_password.get(), &QAction::triggered, this, [&](){
         auto current_account = Accounts::instance()->get_current_account();
@@ -974,6 +975,7 @@ void ChatWindow::add_message(std::shared_ptr<SyncMessage> sync_message) {
         //     << ", file_id : " << ((message_data && message_data->file) ? message_data->file->file_id : "[no fileid]");
 
         target_message_window->add_message(message_data);
+
         // 不需要切换显示
         // m_ui->stacked_contact_detail->setCurrentWidget(target_message_window);
 
@@ -1293,7 +1295,7 @@ MessageWindow* ChatWindow::get_message_window(const QString& chatroom_id) {
 }
 
 // 更新列表中显示的最后一条消息
-void ChatWindow::update_last_message(const QPointer<MessageModel> signal_sender, std::shared_ptr<MessageData::ItemData> last_message) {
+void ChatWindow::slot_update_last_message(const QPointer<MessageModel> signal_sender, std::shared_ptr<MessageData::ItemData> last_message) {
     do {
         // 更新列表中显示的内容
         if (!last_message) { break; }
@@ -1323,6 +1325,14 @@ void ChatWindow::update_last_message(const QPointer<MessageModel> signal_sender,
         // // 对聊天列表进行排序
         // m_chatroom_model->sort(0);
     } while(false);
+}
+
+void ChatWindow::slot_update_message_unread(const QString &chatroom_id, int unread_count) {
+    if ( chatroom_id.isEmpty()) { return; }
+    auto chatroom_data = m_chatroom_model->get_chatroom_data(chatroom_id);
+    if (!chatroom_data) { return; }
+    chatroom_data->message_unread_count = unread_count;
+    m_chatroom_model->updata_chatroom_data(chatroom_data);
 }
 
 void ChatWindow::update_contact_avatar(const QString& avatar_id, bool online_download) {

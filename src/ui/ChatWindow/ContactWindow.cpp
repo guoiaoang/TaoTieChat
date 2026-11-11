@@ -374,11 +374,11 @@ void ContactWindow::slot_button_save() {
         }
 
 //         // TODO:更新消息由同步获取，此处是否应该保留??
-// 
+//
 //         std::shared_ptr<ContactInfo> contact_info = std::make_shared<ContactInfo>(reply_update_profile->request().contactInfo());
 //         auto contact_data = Utils::Transform::to_contact_data(contact_info);
 //         // set_contact_data(contact_data, get_source_flag());
-// 
+//
 //         // 发送更新通知
 //         if (contact_data->is_me) {
 //             Accounts::instance()->set_current_account(contact_data);

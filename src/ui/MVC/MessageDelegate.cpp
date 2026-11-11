@@ -59,6 +59,21 @@ bool check_is_message_context(const QModelIndex &index) {
     return true;
 }
 
+// 文件卡片第二行：传输中显示「百分比 (已传 / 总量)」，其余只显示总大小。
+// paint 与 itemGeometry 共用，保证气泡宽度按实际要画的文字计算。
+QString fileStatusText(const MessageData::FileData &file) {
+    const QString total_text = file.human_size.isEmpty() && file.file_size >= 0
+        ? Utils::Transform::human_size(file.file_size) : file.human_size;
+    if (file.status != FileStatusCode::FILE_STATUS_UPLOADING || file.file_size <= 0) {
+        return total_text;
+    }
+    const qint64 done = qBound<qint64>(0, file.downloaded_file_size, file.file_size);
+    const QString done_text = file.downloaded_human_size.isEmpty()
+        ? Utils::Transform::human_size(done) : file.downloaded_human_size;
+    const int percent = qBound(0, qRound((double(done) / double(file.file_size)) * 100.0), 100);
+    return QStringLiteral("%1% (%2 / %3)").arg(percent).arg(done_text, total_text);
+}
+
 } // namespace
 
 MessageDelegate::MessageDelegate(QObject *parent) : ItemDelegateBase(parent) {
@@ -302,7 +317,14 @@ std::shared_ptr<MessageDelegate::ItemGeometry> MessageDelegate::itemGeometry(con
             const int name_space = int(max_bubble_width) - 2 * kBubbleHPad - kFileIconSize - kFileIconGap;
             item_geometry->fileName = fm.elidedText(name, Qt::ElideMiddle, qMax(name_space, 24));
             const qreal name_width = fm.horizontalAdvance(item_geometry->fileName);
-            const qreal bubble_width = qMax<qreal>(kMinTextWidth, qMin<qreal>(2 * kBubbleHPad + kFileIconSize + kFileIconGap + name_width, max_bubble_width));
+            // 进度行往往比文件名更长（例如 "45% (4.3 MB / 10.0 MB)"），
+            // 只按文件名算宽度会把进度文字裁掉，看起来就像没有进度。
+            QFont size_font(option.font);
+            size_font.setPointSizeF(size_font.pointSizeF() * 0.85);
+            const QFontMetrics size_fm(size_font);
+            const qreal size_width = size_fm.horizontalAdvance(fileStatusText(*message_data->file));
+            const qreal content_width = qMax(name_width, size_width);
+            const qreal bubble_width = qMax<qreal>(kMinTextWidth, qMin<qreal>(2 * kBubbleHPad + kFileIconSize + kFileIconGap + content_width, max_bubble_width));
             int bubble_x = message_data->is_me
                 ? item_geometry->rect_avatar.left () - kAvatarSpacing - bubble_width
                 : item_geometry->rect_avatar.right() + kAvatarSpacing;
@@ -491,20 +513,8 @@ void MessageDelegate::paint(QPainter *painter, const QStyleOptionViewItem &optio
 
         else if (is_file) {
             const auto &file = message_data->file;
-            const auto &human_size = file->human_size;
-            QString display_size = human_size;
-            // 获取文件百分百时，总大小大于 0 才有意义
-            if (file->file_size > 0 && file->downloaded_file_size != file->file_size) {
-                double percent = (static_cast<double>(file->downloaded_file_size) / file->file_size) * 100.0;
-                // 格式化输出：例如 "45.2% (4.30 MB / 10.00 MB)"
-                // QString percent_text = QString::asprintf("%.1f%% (%.2f MB / %.2f MB)", percent, 123, 234);
-                // 格式化为字符串（例如保留 2 位小数：“44.23%”）
-                // QString percent_text = QString::number(percent, 'f', 2);
-                QString percent_text = QString::number(percent, 'f', 0);
-                // TODO:可能会太长导致显示不全
-                display_size = QString("%1% (%2 / %3)").arg(percent_text).arg(file->downloaded_human_size).arg(file->human_size);
-                // display_size = QString("%2 / %3").arg(percent_text).arg(file->downloaded_human_size).arg(file->human_size);
-            }
+            // 传输中（含 0% / 100%）显示百分比，非传输中只显示总大小
+            QString display_size = fileStatusText(*file);
             // ---- 文件卡片：图标 + 文件名 + 大小 ----
             const QRectF iconRect(item_geometry->rect_bubble.left() + kBubbleHPad, item_geometry->rect_bubble.top() + (item_geometry->rect_bubble.height() - kFileIconSize) / 2.0, kFileIconSize, kFileIconSize);
             file->file_icon.paint(painter, iconRect.toRect());
@@ -521,7 +531,10 @@ void MessageDelegate::paint(QPainter *painter, const QStyleOptionViewItem &optio
             sizeFont.setPointSizeF(sizeFont.pointSizeF() * 0.85);
             painter->setFont(sizeFont);
             painter->setPen(m_theme.metaText);
-            painter->drawText(QRectF(textLeft, item_geometry->rect_bubble.top() + kBubbleVPad + 20, textW, 14), Qt::AlignLeft | Qt::AlignVCenter, display_size);
+            // 气泡宽度受视口限制，超长时省略中间，至少保留百分比与部分大小信息
+            painter->drawText(QRectF(textLeft, item_geometry->rect_bubble.top() + kBubbleVPad + 20, textW, 14),
+                Qt::AlignLeft | Qt::AlignVCenter,
+                QFontMetrics(sizeFont).elidedText(display_size, Qt::ElideMiddle, qMax<int>(0, int(textW))));
             // painter->restore();
             // return;
         }

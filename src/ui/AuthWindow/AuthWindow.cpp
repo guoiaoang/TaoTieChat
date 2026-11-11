@@ -16,6 +16,7 @@ AuthWindow::AuthWindow(QWidget *parent)
     connect(m_ui->signup_button_signup, &QToolButton::clicked, this, &AuthWindow::slot_signup);  // 注册成功直接登录
     connect(m_ui->signin_button_signin, &QToolButton::clicked, this, &AuthWindow::slot_signin);  // 登录成功显示主界面
     // 登陆页面清除错误提示
+    connect(m_ui->signin_combo_username, &QComboBox::currentTextChanged, this, &AuthWindow::slot_signin_update_avatar  );
     connect(m_ui->signin_combo_username, &QComboBox::currentTextChanged, this, &AuthWindow::slot_page_signin_tips_clean);
     connect(m_ui->signin_edit_password , &QLineEdit::textChanged       , this, &AuthWindow::slot_page_signin_tips_clean);
     // 注册页面清除错误提示
@@ -35,80 +36,31 @@ AuthWindow::AuthWindow(QWidget *parent)
             m_ui->signin_check_rember->setChecked(true);
         }
     });
-    connect(m_ui->signin_combo_username, &QComboBox::currentTextChanged, this, [this](const QString& currentText) {
-        auto button_set = [](QToolButton* button, const QIcon& icon, const QSize& size_max = QSize(36, 36)) {
-            // QToolButton 默认显示模式为图标 + 文字，因此直接设置时会导致使用默认的小图标
-            button->setIcon     (icon);
-            // button->setIconSize (size_max);
-            // // 设置按钮大小为图标大小，避免按钮过大导致布局不美观
-            // button->setFixedSize(size_max);
-
-            // 保持宽高比时需要进行特殊处理
-            // 1. 获取图标在指定大范围下的原始/实际尺寸，从而推导宽高比
-            QSize size_orig = icon.actualSize(QSize(1024, 1024));
-            if (size_orig.isEmpty()) {
-                size_orig = size_max; // 兜底保护
-            }
-            // 2. 等比例缩放，计算出能放入 maxSize 区域内的最大尺寸
-            QSize size_target = size_orig.scaled(size_max, Qt::KeepAspectRatio);
-            button->setIconSize(size_target);
-            // 3. 设置按钮容器大小（保持整体布局整齐，不失真的图标会自动在按钮内居中显示）
-            button->setFixedSize(size_max);
-
-            // 默认不显示边框
-            button->setAutoRaise(true);
-            // 只显示图标，默认是图标 + 文字，因此如果不设置，按钮会显示一个默认的小图标
-            button->setToolButtonStyle(Qt::ToolButtonIconOnly);
-            // 设置悬浮提示词
-            button->setToolTip(button->text());
-        };
-
-        static Utils::FontIcons font_icon =  Utils::FontIcons().update();
-
-        for(const auto& auth_opt : m_auth_opts) {
-            if(auth_opt->user_id == currentText) {
-                m_ui->signin_edit_password ->setText   (auth_opt->password       );
-                m_ui->signin_check_rember  ->setChecked(auth_opt->rember_password);
-                m_ui->signin_check_auto    ->setChecked(auth_opt->auto_login     );
-
-                // 设置头像
-                QString path_avatar;
-                QIcon   icon_avatar;
-                if (!auth_opt->avatar_id.isEmpty()) {
-                    // 方便读取头像
-                    Database::instance()->set_config_dir(Utils::user_home_path(auth_opt->account_id));
-                    path_avatar = Database::instance()->get_local_file_id_path(auth_opt->avatar_id + ";size:128*128");
-                    icon_avatar = QIcon(path_avatar);
-                    if (!icon_avatar.isNull()) {
-                        button_set(m_ui->signin_button_avatar, icon_avatar, m_ui->signin_button_avatar->size());
-                    }
-                }
-                if (auth_opt->avatar_id.isEmpty() || path_avatar.isEmpty() || icon_avatar.isNull()) {
-                    button_set(m_ui->signin_button_avatar, font_icon.icon.profile, m_ui->signin_button_avatar->size());
-                }
-
-                // break;
-                return;  // 用户名唯一，找到第一条记录后直接返回
-            }
-        }
-        // 没有找到记录，清空界面数据
-        m_ui->signin_edit_password ->clear();
-        m_ui->signin_check_rember ->setChecked(false);
-        m_ui->signin_check_auto   ->setChecked(false);
-        button_set(m_ui->signin_button_avatar, font_icon.icon.profile, m_ui->signin_button_avatar->size());
-    });
     connect(m_ui->auth_stacked, &QStackedWidget::currentChanged, this, [this](int index){
         ;    if(m_ui->auth_stacked->widget(index) == m_ui->page_signin) { setWindowTitle(tr("Sign In")); }
         else if(m_ui->auth_stacked->widget(index) == m_ui->page_signup) { setWindowTitle(tr("Sign Up")); }
     });
     // 记录头像 ID
     connect(SignalInner::instance(), &SignalInner::signal_account_changed, this, &AuthWindow::slot_account_changed);  // 更改当前账号信息时触发
+    // 退出登录时可能需要更新头像显示
+    connect(SignalInner::instance(), &SignalInner::signal_signout, [this]() {
+        slot_signin_update_avatar(m_ui->signin_combo_username->currentText());
+        // 还要更新登录信息
+        auto auth_opts = AuthOptRW::load();
+        for(auto const& auth_opt : auth_opts) {
+            if (auth_opt->user_id == m_ui->signin_combo_username->currentText()) {
+                m_ui->signin_edit_password->setText(auth_opt->password);
+                m_ui->signin_check_rember ->setChecked(auth_opt->rember_password);
+                m_ui->signin_check_auto   ->setChecked(auth_opt->auto_login     );
+            }
+        }
+    });
 
     m_ui->signin_combo_username->lineEdit()->setPlaceholderText(m_ui->signin_combo_username->placeholderText());
     m_ui->signin_combo_username->lineEdit()->setClearButtonEnabled(true);
-    // 编译时需要选择 `ALL_BUILD` 来触发 qm 文件的完全重新生成，否则可能会仅复制原先的内容而没有实际更新
-    // // ~~不知道什么情况，自动生成的翻译有问题，应该为"登陆"却显示为"注册"~~
-    // m_ui->signup_button_signin->setText(m_ui->signin_button_signin->text());
+    // 触发一次以便保持初始化与更新时头像显示一致
+    // m_ui->signin_combo_username->currentTextChanged(m_ui->signin_combo_username->currentText());
+    slot_signin_update_avatar(m_ui->signin_combo_username->currentText());
 
     // 设置信息提示的 Label 隐藏时依然保留大小占位，防止显示信息与清空信息显示时造成的其他控件位置的变化
     auto sizePolicy = m_ui->signin_label_info->sizePolicy();
@@ -185,7 +137,7 @@ void AuthWindow::reload_login_config(bool auto_login) {
 void AuthWindow::view() {
     static Utils::FontIcons font_icon =  Utils::FontIcons().update();
     QApplication::setWindowIcon(font_icon.icon.profile);
-    m_ui->signin_button_avatar->setIcon(font_icon.icon.profile);
+    // m_ui->signin_button_avatar->setIcon(font_icon.icon.profile);
     // 新用户从注册页面直接登陆时又点击了记住密码，此时需要重置页面为登陆页面及加载登陆配置，然后才能显示
     m_ui->auth_stacked->setCurrentWidget(m_ui->page_signin);
     reload_login_config(false);
@@ -232,6 +184,70 @@ void AuthWindow::slot_page_signup_tips_show(TipsLevel level, const QString&messa
 void AuthWindow::slot_page_signup_tips_clean() {
     // m_ui->signup_label_info->clear();
     slot_page_signup_tips_show(TipsLevel::CLEAN);
+}
+
+void AuthWindow::slot_signin_update_avatar(const QString& user_name) {
+    auto button_set = [](QToolButton* button, const QIcon& icon, const QSize& size_max = QSize(36, 36)) {
+        // QToolButton 默认显示模式为图标 + 文字，因此直接设置时会导致使用默认的小图标
+        button->setIcon     (icon);
+        // button->setIconSize (size_max);
+        // // 设置按钮大小为图标大小，避免按钮过大导致布局不美观
+        // button->setFixedSize(size_max);
+
+        // 保持宽高比时需要进行特殊处理
+        // 1. 获取图标在指定大范围下的原始/实际尺寸，从而推导宽高比
+        QSize size_orig = icon.actualSize(QSize(1024, 1024));
+        if (size_orig.isEmpty()) {
+            size_orig = size_max; // 兜底保护
+        }
+        // 2. 等比例缩放，计算出能放入 maxSize 区域内的最大尺寸
+        QSize size_target = size_orig.scaled(size_max, Qt::KeepAspectRatio);
+        button->setIconSize(size_target);
+        // 3. 设置按钮容器大小（保持整体布局整齐，不失真的图标会自动在按钮内居中显示）
+        button->setFixedSize(size_max);
+
+        // 默认不显示边框
+        button->setAutoRaise(true);
+        // 只显示图标，默认是图标 + 文字，因此如果不设置，按钮会显示一个默认的小图标
+        button->setToolButtonStyle(Qt::ToolButtonIconOnly);
+        // 设置悬浮提示词
+        button->setToolTip(button->text());
+    };
+
+    static Utils::FontIcons font_icon =  Utils::FontIcons().update();
+
+    auto auth_opts = AuthOptRW::load();
+    for(const auto& auth_opt : auth_opts) {
+        if(auth_opt->user_id == user_name) {
+            m_ui->signin_edit_password ->setText   (auth_opt->password       );
+            m_ui->signin_check_rember  ->setChecked(auth_opt->rember_password);
+            m_ui->signin_check_auto    ->setChecked(auth_opt->auto_login     );
+
+            // 设置头像
+            QString path_avatar;
+            QIcon   icon_avatar;
+            if (!auth_opt->avatar_id.isEmpty()) {
+                // 方便读取头像
+                Database::instance()->set_config_dir(Utils::user_home_path(auth_opt->account_id));
+                path_avatar = Database::instance()->get_local_file_id_path(auth_opt->avatar_id + ";size:128*128");
+                icon_avatar = QIcon(path_avatar);
+                if (!icon_avatar.isNull()) {
+                    button_set(m_ui->signin_button_avatar, icon_avatar, m_ui->signin_button_avatar->size());
+                }
+            }
+            if (auth_opt->avatar_id.isEmpty() || path_avatar.isEmpty() || icon_avatar.isNull()) {
+                button_set(m_ui->signin_button_avatar, font_icon.icon.profile, m_ui->signin_button_avatar->size());
+            }
+
+            // break;
+            return;  // 用户名唯一，找到第一条记录后直接返回
+        }
+    }
+    // 没有找到记录，清空界面数据
+    m_ui->signin_edit_password ->clear();
+    m_ui->signin_check_rember ->setChecked(false);
+    m_ui->signin_check_auto   ->setChecked(false);
+    button_set(m_ui->signin_button_avatar, font_icon.icon.profile, m_ui->signin_button_avatar->size());
 }
 
 bool AuthWindow::slot_signup() {

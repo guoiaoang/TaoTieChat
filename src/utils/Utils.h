@@ -136,27 +136,30 @@ struct FontIcons {
         QIcon  settings          ;
         QIcon  chat_room         ;
         QIcon  contacts          ;
+        // MessageWindow 中的图标
+        QIcon file           ;  // "" nf-cod-file
+        QIcon send           ;  // "" nf-fa-send
         // MediaWindow 中的图标
-        QIcon pin            ; //  = Utils::to_icon("󰤱", icon_color);  // icon_nf_md_pin_outline               //
-        QIcon pin_off        ; //  = Utils::to_icon("󰤰", icon_color);  // icon_nf_md_pin_off_outline           //
-        QIcon menu           ; //  = Utils::to_icon("󰍜", icon_color);  // icon_nf_md_menu                      //
-        QIcon menu_open      ; //  = Utils::to_icon("󰮫", icon_color);  // icon_nf_md_menu_open                 //
-        QIcon fullscreen     ; //  = Utils::to_icon("󰊓", icon_color);  // icon_nf_md_fullscreen                //
-        QIcon window_minimize; //  = Utils::to_icon("󰖰", icon_color);  // icon_nf_md_window_minimize           //
-        QIcon window_maximize; //  = Utils::to_icon("󰖯", icon_color);  // icon_nf_md_window_maximize           //
-        QIcon window_restore ; //  = Utils::to_icon("󰖲", icon_color);  // icon_nf_md_window_restore            //
-        QIcon zoom_in        ; //  = Utils::to_icon("", icon_color);  // icon_nf_oct_zoom_in                  //
-        QIcon zoom_out       ; //  = Utils::to_icon("", icon_color);  // icon_nf_oct_zoom_out                 //
-        QIcon folder_open    ; //  = Utils::to_icon("󰷏", icon_color);  // icon_nf_md_folder_open_outline       //
-        QIcon save           ; //  = Utils::to_icon("󰠘", icon_color);  // icon_nf_md_content_save_outline      //
-        QIcon save_edit      ; //  = Utils::to_icon("󰳼", icon_color);  // icon_nf_md_content_save_edit_outlin  //
-        QIcon arrow_right    ; //  = Utils::to_icon("", icon_color);  // icon_nf_fa_arrow_right               //
-        QIcon arrow_left     ; //  = Utils::to_icon("", icon_color);  // icon_nf_fa_arrow_left                //
-        QIcon fit_to_screen  ; //  = Utils::to_icon("󱣵", icon_color);  // icon_nf_md_fit_to_screen_outline     //
-        QIcon restore        ; //  = Utils::to_icon("󰦛", icon_color);  // icon_nf_md_restore                   //
-        QIcon oct_pin        ; //  = Utils::to_icon("", icon_color);  // icon_nf_oct_pin                      // 备用
-        QIcon cod_zoom_in    ; //  = Utils::to_icon("", icon_color);  // icon_nf_cod_zoom_in                  // 备用
-        QIcon cod_zoom_out   ; //  = Utils::to_icon("", icon_color);  // icon_nf_cod_zoom_out                 // 备用
+        QIcon pin            ;  // "󰤱" nf_md_pin_outline
+        QIcon pin_off        ;  // "󰤰" nf_md_pin_off_outline
+        QIcon menu           ;  // "󰍜" nf_md_menu
+        QIcon menu_open      ;  // "󰮫" nf_md_menu_open
+        QIcon fullscreen     ;  // "󰊓" nf_md_fullscreen
+        QIcon window_minimize;  // "󰖰" nf_md_window_minimize
+        QIcon window_maximize;  // "󰖯" nf_md_window_maximize
+        QIcon window_restore ;  // "󰖲" nf_md_window_restore
+        QIcon zoom_in        ;  // "" nf_oct_zoom_in
+        QIcon zoom_out       ;  // "" nf_oct_zoom_out
+        QIcon folder_open    ;  // "󰷏" nf_md_folder_open_outline
+        QIcon save           ;  // "󰠘" nf_md_content_save_outline
+        QIcon save_edit      ;  // "󰳼" nf_md_content_save_edit_outlin
+        QIcon arrow_right    ;  // "" nf_fa_arrow_right
+        QIcon arrow_left     ;  // "" nf_fa_arrow_left
+        QIcon fit_to_screen  ;  // "󱣵" nf_md_fit_to_screen_outline
+        QIcon restore        ;  // "󰦛" nf_md_restore
+        QIcon oct_pin        ;  // "" nf_oct_pin      // 备用
+        QIcon cod_zoom_in    ;  // "" nf_cod_zoom_in  // 备用
+        QIcon cod_zoom_out   ;  // "" nf_cod_zoom_out // 备用
         // collapse
         QIcon collapse;
         QIcon expand  ;
@@ -169,6 +172,9 @@ struct FontIcons {
             settings           = QIcon();
             chat_room          = QIcon();
             contacts           = QIcon();
+            // MessageWindow 中的图标
+            file            = QIcon();
+            send            = QIcon();
             // MediaWindow 中的图标
             pin             = QIcon();
             pin_off         = QIcon();
@@ -214,6 +220,10 @@ struct FontIcons {
                 contacts.addPixmap(contacts_normal   .pixmap(size.button), QIcon::Normal  , QIcon::Off);
                 contacts.addPixmap(contacts_disabled .pixmap(size.button), QIcon::Disabled, QIcon::Off);
             }
+            // MessageWindow 中的图标
+            icon_set(file           , "󰷏", color.normal);
+            icon_set(send           , "", color.normal);
+            // MediaWindow 中的图标
             icon_set(pin            , "󰤱", color.normal);
             icon_set(pin_off        , "󰤰", color.normal);
             icon_set(menu           , "󰍜", color.normal);
@@ -224,7 +234,7 @@ struct FontIcons {
             icon_set(window_restore , "󰖲", color.normal);
             icon_set(zoom_in        , "", color.normal);
             icon_set(zoom_out       , "", color.normal);
-            icon_set(folder_open    , "󰷏", color.normal);
+            icon_set(folder_open    , "", color.normal);
             icon_set(save           , "󰠘", color.normal);
             icon_set(save_edit      , "󰳼", color.normal);
             icon_set(arrow_right    , "", color.normal);
@@ -619,7 +629,7 @@ private:
 }  // namespace Utils::Algorithm
 
 // tasks
-namespace Utils{
+namespace Utils {
 template<class T = QString>
 class SimpleTasks {
 public:
@@ -646,7 +656,7 @@ private:
 }
 
 // class Utils::WidgetTools::LineEdit;
-namespace Utils::WidgetTools{
+namespace Utils::WidgetTools {
 class LineEdit : public QObject{
     Q_OBJECT
 public:

@@ -52,9 +52,6 @@ private:
 
     // 获取聊天记录窗口
     MessageWindow* get_message_window(const QString &chatroom_id);
-    // 更新列表中显示的最后一条消息
-    void update_last_message(const QPointer<MessageModel> signal_sender, std::shared_ptr<MessageData::ItemData> last_message);
-
     // 选中并高亮指定的聊天列表
     bool highlight_chatroom(const QString &chatroom_id);
 
@@ -80,6 +77,10 @@ public Q_SLOTS:
 
     // 添加聊天内容到对话内
     void add_message(std::shared_ptr<SyncMessage> sync_message);
+
+    // 更新列表中显示的最后一条消息
+    void slot_update_last_message(const QPointer<MessageModel> signal_sender, std::shared_ptr<MessageData::ItemData> last_message);
+    void slot_update_message_unread(const QString &chatroom_id, int unread_count);
 
     // 更新联系人信息，可能是头像、昵称、状态等
     // void slot_update_current_account_data();

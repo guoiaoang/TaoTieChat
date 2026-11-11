@@ -138,9 +138,10 @@ struct ItemData {
 namespace ChatroomData {
 // 聊天列表所需的数据
 struct ItemData {
-    QString   chatroom_id; //
-    QString   last_message_text    ;  // last_message_text
-    QDateTime last_message_datetime;  // last_message_datetime
+    QString   chatroom_id             ; //
+    QString   last_message_text       ;  // last_message_text
+    QDateTime last_message_datetime   ;  // last_message_datetime
+    int64_t   message_unread_count = 0;
     // cache
     QString display_datetime;
     QString display_name;
@@ -167,10 +168,10 @@ enum class MediaType : short {
 };
 
 struct SenderData {
-    QString account_id;
+    QString account_id  ;
     QString display_name;
-    QString avatar_id;
-    QString avatar_path;
+    QString avatar_id   ;
+    QString avatar_path ;
     std::shared_ptr<QImage> avatar_image;
 };
 
@@ -188,16 +189,20 @@ struct ImageData {
 struct AudioData {};
 struct VideoData {};
 struct FileData  {
-    QString file_id;
+    using Status = FileStatusCode;
+
+    QString file_id  ;
     QString file_path;
     QString file_hash;
     // cache 数据
     QString file_name;
     QIcon   file_icon;
-    qint64  file_size = -1;  // 文件总大小
-    QString human_size;      // 文件总大小
-    qint64  downloaded_file_size = -1;  // 已下载的文件大小
-    QString downloaded_human_size;      // 已下载的文件大小
+    qint64  file_size             = -1;  // 文件总大小
+    QString human_size                ;  // 文件总大小
+    qint64  downloaded_file_size  = -1;  // 已下载的文件大小
+    QString downloaded_human_size     ;  // 已下载的文件大小
+    // 文件状态 // 非传输中不需要显示进度
+    Status  status = FileStatusCode::FILE_STATUS_NONE;
 };
 
 struct ItemCache {
@@ -209,16 +214,16 @@ struct ItemData {
     QString    chatroom_id;
     //
     SenderType sender_type = SenderType::USER;
-    MediaType  media_type  = MediaType::TEXT;
+    MediaType  media_type  = MediaType::TEXT ;
     bool       is_me = false;
-    QString    message_id;
-    QDateTime  message_time;
+    QString    message_id   ;
+    QDateTime  message_time ;
     std::shared_ptr<SenderData> sender;  // 发送者信息
-    std::shared_ptr<FileData  > file;    // 图片视频等也均为文件
-    std::shared_ptr<TextData  > text;
-    std::shared_ptr<ImageData > image;
-    std::shared_ptr<AudioData > audio;
-    std::shared_ptr<VideoData > video;
+    std::shared_ptr<FileData  > file  ;  // 图片视频等也均为文件
+    std::shared_ptr<TextData  > text  ;
+    std::shared_ptr<ImageData > image ;
+    std::shared_ptr<AudioData > audio ;
+    std::shared_ptr<VideoData > video ;
     // cache
     ItemCache cache;
 };
@@ -231,17 +236,17 @@ struct ItemData {
  * 的调色板注入。因此切换深/浅色主题时缓存完全不用失效重建。
  */
 struct ChatTheme {
-    QColor viewBg;      ///< 消息列表背景
-    QColor windowBg;    ///< 工具栏/输入栏等面板背景
-    QColor bubbleMe;    ///< 我的气泡背景
-    QColor bubbleOther; ///< 对方气泡背景
-    QColor text;        ///< 正文默认颜色
-    QColor systemText;  ///< 系统消息颜色
-    QColor metaText;    ///< 发送者/时间行颜色
-    QColor border;      ///< 气泡描边
-    QColor link;        ///< 超链接颜色
-    QColor selBg;       ///< 文字选区高亮背景
-    QColor selText;     ///< 文字选区高亮前景
+    QColor viewBg      ;// 消息列表背景
+    QColor windowBg    ;// 工具栏/输入栏等面板背景
+    QColor bubbleMe    ;// 我的气泡背景
+    QColor bubbleOther; // 对方气泡背景
+    QColor text;        // 正文默认颜色
+    QColor systemText;  // 系统消息颜色
+    QColor metaText;    // 发送者/时间行颜色
+    QColor border;      // 气泡描边
+    QColor link;        // 超链接颜色
+    QColor selBg;       // 文字选区高亮背景
+    QColor selText;     // 文字选区高亮前景
 
     static ChatTheme light();
     static ChatTheme dark();
@@ -281,10 +286,10 @@ inline ChatTheme ChatTheme::dark() {
 
 struct ChatMessage {
     enum class Type {
-        Text,    ///< 普通聊天消息（富文本气泡）
-        System,  ///< 系统提示（居中灰色小字）
-        Image,   ///< 图片消息（缩放气泡，来自剪贴板粘贴或文件选择）
-        File,    ///< 文件消息（文件卡片，点击打开所在位置）
+        Text  ,  // 普通聊天消息（富文本气泡）
+        System,  // 系统提示（居中灰色小字）
+        Image ,  // 图片消息（缩放气泡，来自剪贴板粘贴或文件选择）
+        File  ,  // 文件消息（文件卡片，点击打开所在位置）
     };
 };
 
@@ -308,9 +313,8 @@ struct FileDownloadNotify {
     QString name           = QString();  // 文件名称 // 用于下载完成时重命名
     int64_t size           =        -1;  // 文件大小
     QString md5            = QString();  // 文件 md5
-    int64_t uploaded_bytes =         -1;  // 文件已经上传/下载完成的大小
+    int64_t uploaded_bytes =        -1;  // 文件已经上传/下载完成的大小
 };
-
 
 inline QDebug operator<<(QDebug debug, const FileDownloadNotify &notify) {
     QDebugStateSaver saver(debug); // 保持输出格式一致性

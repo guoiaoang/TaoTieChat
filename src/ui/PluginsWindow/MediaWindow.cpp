@@ -110,7 +110,6 @@ MediaWindow::MediaWindow(QWidget *parent)
     // add toolbar to window
     this->addToolBar(m_toolbar);
 
-    // connect(this, &MediaWindow::signal_media_changed, m_ui->label, &QLabel::setPixmap);
     connect(SignalInner::instance(), &SignalInner::signal_media_changed, m_ui->label, &QLabel::setPixmap);
     m_ui->label->setAlignment(Qt::AlignCenter);
     // 设置 label 的尺寸策略，使其能够收缩以避免出现滚动条

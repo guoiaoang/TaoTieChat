@@ -77,5 +77,6 @@ private:
     std::shared_ptr<ContactWindow         > m_contact_window;  // 当前显示的联系人详情窗口
     std::shared_ptr<MessageModel          > m_message_model;
     std::shared_ptr<MessageDelegate       > m_message_delegate;
+    QList<QString> m_unread_message_ids;
     bool enable_return_send = true;  // 按回车键发送消息
 };

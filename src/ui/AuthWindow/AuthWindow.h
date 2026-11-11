@@ -35,6 +35,8 @@ private slots:
     void slot_page_signup_tips_show(TipsLevel level, const QString&message = QString{});
     void slot_page_signup_tips_clean();
     //
+    void slot_signin_update_avatar(const QString& user_name);
+    //
     bool slot_signup();
     bool slot_signin();
     bool slot_signup_successd(signup_params params_signup);

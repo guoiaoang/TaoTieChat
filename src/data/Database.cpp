@@ -79,6 +79,9 @@ QString Database::get_local_file_id_path(const QString&file_id) {
         if(file_id  .isEmpty()) { break; }
         file_path = m_file_id_path_map.get_local_file_id_path(file_id);
         if(!file_path.isEmpty() && QFile::exists(file_path)) { break; }
+        // // 记录的路径已失效：必须清空。否则下载会把这个不存在的旧路径
+        // // 当成可用位置，以 ReadWrite 打开并创建一个空文件。
+        // file_path.clear();
 
         // 没有直接命中则尝试转换
         // uuid-xxx-uuid;size:128*128

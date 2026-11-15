@@ -15,10 +15,10 @@ QString user_home_path    (QString user_id = QString());
 QString user_storage_path (QString user_id = QString());
 QString user_download_path(QString user_id = QString());
 QString user_cache_path   (QString user_id = QString());
-QString get_dir(const QString& path);
-bool create_dirs(QString full_path);
-bool remove_dirs(QString full_path);
-bool rename(QString src, QString dst);
+QString get_dir(const QString &path);
+bool create_dirs(const QString &full_path);
+bool remove_dirs(const QString &full_path);
+bool rename(const QString &src_file_path, const QString &dst_file_path);
 } // namespace Utils
 
 namespace Utils {
@@ -305,6 +305,7 @@ TaoTieChat::Timestamp to_timestamp(const QDateTime&datatime);
 QString human_size(qint64 bytes); // 字节数 → 人类可读大小（KB/MB/GB）
 }
 
+// ContactData::ItemData <--> ContactInfo
 namespace Utils::Transform {
 std::shared_ptr<ContactData::ItemData> to_contact_data(std::shared_ptr<ContactInfo          > contact_info);
 std::shared_ptr<ContactInfo          > to_contact_info(std::shared_ptr<ContactData::ItemData> contact_data);
@@ -681,6 +682,7 @@ namespace Utils::OS {
 bool try_grab_account_pipe(const QString& user_id, bool grab = true);
 }
 
+// protobuf ErrorCode / FileStatusCode / FileStatusCode
 namespace Utils::Transform {
     // static const 是在翻译加载前存储的，因此直接使用的话不会加载翻译
     // static const 会有多个副本，可以使用 inline const (c++17) 代替
@@ -811,6 +813,13 @@ namespace Utils::Transform {
         { FileStatusCode::FILE_STATUS_UPLOADING, 2 },
         { FileStatusCode::FILE_STATUS_NOT_FOUND, 3 },
     };
+
+}
+
+// svg
+namespace Utils::Transform {
+bool resize_svg_to_bitmap(const QString& inputSvgPath, const QString& outputImagePath, const QSize& newSize);
+bool resize_svg_vector(const QString& inputSvgPath, const QString& outputSvgPath, const QSize& newSize);
 
 }
 

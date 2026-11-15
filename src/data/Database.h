@@ -4,45 +4,45 @@
 #include "Utils.h"
 #include "Defines.h"
 
-class Database{
-    // Q_OBJECT
+class Database : public QObject {
+    Q_OBJECT
 private:
     Database() = default;
     Database(const Database&) = delete;
     Database& operator=(const Database&) = delete;
+
 public:
-    ~Database() = default;
+    ~Database();
     static Database* instance();
-public:
-    class FileIDPathMap {
-    public:
-        FileIDPathMap();
-        ~FileIDPathMap();
-        void set_config_dir(const QString& config_dir);
 
-        bool reload();
-
-        bool save();
-
-        QString get_local_file_id_path(const QString&file_id);
-        bool save_local_file_id_path(const QString&file_id, const QString&file_path);
-    private:
-        QMap<QString, QString> m_file_id_path_map;
-        QString m_map_file_dir  = Utils::app_data_path();
-        QString m_map_file_name = "map_file_id_path.ini";
-        QString m_section_name  = "file_ids";
-        // QString m_map_file_path =  m_map_file_dir + "/" +  m_map_file_name;
-        bool m_inited = false;  // 未初始化时修改配置路径不需要保存，否则即使为空也要保存
+    static QString get_local_stroage_path(const QString &stroage_dir, const QString &hash, const QString &file_name){
+        return QString("%1/%2/%3").arg(stroage_dir).arg(hash).arg(file_name);
     };
-    // using FileIDPathMap::get_local_file_id_path;
-    // using FileIDPathMap::save_local_file_id_path;
-    // using FileIDPathMap::set_config_dir;
 
-    // 无法直接使用子成员中的函数，只能挨个转发
-    QString get_local_file_id_path(const QString&file_id);
-    bool save_local_file_id_path(const QString&file_id, const QString&file_path);
-    void set_config_dir(const QString& config_dir);
+    static QString get_local_downloading_path(const QString &stroage_dir, const QString &hash, const QString &file_name){
+        return QString("%1/%2/%3.part").arg(stroage_dir).arg(hash).arg(file_name);
+    };
+
+public:
+    bool reload_stroage_file_info();
+    bool save_stroage_file_info();
+    void set_config_dir(const QString & config_dir);
+    bool save_local_file_id_path(const QString &file_id, const QString &file_path);
+    QString get_local_file_id_path(const QString &file_id);
+
+// public:
+//     bool has_file_id_metadata(const QString &id);
+//     bool add_file_id_metadata(const QString &id, std::shared_ptr<MessageData::FileData> metadata);
+//     bool update_file_id_metadata(const QString &id, std::shared_ptr<MessageData::FileData> metadata);
+
 private:
-    FileIDPathMap m_file_id_path_map;
+    bool m_inited = false;  // 未初始化时修改配置路径不需要保存，否则即使为空也要保存
+    //
+    QMap<QString, QString> m_file_id_path_map;
+    QString m_map_file_dir  = Utils::app_data_path();
+    QString m_map_file_name = "map_file_id_path.ini";
+    QString m_section_name  = "file_ids";
+    // //
+    // QMap<const QString, std::shared_ptr<MessageData::FileData>> m_map_id_metadates;
 };
 

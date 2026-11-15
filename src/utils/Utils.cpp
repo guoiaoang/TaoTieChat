@@ -75,12 +75,13 @@ QString get_dir(const QString& path) {
     return file_info.absolutePath();
 }
 
-bool create_dirs(QString full_path) {
-    QDir dir(full_path);
+bool create_dirs(const QString &full_path) {
+    auto last_path = full_path;
+    QDir dir(last_path);
     // 判断当前输入的 fullpath 目录是否为相对路径
     if(dir.isRelative()) {
         dir.makeAbsolute();    // 将相对路径转成绝对路径
-        full_path = dir.path(); // dir.path() 将输出绝对路径
+        last_path = dir.path(); // dir.path() 将输出绝对路径
     }
 
     // 如果当前目录已经存在，不在创建
@@ -88,15 +89,16 @@ bool create_dirs(QString full_path) {
         return true;
     }
 
-    return dir.mkpath(full_path); // 创建多级目录
+    return dir.mkpath(last_path); // 创建多级目录
 }
 
-bool remove_dirs(QString full_path) {
-    QDir dir(full_path);
+bool remove_dirs(const QString &full_path) {
+    auto last_path = full_path;
+    QDir dir(last_path);
     // 判断当前输入的 full_path 目录是否为相对路径
     if(dir.isRelative()) {
         dir.makeAbsolute(); // 将相对路径转成绝对路径
-        full_path = dir.path(); // dir.path() 将输出绝对路径
+        last_path = dir.path(); // dir.path() 将输出绝对路径
     }
 
     // 如果当前目录已经不存在，返回
@@ -107,47 +109,55 @@ bool remove_dirs(QString full_path) {
     return dir.removeRecursively(); // 删除目录
 }
 
-bool rename(QString src, QString dst) {
+bool rename(const QString &src_file_path, const QString &dst_file_path) {
     // 源路径与目标路径都不能为空，源路径不能不存在，但目标路径不能存在
-    QFileInfo srcInfo(src);
-    QFileInfo dstInfo(dst);
-    if (src.isEmpty() || dst.isEmpty() || !srcInfo.exists() || dstInfo.exists()) {
+    QFileInfo src_file_info(src_file_path);
+    QFileInfo dst_file_info(dst_file_path);
+    if (src_file_path.isEmpty() || dst_file_path.isEmpty() || !src_file_info.exists() || dst_file_info.exists()) {
+        return false;
+    }
+
+    // 目标文件不应存在，不要覆盖原始文件
+    if (QFile(dst_file_path).exists()) {
         return false;
     }
 
     // 确保目标文件的父目录存在，如果不存在则自动级联创建
-    QDir().mkpath(dstInfo.absolutePath());
+    auto dst_dir_path = dst_file_info.absolutePath();
+    if (!QDir().exists(dst_dir_path)) {
+        QDir().mkpath(dst_dir_path);
+    }
 
     // // 无论是文件还是目录，QFile::rename 都能一行搞定，它在底层调用操作系统的重命名 API，效率极高
-    // return QFile::rename(src, dst);
+    // return QFile::rename(src, dst_file_path);
 
-//     // QString src = "path/to/src.txt";
-//     // QString dst = "path/to/dst.txt";
+//     // QString src_file_path = "path/to/src_file_path.txt";
+//     // QString dst_file_path = "path/to/dst_file_path.txt";
 //
-//     // 确保 src 文件确实存在
-//     if (!QFile::exists(src)) {
+//     // 确保 src_file_path 文件确实存在
+//     if (!QFile::exists(src_file_path)) {
 //         return false;
 //     }
 //
-//     // 如果 dst 已经存在，先将其删除，否则 rename 必然失败
-//     if (QFile::exists(dst)) {
-//         QFile::remove(dst);
+//     // 如果 dst_file_path 已经存在，先将其删除，否则 rename 必然失败
+//     if (QFile::exists(dst_file_path)) {
+//         QFile::remove(dst_file_path);
 //     }
 
     // 使用实例化的对象进行重命名，方便获取错误信息
-    QFile file(src);
-    if (file.rename(dst)) {
+    QFile src_file_writer(src_file_path);
+    if (src_file_writer.rename(dst_file_path)) {
         return true;
     }
     // 这里会打印出具体的失败原因，例如 "Permission denied" 或 "File access error"
     qDebug().noquote().nospace() << QString("failed to rename %1 to %2 with error: %3")
-        .arg(src).arg(dst).arg(file.errorString());
+        .arg(src_file_path).arg(dst_file_path).arg(src_file_writer.errorString());
     // 直接重命名失败时尝试复制
-    if (file.copy(dst)) {
+    if (src_file_writer.copy(dst_file_path)) {
         return true;
     }
     qDebug().noquote().nospace() << QString("failed to copy %1 to %2 with error: %3")
-        .arg(src).arg(dst).arg(file.errorString());
+        .arg(src_file_path).arg(dst_file_path).arg(src_file_writer.errorString());
     return false;
 }
 
@@ -164,7 +174,7 @@ void init_debug_output_format() {
     qSetMessagePattern(QT_MESSAGE_PATTERN);
 }
 
-bool load_translator(QApplication&application) {
+bool load_translator(QApplication &application) {
     // ":/rc/translations/TaoTieChat_zh_CN.qm"
     static QTranslator translator;  // QTranslator 对象必须始终存在，翻译才会生效
     const QStringList ui_languages = QLocale::system().uiLanguages();
@@ -941,6 +951,76 @@ bool try_grab_account_pipe(const QString& user_id, bool grab) {
     }
 
     return server->listen(pipeName);
+}
+
+}
+
+namespace Utils::Transform {
+bool resize_svg_to_bitmap(const QString& inputSvgPath, const QString& outputImagePath, const QSize& newSize);
+bool resize_svg_vector(const QString& inputSvgPath, const QString& outputSvgPath, const QSize& newSize);
+
+// 使用示例：将 64x64 的 SVG 放大渲染保存为 1024x1024 的 PNG
+// resize_svg_to_bitmap("icon.svg", "icon_1024.png", QSize(1024, 1024));
+bool resize_svg_to_bitmap(const QString& inputSvgPath, const QString& outputImagePath, const QSize& newSize) {
+    // 1. 加载 SVG 渲染器
+    QSvgRenderer renderer(inputSvgPath);
+    if (!renderer.isValid()) {
+        return false; // SVG 文件解析失败
+    }
+
+    // 2. 创建指定大小的透明 QImage（支持 Alpha 通道）
+    QImage image(newSize, QImage::Format_ARGB32);
+    image.fill(Qt::transparent); // 背景透明
+
+    // 3. 使用 QPainter 将 SVG 绘制到 QImage 上
+    QPainter painter(&image);
+    painter.setRenderHint(QPainter::Antialiasing);         // 抗锯齿
+    painter.setRenderHint(QPainter::SmoothPixmapTransform); // 顺滑缩放
+
+    // 绘制到指定的区域大小
+    renderer.render(&painter, QRectF(0, 0, newSize.width(), newSize.height()));
+    painter.end();
+
+    // 4. 保存为目标文件（根据扩展名自动识别 PNG/JPG 等）
+    return image.save(outputImagePath);
+}
+
+// 使用示例：调整 XML 视口尺寸并保存为新的 svg
+// resize_svg_vector("input.svg", "output_resized.svg", QSize(800, 600));
+bool resize_svg_vector(const QString& inputSvgPath, const QString& outputSvgPath, const QSize& newSize) {
+    QFile file(inputSvgPath);
+    if (!file.open(QIODevice::ReadOnly)) return false;
+
+    // 1. 解析 SVG 为 DOM 树
+    QDomDocument doc;
+    if (!doc.setContent(&file)) {
+        file.close();
+        return false;
+    }
+    file.close();
+
+    // 2. 获取根节点 <svg>
+    QDomElement svgElement = doc.documentElement();
+    if (svgElement.tagName() != "svg") return false;
+
+    // 3. 设置/更新宽与高属性
+    svgElement.setAttribute("width", QString("%1px").arg(newSize.width()));
+    svgElement.setAttribute("height", QString("%1px").arg(newSize.height()));
+
+    // 提示：若需要适配比例，亦可同时调整 viewBox 属性，例如：
+    // svgElement.setAttribute("viewBox", QString("0 0 %1 %2").arg(newSize.width()).arg(newSize.height()));
+
+    // 4. 将修改后的 XML 内容写入新 SVG 文件
+    QFile outFile(outputSvgPath);
+    if (!outFile.open(QIODevice::WriteOnly | QIODevice::Truncate | QIODevice::Text)) {
+        return false;
+    }
+
+    QTextStream stream(&outFile);
+    doc.save(stream, 4); // 4 表示 XML 缩进空格数
+    outFile.close();
+
+    return true;
 }
 
 }

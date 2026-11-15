@@ -1065,15 +1065,15 @@ public:
         m_notify.id   = m_params.file_id;
         m_notify.path = m_params.saved_path;
 
-        // 有下载记录时先打开已有文件（与原实现一致：打开失败直接结束）
-        if (!m_notify.path.isEmpty()) {
-            Utils::create_dirs(Utils::get_dir(m_notify.path));
-            m_file = std::make_shared<QFile>(m_notify.path);
-            if (!m_file->open(QIODevice::ReadWrite)) {
-                fail(ErrorCode::FILE_READ_ERROR, NetworkClient::tr("Failed to open file for md5 calculation: %1").arg(m_file->errorString()));
-                return;
-            }
-        }
+        // // 有下载记录时先打开已有文件（与原实现一致：打开失败直接结束）
+        // if (!m_notify.path.isEmpty()) {
+        //     Utils::create_dirs(Utils::get_dir(m_notify.path));
+        //     m_file = std::make_shared<QFile>(m_notify.path);
+        //     if (!m_file->open(QIODevice::ReadOnly)) {
+        //         fail(ErrorCode::FILE_READ_ERROR, NetworkClient::tr("Failed to open file for md5 calculation: %1").arg(m_file->errorString()));
+        //         return;
+        //     }
+        // }
 
         // 【核心】channel 与 client 必须在本线程创建，不能复用主线程的共享实例
         m_channel = std::make_shared<QGrpcHttp2Channel>(m_params.server_url, m_params.channel_options);
@@ -1174,10 +1174,27 @@ private:
                 return;
             }
 
+            // 从服务器获取到 metadata 后拼接本地路径并检查是否有文件，
+            // 有文件的话就认为下载成功，以防误写入或删除文件，
+            // 并使用原始 metadata 通知下载完成
+            auto local_stroage_path = Database::get_local_stroage_path(m_params.download_dir, notify.md5, notify.name);
+            if (!local_stroage_path.isEmpty() && QFile(local_stroage_path).exists()) {
+                m_initialized   = true;  // 初始化完成
+                notify.finished = true;
+                notify.ok       = true;
+                notify.code     = int64_t(SuccessCode::SUCCESS);
+                notify.message  = NetworkClient::tr("Local file exists : %1").arg(notify.path);
+                notify.status   = FileStatusCode::FILE_STATUS_UPLOADED;
+                notify.uploaded_bytes = notify.size;  // 下载成功的通知中已下载大小要与文件大小一致
+                emit_notify(notify);
+                stop();
+                return;
+            }
+
             // 临时文件路径：目录用主线程算好的 cache_dir，写库排队回主线程
             if (notify.path.isEmpty() && !m_file) {
-                notify.path = QString("%1/%2/%3.part").arg(m_params.cache_dir).arg(notify.md5).arg(notify.name);
-                save_path_to_db(notify.id, notify.path);
+                notify.path = Database::get_local_downloading_path(m_params.cache_dir, notify.md5, notify.name);
+                // save_path_to_db(notify.id, notify.path);
                 Utils::create_dirs(Utils::get_dir(notify.path));
                 m_file = std::make_shared<QFile>(notify.path);
                 if (!m_file || !m_file->open(QIODevice::ReadWrite)) {
@@ -1249,10 +1266,10 @@ private:
             return;
         }
 
-        const QString new_file_path = QString("%1/%2/%3").arg(m_params.download_dir).arg(notify.md5).arg(notify.name);
-        if (Utils::rename(notify.path, new_file_path)) {
-            save_path_to_db(notify.id, new_file_path);
-            notify.path = new_file_path;
+        auto local_stroage_path = Database::get_local_stroage_path(m_params.download_dir, notify.md5, notify.name);
+        if (!QFile(local_stroage_path).exists() && Utils::rename(notify.path, local_stroage_path)) {
+            save_path_to_db(notify.id, local_stroage_path);
+            notify.path = local_stroage_path;
         }
 
         notify.finished = true;

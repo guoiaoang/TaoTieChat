@@ -5,80 +5,85 @@ Database* Database::instance() {
     return &s_database;
 }
 
-// 使用示例：将 64x64 的 SVG 放大渲染保存为 1024x1024 的 PNG
-// resizeSvgToBitmap("icon.svg", "icon_1024.png", QSize(1024, 1024));
-bool resizeSvgToBitmap(const QString &inputSvgPath, const QString &outputImagePath, const QSize &newSize) {
-    // 1. 加载 SVG 渲染器
-    QSvgRenderer renderer(inputSvgPath);
-    if (!renderer.isValid()) {
-        return false; // SVG 文件解析失败
-    }
-
-    // 2. 创建指定大小的透明 QImage（支持 Alpha 通道）
-    QImage image(newSize, QImage::Format_ARGB32);
-    image.fill(Qt::transparent); // 背景透明
-
-    // 3. 使用 QPainter 将 SVG 绘制到 QImage 上
-    QPainter painter(&image);
-    painter.setRenderHint(QPainter::Antialiasing);         // 抗锯齿
-    painter.setRenderHint(QPainter::SmoothPixmapTransform); // 顺滑缩放
-
-    // 绘制到指定的区域大小
-    renderer.render(&painter, QRectF(0, 0, newSize.width(), newSize.height()));
-    painter.end();
-
-    // 4. 保存为目标文件（根据扩展名自动识别 PNG/JPG 等）
-    return image.save(outputImagePath);
+Database::~Database() {
+    save_stroage_file_info();
 }
 
-// 使用示例：调整 XML 视口尺寸并保存为新的 svg
-// resizeSvgVector("input.svg", "output_resized.svg", QSize(800, 600));
-bool resizeSvgVector(const QString &inputSvgPath, const QString &outputSvgPath, const QSize &newSize) {
-    QFile file(inputSvgPath);
-    if (!file.open(QIODevice::ReadOnly)) return false;
+bool Database::reload_stroage_file_info() {
+    m_inited = true;
+    m_file_id_path_map.clear();
 
-    // 1. 解析 SVG 为 DOM 树
-    QDomDocument doc;
-    if (!doc.setContent(&file)) {
-        file.close();
-        return false;
+    // 暂时将映射序列化存到本地
+    QString map_file_path =  m_map_file_dir + "/" +  m_map_file_name;
+
+    mINI::INIFile ini_file(map_file_path.toStdString());
+    mINI::INIStructure ini_data;
+    // 加载数据时读取失败即可返回错误
+    if (!ini_file.read(ini_data)) { return false; }
+
+    if ( ini_data.has(m_section_name.toStdString())) {
+        auto section_data = ini_data[m_section_name.toStdString()];
+        for (const auto&kv : section_data) {
+            auto file_id       = QString::fromStdString(kv.first ).trimmed();
+            auto path_relative = QString::fromStdString(kv.second).trimmed();
+            auto path_full     = QDir(m_map_file_dir).absoluteFilePath(path_relative);
+            m_file_id_path_map[file_id] = path_full;
+        }
     }
-    file.close();
-
-    // 2. 获取根节点 <svg>
-    QDomElement svgElement = doc.documentElement();
-    if (svgElement.tagName() != "svg") return false;
-
-    // 3. 设置/更新宽与高属性
-    svgElement.setAttribute("width", QString("%1px").arg(newSize.width()));
-    svgElement.setAttribute("height", QString("%1px").arg(newSize.height()));
-
-    // 提示：若需要适配比例，亦可同时调整 viewBox 属性，例如：
-    // svgElement.setAttribute("viewBox", QString("0 0 %1 %2").arg(newSize.width()).arg(newSize.height()));
-
-    // 4. 将修改后的 XML 内容写入新 SVG 文件
-    QFile outFile(outputSvgPath);
-    if (!outFile.open(QIODevice::WriteOnly | QIODevice::Truncate | QIODevice::Text)) {
-        return false;
-    }
-
-    QTextStream stream(&outFile);
-    doc.save(stream, 4); // 4 表示 XML 缩进空格数
-    outFile.close();
-
     return true;
 }
 
-// 无法直接使用子成员中的函数，只能挨个转发
-QString Database::get_local_file_id_path(const QString&file_id) {
-    // return m_file_id_path_map.get_local_file_id_path(file_id);
+bool Database::save_stroage_file_info() {
+    // 没有初始化时调用不必保存，防止出现无用文件
+    if(!m_inited) { return false; }
 
+    QString map_file_path =  m_map_file_dir + "/" +  m_map_file_name;
+    Utils::create_dirs(Utils::get_dir(map_file_path));
+
+    mINI::INIFile ini_file(map_file_path.toStdString());
+    mINI::INIStructure ini_data;
+    // if (!ini_file.read(ini_data)) { return false; }
+    // 没有文件时会读取失败，但需要继续保存
+    ini_file.read(ini_data);
+
+    for(auto it = m_file_id_path_map.begin(); it != m_file_id_path_map.end(); ++it) {
+        // 计算 it.value() 相对于 m_map_file_dir 的路径
+        QString path_relative = QDir(m_map_file_dir).relativeFilePath(it.value());
+        ini_data[m_section_name.toStdString()][it.key().toStdString()] = path_relative.toStdString();
+    }
+    if (!ini_file.write(ini_data)) { return false; };  // 写入失败才返回错误
+    return true;
+}
+
+void Database::set_config_dir(const QString &config_dir) {
+    save_stroage_file_info();
+    m_map_file_dir = config_dir;
+    reload_stroage_file_info();
+}
+
+// 不应存储缓存文件，防止发生意外读写
+bool Database::save_local_file_id_path(const QString &file_id, const QString &file_path) {
+    if(file_id.isEmpty() || file_path.isEmpty()) { return false; }
+    if (file_path.endsWith(".part")) { return false; }  // 不应存储缓存文件，防止发生意外读写
+    m_file_id_path_map[file_id] = file_path;
+    return save_stroage_file_info();
+}
+
+QString Database::get_local_file_id_path(const QString &file_id) {
     QString file_path;
     do {
         // 如果命中则直接返回
-        if(file_id  .isEmpty()) { break; }
-        file_path = m_file_id_path_map.get_local_file_id_path(file_id);
-        if(!file_path.isEmpty() && QFile::exists(file_path)) { break; }
+        if(file_id.isEmpty()) { break; }
+        auto ite_cache = m_file_id_path_map.constFind(file_id);
+        if (ite_cache != m_file_id_path_map.constEnd()) {
+            file_path = ite_cache.value();
+            // break;
+            if(!file_path.isEmpty() && QFile::exists(file_path)) { break; }
+        }
+
+        // file_path = get_local_file_id_path(file_id);
+        // if(!file_path.isEmpty() && QFile::exists(file_path)) { break; }
+
         // // 记录的路径已失效：必须清空。否则下载会把这个不存在的旧路径
         // // 当成可用位置，以 ReadWrite 打开并创建一个空文件。
         // file_path.clear();
@@ -109,7 +114,7 @@ QString Database::get_local_file_id_path(const QString&file_id) {
         }
         if(!str_id.isEmpty() && size_width >= 0 && size_height > 0) {
             // 将 id 再次传入进行查找
-            file_path = m_file_id_path_map.get_local_file_id_path(str_id);
+            file_path = get_local_file_id_path(str_id);
             if(file_path.isEmpty()) { break; }  // 仅 ID 时还是找不到源文件
             // 转换文件
             QString file_name = QFileInfo(file_path).fileName();
@@ -120,95 +125,47 @@ QString Database::get_local_file_id_path(const QString&file_id) {
                 // 检测文件格式
                 QByteArray format = QImageReader::imageFormat(file_path);
                 if (format.toLower() == "svg" || format.toLower() == "svgz") {
-                    resizeSvgVector(file_path, size_path, QSize(size_width, size_height));
+                    Utils::Transform::resize_svg_vector(file_path, size_path, QSize(size_width, size_height));
                 }
                 else {
                     QImage(file_path).scaled(QSize(size_width, size_height), Qt::KeepAspectRatio, Qt::SmoothTransformation).save(size_path);
                 }
             }
-            m_file_id_path_map.save_local_file_id_path(file_id, size_path);
+            save_local_file_id_path(file_id, size_path);
             file_path = size_path;
         }
     } while(false);
     return file_path;
 }
 
-bool Database::save_local_file_id_path(const QString&file_id, const QString&file_path) {
-    return m_file_id_path_map.save_local_file_id_path(file_id, file_path);
-}
-
-void Database::set_config_dir(const QString& config_dir) {
-    m_file_id_path_map.set_config_dir(config_dir);
-}
-
-Database::FileIDPathMap::FileIDPathMap() {
-    // reload();
-}
-
-Database::FileIDPathMap::~FileIDPathMap() {
-    save();
-}
-
-void Database::FileIDPathMap::set_config_dir(const QString& config_dir) {
-    save();
-    m_map_file_dir = config_dir;
-    reload();
-}
-
-bool Database::FileIDPathMap::reload() {
-    m_inited = true;
-    m_file_id_path_map.clear();
-
-    // 暂时将映射序列化存到本地
-    QString map_file_path =  m_map_file_dir + "/" +  m_map_file_name;
-
-    mINI::INIFile ini_file(map_file_path.toStdString());
-    mINI::INIStructure ini_data;
-    // 加载数据时读取失败即可返回错误
-    if (!ini_file.read(ini_data)) { return false; }
-
-    if ( ini_data.has(m_section_name.toStdString())) {
-        auto section_data = ini_data[m_section_name.toStdString()];
-        for (const auto&kv : section_data) {
-            auto file_id       = QString::fromStdString(kv.first ).trimmed();
-            auto path_relative = QString::fromStdString(kv.second).trimmed();
-            auto path_full     = QDir(m_map_file_dir).absoluteFilePath(path_relative);
-            m_file_id_path_map[file_id] = path_full;
-        }
-    }
-    return true;
-}
-
-bool Database::FileIDPathMap::save() {
-    // 没有初始化时调用不必保存，防止出现无用文件
-    if(!m_inited) { return false; }
-
-    QString map_file_path =  m_map_file_dir + "/" +  m_map_file_name;
-    Utils::create_dirs(Utils::get_dir(map_file_path));
-
-    mINI::INIFile ini_file(map_file_path.toStdString());
-    mINI::INIStructure ini_data;
-    // if (!ini_file.read(ini_data)) { return false; }
-    // 没有文件时会读取失败，但需要继续保存
-    ini_file.read(ini_data);
-
-    for(auto it = m_file_id_path_map.begin(); it != m_file_id_path_map.end(); ++it) {
-        // 计算 it.value() 相对于 m_map_file_dir 的路径
-        QString path_relative = QDir(m_map_file_dir).relativeFilePath(it.value());
-        ini_data[m_section_name.toStdString()][it.key().toStdString()] = path_relative.toStdString();
-    }
-    if (!ini_file.write(ini_data)) { return false; };  // 写入失败才返回错误
-    return true;
-}
-
-QString Database::FileIDPathMap::get_local_file_id_path(const QString&file_id) {
-    QString file_path;
-    if(file_id.isEmpty()) { return file_path; }
-    return m_file_id_path_map.value(file_id, QString());
-}
-
-bool Database::FileIDPathMap::save_local_file_id_path(const QString&file_id, const QString&file_path) {
-    if(file_id.isEmpty() || file_path.isEmpty()) { return false; }
-    m_file_id_path_map[file_id] = file_path;
-    return save();
-}
+// bool Database::has_file_id_metadata(const QString &id) {
+//     auto ite_id = m_map_id_metadates.constFind(id);
+//     // 没有
+//     if (ite_id == m_map_id_metadates.constEnd()) { return false; }
+//     // 失效指针
+//     if (!ite_id.value()) {
+//         m_map_id_metadates.erase(ite_id);
+//         return false;
+//     }
+//     const auto m = ite_id.value();
+//     // 是否校验内容是否有效??
+//     // if (m->file_name.isEmpty() || m->file_hash.isEmpty() || m->file_size < 0) {
+//     //     m_map_id_metadates.erase(ite_id);
+//     //     return false;
+//     // }
+//     return true;
+// }
+// 
+// bool Database::add_file_id_metadata(const QString &id, std::shared_ptr<MessageData::FileData> metadata) {
+//     if (has_file_id_metadata(id)) { return false; }
+//     m_map_id_metadates.insert(id, metadata);
+//     return true;
+// }
+// 
+// bool Database::update_file_id_metadata(const QString &id, std::shared_ptr<MessageData::FileData> metadata) {
+//     if (!has_file_id_metadata(id)) { return false; }
+//     m_map_id_metadates.erase(m_map_id_metadates.constFind(id));
+//     m_map_id_metadates.insert(id, metadata);
+//     // m_map_id_metadates[id] = metadata;
+//     return true;
+// }

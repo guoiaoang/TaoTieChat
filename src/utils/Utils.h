@@ -93,6 +93,10 @@ void set(Result&result, const ErrorCode  &error_code  );
 // 5. [本年前，本年内) -> yyyy/MM/dd
 QString format_smart_time(const QDateTime &datetime);
 
+// 生成文件打开时要设置的过滤器的字符串
+// QFileDialog::AcceptMode : 打开或保存(QFileDialog::AcceptOpen/QFileDialog::AcceptSave)
+QString create_file_dialog_all_filter_string(QFileDialog::AcceptMode accept_mode = QFileDialog::AcceptOpen);
+
 } // namespace Utils
 
 // FontIcons

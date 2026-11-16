@@ -416,7 +416,7 @@ bool ChatWindow::network_status_sync() {
 
         // 需要更新的消息
         QList<TaoTieChat::SyncTag> sync_tags;
-        for (auto&tag : reply_get_last_id->tags()) {
+        for (const auto &tag : reply_get_last_id->tags()) {
             auto server_last_id = tag.idEnd();
             auto local_last_id = get_local_last_id(tag.type());
             auto type_name = QMetaEnum::fromType<SyncType>().valueToKey(quint64(tag.type()));
@@ -882,7 +882,7 @@ void ChatWindow::add_message(std::shared_ptr<SyncMessage> sync_message) {
         auto sender_account_id   = sync_message->senderAccountId  ();
         auto receiver_account_id = sync_message->receiverAccountId();
         auto timestamp           = sync_message->timestamp        ();
-        auto message_time        = sync_message->timestamp().timestamp().toDateTime();;
+        auto message_time        = sync_message->timestamp().timestamp().toDateTime();
         //
         auto sender_data         = Accounts::instance()->get_contact(sender_account_id);
         auto receiver_data       = Accounts::instance()->get_contact(receiver_account_id);
@@ -1056,20 +1056,20 @@ void ChatWindow::slot_button_navigate_avatar() {
     m_contact_window->set_contact_data(current_account, ContactWindow::SourceFlag::Profile);
     m_contact_window->show();
 
-    // 先显示窗口再更新内容，避免网络请求较慢时窗口无响应
-    auto&user_id = current_account->user_id;
-    // 更新成功，刷新显示
-    // update(params_update_profile->contact());
-    search_user_params params_search_user = std::make_shared<TaoTieChat::SearchUserRequest>();
-    params_search_user->setRequestUserAuth(*Accounts::instance()->get_auth_request().get());
-    params_search_user->setUserId(user_id);
-    NetworkClient::instance()->search_user(params_search_user, [this](search_user_params params_search_user, search_user_reply reply_search_user) {
-        if (!reply_search_user || !reply_search_user->result().hasSuccessCode()) { return; }
-        auto contact_info = Utils::Transform::to_contact_data(std::make_shared<ContactInfo>(reply_search_user->contactInfo()));
-        contact_info->is_me = true;  // 标记为查看自身资料
-        contact_info->display_name = contact_info->nickname;  // 自身资料显示为昵称，不能为备注
-        m_contact_window->set_contact_data(contact_info, ContactWindow::SourceFlag::Profile);
-    });
+    // // 先显示窗口再更新内容，避免网络请求较慢时窗口无响应
+    // auto &user_id = current_account->user_id;
+    // // 更新成功，刷新显示
+    // // update(params_update_profile->contact());
+    // search_user_params params_search_user = std::make_shared<TaoTieChat::SearchUserRequest>();
+    // params_search_user->setRequestUserAuth(*Accounts::instance()->get_auth_request().get());
+    // params_search_user->setUserId(user_id);
+    // NetworkClient::instance()->search_user(params_search_user, [this](search_user_params params_search_user, search_user_reply reply_search_user) {
+    //     if (!reply_search_user || !reply_search_user->result().hasSuccessCode()) { return; }
+    //     auto contact_info = Utils::Transform::to_contact_data(std::make_shared<ContactInfo>(reply_search_user->contactInfo()));
+    //     contact_info->is_me = true;  // 标记为查看自身资料
+    //     contact_info->display_name = contact_info->nickname;  // 自身资料显示为昵称，不能为备注
+    //     m_contact_window->set_contact_data(contact_info, ContactWindow::SourceFlag::Profile);
+    // });
 }
 
 void ChatWindow::slot_button_navigate_message() {

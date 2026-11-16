@@ -429,8 +429,85 @@ void MessageWindow::slot_button_detail() {
 void MessageWindow::slot_button_emoji() {
 }
 
+void print_supported_info() {
+    // QCamera::Features supported_camera_features   = QCamera().supportedFeatures();
+    // QStringList supported_file_dialog_schemes     = QFileDialog().supportedSchemes();
+    // qDebug().noquote().nospace() << "supported_camera_features : " << supported_camera_features;
+    // qDebug().noquote().nospace() << "supported_file_dialog_schemes     : " << supported_file_dialog_schemes    ;
+
+    // QList<QByteArray> supported_image_reader_sub_types  = QImageReader().supportedSubTypes();
+    // QList<QByteArray> supported_image_writer_sub_types  = QImageWriter().supportedSubTypes();
+    // qDebug().noquote().nospace() << "supported_image_reader_sub_types  : " << supported_image_reader_sub_types ;
+    // qDebug().noquote().nospace() << "supported_image_writer_sub_types  : " << supported_image_writer_sub_types ;
+
+    QList<QImageCapture::FileFormat> supported_image_capture_formats   = QImageCapture::supportedFormats();
+    QStringList                      supported_sound_effect_mime_types = QSoundEffect::supportedMimeTypes();
+    QList<QByteArray>                supported_movie_formats           = QMovie::supportedFormats();
+    QStringList                      supported_network_access_schemes  = QNetworkAccessManager().supportedSchemes();
+    qDebug().noquote().nospace() << "supported_image_capture_formats   : " << supported_image_capture_formats  ;
+    qDebug().noquote().nospace() << "supported_sound_effect_mime_types : " << supported_sound_effect_mime_types;
+    qDebug().noquote().nospace() << "supported_movie_formats           : " << supported_movie_formats          ;
+    qDebug().noquote().nospace() << "supported_network_access_schemes  : " << supported_network_access_schemes ;
+
+    QList<QByteArray> supported_image_reader_formats    = QImageReader::supportedImageFormats();
+    QList<QByteArray> supported_image_writer_formats    = QImageWriter::supportedImageFormats();
+    QList<QByteArray> supported_image_reader_mime_types = QImageReader::supportedMimeTypes   ();
+    QList<QByteArray> supported_image_writer_mime_types = QImageWriter::supportedMimeTypes   ();
+    qDebug().noquote().nospace() << "supported_image_reader_formats    : " << supported_image_reader_formats   ;
+    qDebug().noquote().nospace() << "supported_image_writer_formats    : " << supported_image_writer_formats   ;
+    qDebug().noquote().nospace() << "supported_image_reader_mime_types : " << supported_image_reader_mime_types;
+    qDebug().noquote().nospace() << "supported_image_writer_mime_types : " << supported_image_writer_mime_types;
+
+    QList<QMediaFormat::AudioCodec> supported_media_audio_encode_codec  = QMediaFormat().supportedAudioCodecs(QMediaFormat::Encode);
+    QList<QMediaFormat::AudioCodec> supported_media_audio_decode_codec  = QMediaFormat().supportedAudioCodecs(QMediaFormat::Decode);
+    QList<QMediaFormat::VideoCodec> supported_media_video_encode_codec  = QMediaFormat().supportedVideoCodecs(QMediaFormat::Encode);
+    QList<QMediaFormat::VideoCodec> supported_media_video_decode_codec  = QMediaFormat().supportedVideoCodecs(QMediaFormat::Decode);
+    QList<QMediaFormat::FileFormat> supported_media_file_encode_formats = QMediaFormat().supportedFileFormats(QMediaFormat::Encode);
+    QList<QMediaFormat::FileFormat> supported_media_file_decode_formats = QMediaFormat().supportedFileFormats(QMediaFormat::Decode);
+    qDebug().noquote().nospace() << "supported_media_audeo_encode_codec  : " << supported_media_audio_encode_codec ;
+    qDebug().noquote().nospace() << "supported_media_audeo_decode_codec  : " << supported_media_audio_decode_codec ;
+    qDebug().noquote().nospace() << "supported_media_video_encode_codec  : " << supported_media_video_encode_codec ;
+    qDebug().noquote().nospace() << "supported_media_video_decode_codec  : " << supported_media_video_decode_codec ;
+    qDebug().noquote().nospace() << "supported_media_file_encode_formats : " << supported_media_file_encode_formats;
+    qDebug().noquote().nospace() << "supported_media_file_decode_formats : " << supported_media_file_decode_formats;
+
+    QList<std::tuple<QMediaFormat::AudioCodec, QString, QString>> supported_media_audio_encodes;
+    for (auto audio_codec : supported_media_audio_encode_codec) {
+        supported_media_audio_encodes.append(std::make_tuple<>(audio_codec, QMediaFormat::audioCodecName(audio_codec), QMediaFormat::audioCodecDescription(audio_codec)));
+    }
+    QList<std::tuple<QMediaFormat::AudioCodec, QString, QString>> supported_media_audio_decodes;
+    for (auto audio_codec : supported_media_audio_decode_codec) {
+        supported_media_audio_decodes.append(std::make_tuple<>(audio_codec, QMediaFormat::audioCodecName(audio_codec), QMediaFormat::audioCodecDescription(audio_codec)));
+    }
+    QList<std::tuple<QMediaFormat::VideoCodec, QString, QString>> supported_media_video_encodes;
+    for (auto video_codec : supported_media_video_encode_codec) {
+        supported_media_video_encodes.append(std::make_tuple<>(video_codec, QMediaFormat::videoCodecName(video_codec), QMediaFormat::videoCodecDescription(video_codec)));
+    }
+    QList<std::tuple<QMediaFormat::VideoCodec, QString, QString>> supported_media_video_decodes;
+    for (auto video_codec : supported_media_video_decode_codec) {
+        supported_media_video_decodes.append(std::make_tuple<>(video_codec, QMediaFormat::videoCodecName(video_codec), QMediaFormat::videoCodecDescription(video_codec)));
+    }
+    QList<std::tuple<QMediaFormat::FileFormat, QString, QString>> supported_media_file_encodes;
+    for (auto file_format : supported_media_file_encode_formats) {
+        supported_media_file_encodes.append(std::make_tuple<>(file_format, QMediaFormat::fileFormatName(file_format), QMediaFormat::fileFormatDescription(file_format)));
+    }
+    QList<std::tuple<QMediaFormat::FileFormat, QString, QString>> supported_media_file_decodes;
+    for (auto file_format : supported_media_file_decode_formats) {
+        supported_media_file_decodes.append(std::make_tuple<>(file_format, QMediaFormat::fileFormatName(file_format), QMediaFormat::fileFormatDescription(file_format)));
+    }
+    qDebug().noquote().nospace() << "supported_media_audio_encodes : " << supported_media_audio_encodes;
+    qDebug().noquote().nospace() << "supported_media_audio_decodes : " << supported_media_audio_decodes;
+    qDebug().noquote().nospace() << "supported_media_video_encodes : " << supported_media_video_encodes;
+    qDebug().noquote().nospace() << "supported_media_video_decodes : " << supported_media_video_decodes;
+    qDebug().noquote().nospace() << "supported_media_file_encodes  : " << supported_media_file_encodes ;
+    qDebug().noquote().nospace() << "supported_media_file_decodes  : " << supported_media_file_decodes ;
+}
+
 void MessageWindow::slot_button_file() {
-    const QString file_path = QFileDialog::getOpenFileName(this, tr("Select file to send"), QString(), tr("All files (*.*)"));
+    print_supported_info();
+
+    auto filter_string = Utils::create_file_dialog_all_filter_string(QFileDialog::AcceptOpen);
+    const QString file_path = QFileDialog::getOpenFileName(this, tr("Select file to send"), QString(), filter_string);
     if (file_path.isEmpty()) { return; }
 
     // QPixmap 主要为显示设计，相当于显示优化专用
@@ -462,7 +539,7 @@ void MessageWindow::slot_button_file() {
             media_type = MessageData::MediaType::IMAGE;
             image_data = std::make_shared<MessageData::ImageData>();
             // TODO:这里仅需缓存预览图以便节省空间，需要按比例缩放。视图中会拉伸窗口，因此此图像不宜太小。
-            image_data->image = std::make_shared<QImage>(file_path);;
+            image_data->image = std::make_shared<QImage>(file_path);
             // QSize size_scaled  = QSize(512, 512);
             // image_data->pixmap = pixmap.scaled(size_scaled, Qt::KeepAspectRatio, Qt::SmoothTransformation);
         }

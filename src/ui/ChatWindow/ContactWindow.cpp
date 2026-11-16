@@ -115,7 +115,7 @@ void ContactWindow::set_contact_data(std::shared_ptr<ContactData::ItemData> cont
 
     // 有头像就显示，无头像就恢复
     // 当点击头像按钮上传完成头像后会修改界面显示，这里需要重置回来
-    if ( contact_data->avatar_image->isNull()) {
+    if (!contact_data || !contact_data->avatar_image || contact_data->avatar_image->isNull()) {
         m_ui->button_avatar->setIcon(QIcon());
     }
     else {
@@ -125,14 +125,14 @@ void ContactWindow::set_contact_data(std::shared_ptr<ContactData::ItemData> cont
 
     // 需要下载头像的情况
     // 头像为空但有头像 ID 时可进行头像的下载
-    if (contact_data->avatar_image->isNull() && !contact_data->avatar_id.isEmpty()) {
+    if (contact_data && !contact_data->avatar_id.isEmpty() && (!contact_data->avatar_image || contact_data->avatar_image->isNull())) {
         NetworkClient::instance()->download_file_notify_signal(contact_data->avatar_id);
     }
 
     ViewFlag  view_flag   = ViewFlag::View;
 
     // 未设置头像的提示
-    bool show_avatar_tips = contact_data->avatar_image->isNull() && contact_data->avatar_id.isEmpty();
+    bool show_avatar_tips = contact_data && contact_data->avatar_image && contact_data->avatar_image->isNull() && contact_data->avatar_id.isEmpty();
     m_ui->button_avatar->setToolTip(show_avatar_tips ? tr("No avatar set") : QString{});
     // m_ui->button_avatar->setEnabled(!show_avatar_tips);
 
@@ -284,7 +284,7 @@ void ContactWindow::slot_button_avatar() {
     bool is_profile = m_source_flag   == SourceFlag::Profile;
 
     // 非设置头像模式，未设置头像时不响应点击
-    if (!is_edit && contact_data->avatar_image->isNull() && contact_data->avatar_id.isEmpty()) {
+    if (!is_edit && (!contact_data->avatar_image || contact_data->avatar_image->isNull()) && contact_data->avatar_id.isEmpty()) {
         return;
     }
 

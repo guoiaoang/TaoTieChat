@@ -65,7 +65,7 @@ QSize ItemDelegate::sizeHint(const QStyleOptionViewItem &option, const QModelInd
         auto type = variant.value<ENUMS::ItemDataType>();
         if (!m_map_delegates.contains(type)) { break; }
 
-        return m_map_delegates[type]->sizeHint(option, index);;
+        return m_map_delegates[type]->sizeHint(option, index);
     } while(false);
     return QStyledItemDelegate::sizeHint(option, index);
 }

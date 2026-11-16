@@ -546,6 +546,36 @@ QString format_smart_time(const QDateTime &datetime) {
     return local_datetime.toString(QObject::tr("yyyy/MM/dd"));
 }
 
+// 生成文件打开时要设置的过滤器的字符串
+QString create_file_dialog_all_filter_string(QFileDialog::AcceptMode accept_mode) {
+    // 文本及音视频均无法使用函数获取支持的后缀格式
+    QByteArrayList image_suffixs    = accept_mode == QFileDialog::AcceptOpen ? QImageReader::supportedImageFormats() : QImageWriter::supportedImageFormats();
+    QByteArrayList document_suffixs = {"txt", "md" , "pdf", "doc" , "docx", "xsl", "xslx", "csv" , "ppt", "pptx"};
+    QByteArrayList audio_suffixs    = {"mp3", "wav", "flac", "wma" , "aac"};
+    QByteArrayList video_suffixs    = {"mp4", "avi", "mkv" , "mov" , "wmv"};
+    QByteArrayList archiver_suffixs = {"zip", "rar", "7z"  , "gz"  };
+    QByteArrayList all_suffixs = document_suffixs + image_suffixs + audio_suffixs + video_suffixs + archiver_suffixs;
+
+    QString document_filter = QObject::tr("Document Files (%1)").arg("*." + document_suffixs.join(";*."));
+    QString image_filter    = QObject::tr("Image Files (%1)"   ).arg("*." + image_suffixs   .join(";*."));
+    QString audio_filter    = QObject::tr("Audio Files (%1)"   ).arg("*." + audio_suffixs   .join(";*."));
+    QString video_filter    = QObject::tr("Video Files (%1)"   ).arg("*." + video_suffixs   .join(";*."));
+    QString archiver_filter = QObject::tr("Archiver Files (%1)").arg("*." + archiver_suffixs.join(";*."));
+
+    QString all_formats_filter = QObject::tr("All Formats (%1)").arg("*." + all_suffixs.join(";*."));
+    QString all_file_filter    = QObject::tr("All Files (*.*)");
+
+    // 两头不加 `;;`
+    QString last_filter = all_file_filter   ;
+    last_filter += ";;" + all_formats_filter;
+    last_filter += ";;" + document_filter   ;
+    last_filter += ";;" + image_filter      ;
+    last_filter += ";;" + audio_filter      ;
+    last_filter += ";;" + video_filter      ;
+    last_filter += ";;" + archiver_filter   ;
+    return last_filter;
+}
+
 // 获取显示名称的接口
 QString get_display_name(std::shared_ptr<ContactInfo> contact_info) {
     QString display_name;

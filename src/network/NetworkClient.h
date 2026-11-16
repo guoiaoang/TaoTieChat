@@ -74,12 +74,12 @@ public:
     bool search_group (const QString&group) { return false; } // 搜索群聊 ID
     // TODO:get_file_id 应该封装在子线程中
     bool get_file_id  (const QString&file_path, network_file_io_notify_callback callback_get_file_id_notiify );
-    // TODO:upload_file 应该封装在子线程中
+    // 已封装在专用子线程（QThread + UploadWorker），与 download_file 对称
     bool upload_file  (const QString&file_path, network_file_io_notify_callback callback_upload_file_notify  );
     bool download_file_notify_signal(const QString&file_id);
 
 private:
-    // TODO:download_file 应该封装在子线程中
+    // 已封装在专用子线程（QThread + DownloadWorker）
     bool download_file(const QString&file_id, network_file_io_notify_callback callback_download_file_notify);
 
 // signals:

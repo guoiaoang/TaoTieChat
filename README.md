@@ -9,8 +9,9 @@
 服务端见 [TaoTieChatServer](https://github.com/guoiaoang/TaoTieChatServer)。
 
 <div style="display: flex; gap: 10px; align-items: center;">
-  <img src="docs\images\chat.png" alt="聊天界面" style="height: 400px; object-fit: cover;">
-  <img src="docs\images\contact.png" alt="联系人界面" style="height: 400px; object-fit: cover;">
+  <img src="docs\images\chat.png" alt="聊天界面" style="height: 300px; object-fit: cover;">
+  <img src="docs\images\contact.png" alt="联系人界面" style="height: 300px; object-fit: cover;">
+  <img src="docs\images\mediaview.png" alt="媒体查看器" style="height: 300px; object-fit: cover;">
 </div>
 
 ## 项目主要依赖与编译
